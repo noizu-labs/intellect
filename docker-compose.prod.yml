@@ -1,0 +1,50 @@
+version: '3.9'
+networks:
+  noizu-intellect-net:
+services:
+  redis:
+    container_name: noizu-intellect-redis
+    hostname: noizu-intellect-redis
+    image: "redis:alpine"
+    logging:
+      driver: "none"
+    ports:
+      - 0.0.0.0:7000:6379
+    networks:
+      - noizu-intellect-net
+    volumes:
+      - ./mnt/redis:/data
+  manticore:
+    container_name: noizu-intellect-manticore
+    image: manticoresearch/manticore
+    environment:
+      - EXTRA=1
+    restart: always
+    ports:
+      - 0.0.0.0:7002:9306
+      - 0.0.0.0:7003:9308
+    ulimits:
+      nproc: 65535
+      nofile:
+         soft: 65535
+         hard: 65535
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./mnt/manticore:/var/lib/manticore
+#      - ./manticore.conf:/etc/manticoresearch/manticore.conf # uncommment if you use a custom config     
+  weaviate:
+    container_name: noizu-intellect-vdb
+    image: semitechnologies/weaviate:1.18.4
+    ports:
+      - 0.0.0.0:7004:8080
+    restart: on-failure:0
+    volumes:
+     - ./mnt/weaviate:/var/lib/weaviate
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+

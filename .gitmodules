@@ -1,0 +1,3 @@
+[submodule "elixir-framework"]
+	path = elixir-framework
+	url = git@github.com:noizu-labs-scaffolding/elixir-framework.git
