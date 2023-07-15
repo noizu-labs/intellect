@@ -1,0 +1,117 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ========================================================== -->
+    <!-- Account Agent Tables                                       -->
+    <!-- ========================================================== -->
+    <changeSet author="kebrings" id="account_agent table">
+        <createTable tableName="account_agent">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_agent"/>
+            </column>
+            <column name="account" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="account_agent_function table">
+        <createTable tableName="account_agent_function">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_agent_function"/>
+            </column>
+            <column name="account_agent" type="BIGINT"/>
+            <column name="function" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="account_agent_service table">
+        <createTable tableName="account_agent_service">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_agent_service"/>
+            </column>
+            <column name="account_agent" type="BIGINT"/>
+            <column name="service" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- Agent : Indexes                                            -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+
+    <changeSet author="kebrings" id="1689398584253-31">
+        <createIndex indexName="IXFK_account_agent_account" tableName="account_agent">
+            <column name="account"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="kebrings" id="1689398584253-32">
+        <createIndex indexName="IXFK_account_agent_function_account_agent" tableName="account_agent_function">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-33">
+        <createIndex indexName="IXFK_account_agent_function_function" tableName="account_agent_function">
+            <column name="function"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-34">
+        <createIndex indexName="IXFK_account_agent_service_account_agent" tableName="account_agent_service">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-35">
+        <createIndex indexName="IXFK_account_agent_service_service" tableName="account_agent_service">
+            <column name="service"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- .......................................................... -->
+    <!-- Agent : Foreign Keys                                       -->
+    <!-- .......................................................... -->
+
+    <changeSet author="kebrings" id="1689398584253-59">
+        <addForeignKeyConstraint baseColumnNames="account" baseTableName="account_agent" constraintName="FK_account_agent_account" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-60">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="account_agent_function" constraintName="FK_account_agent_function_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-61">
+        <addForeignKeyConstraint baseColumnNames="function" baseTableName="account_agent_function" constraintName="FK_account_agent_function_function" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="function" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-62">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="account_agent_service" constraintName="FK_account_agent_service_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-63">
+        <addForeignKeyConstraint baseColumnNames="service" baseTableName="account_agent_service" constraintName="FK_account_agent_service_service" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="service" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

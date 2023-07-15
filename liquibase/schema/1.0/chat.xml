@@ -1,0 +1,311 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+
+    <!-- ========================================================== -->
+    <!-- Chat Related                                               -->
+    <!-- ========================================================== -->
+
+    <changeSet author="kebrings" id="agent_message table">
+        <createTable tableName="agent_message">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_agent_message"/>
+            </column>
+            <column name="account_agent" type="BIGINT"/>
+            <column name="content" type="TEXT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="agent_message_digest table">
+        <createTable tableName="agent_message_digest">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_agent_message_digest"/>
+            </column>
+            <column name="agent_message" type="BIGINT"/>
+            <column name="message" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="channel table">
+        <createTable tableName="channel">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_channel"/>
+            </column>
+            <column name="account" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message table">
+        <createTable tableName="message">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message"/>
+            </column>
+            <column name="sender" type="BIGINT"/>
+            <column name="channel" type="BIGINT"/>
+            <column name="depth" type="SMALLINT"/>
+            <column name="contents" type="TEXT"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message_feature table">
+        <createTable tableName="message_feature">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_feature"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="feature" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message_function table">
+        <createTable tableName="message_function">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_function"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="function" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message_nesting table">
+        <createTable tableName="message_nesting">
+            <column name="message" type="BIGINT"/>
+            <column name="depth" type="BIGINT"/>
+            <column name="ancestor" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="1689398584253-18">
+        <createTable tableName="message_service">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_service"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="service" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message_subject table">
+        <createTable tableName="message_subject">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_subject"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="subject_vector" type="BIGINT"/>
+            <column name="account_agent" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message_subject_tag table">
+        <createTable tableName="message_subject_tag">
+            <column name="messsage_subject" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_subject_tag"/>
+            </column>
+            <column name="tag_vector" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_subject_tag"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="subject_vector table">
+        <createTable tableName="subject_vector">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_subject_vector"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="tag_vector table">
+        <createTable tableName="tag_vector">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_tag_vector"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- Chat : Indexes                                             -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <changeSet author="kebrings" id="1689398584253-39">
+        <createIndex indexName="IXFK_agent_message_account_agent" tableName="agent_message">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-40">
+        <createIndex indexName="IXFK_agent_message_digest_agent_message" tableName="agent_message_digest">
+            <column name="agent_message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-41">
+        <createIndex indexName="IXFK_agent_message_digest_message" tableName="agent_message_digest">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-42">
+        <createIndex indexName="IXFK_channel_account" tableName="channel">
+            <column name="account"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-43">
+        <createIndex indexName="IXFK_message_channel" tableName="message">
+            <column name="channel"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-44">
+        <createIndex indexName="IXFK_message_feature_feature" tableName="message_feature">
+            <column name="feature"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-45">
+        <createIndex indexName="IXFK_message_feature_message" tableName="message_feature">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-46">
+        <createIndex indexName="IXFK_message_function_function" tableName="message_function">
+            <column name="function"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-47">
+        <createIndex indexName="IXFK_message_function_message" tableName="message_function">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-48">
+        <createIndex indexName="IXFK_message_nesting_message" tableName="message_nesting">
+            <column name="ancestor"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-49">
+        <createIndex indexName="IXFK_message_nesting_message_02" tableName="message_nesting">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-50">
+        <createIndex indexName="IXFK_message_service_message" tableName="message_service">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-51">
+        <createIndex indexName="IXFK_message_service_service" tableName="message_service">
+            <column name="service"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="kebrings" id="1689398584253-52">
+        <createIndex indexName="IXFK_message_subject_account_agent" tableName="message_subject">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-53">
+        <createIndex indexName="IXFK_message_subject_message" tableName="message_subject">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-54">
+        <createIndex indexName="IXFK_message_subject_subject_vector" tableName="message_subject">
+            <column name="subject_vector"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-55">
+        <createIndex indexName="IXFK_message_subject_tag_message_subject" tableName="message_subject_tag">
+            <column name="messsage_subject"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-56">
+        <createIndex indexName="IXFK_message_subject_tag_tag_vector" tableName="message_subject_tag">
+            <column name="tag_vector"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- .......................................................... -->
+    <!-- Chat : Foreign Keys                                        -->
+    <!-- .......................................................... -->
+
+    <changeSet author="kebrings" id="1689398584253-67">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="agent_message" constraintName="FK_agent_message_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-68">
+        <addForeignKeyConstraint baseColumnNames="agent_message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_agent_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="agent_message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-69">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-70">
+        <addForeignKeyConstraint baseColumnNames="account" baseTableName="channel" constraintName="FK_channel_account" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-71">
+        <addForeignKeyConstraint baseColumnNames="channel" baseTableName="message" constraintName="FK_message_channel" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="channel" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-72">
+        <addForeignKeyConstraint baseColumnNames="feature" baseTableName="message_feature" constraintName="FK_message_feature_feature" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="feature" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-73">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_feature" constraintName="FK_message_feature_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-74">
+        <addForeignKeyConstraint baseColumnNames="function" baseTableName="message_function" constraintName="FK_message_function_function" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="function" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-75">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_function" constraintName="FK_message_function_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-76">
+        <addForeignKeyConstraint baseColumnNames="ancestor" baseTableName="message_nesting" constraintName="FK_message_nesting_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-77">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_nesting" constraintName="FK_message_nesting_message_02" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-78">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_service" constraintName="FK_message_service_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-79">
+        <addForeignKeyConstraint baseColumnNames="service" baseTableName="message_service" constraintName="FK_message_service_service" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="service" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-80">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="message_subject" constraintName="FK_message_subject_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-81">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_subject" constraintName="FK_message_subject_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-82">
+        <addForeignKeyConstraint baseColumnNames="subject_vector" baseTableName="message_subject" constraintName="FK_message_subject_subject_vector" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="subject_vector" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-83">
+        <addForeignKeyConstraint baseColumnNames="messsage_subject" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_message_subject" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message_subject" validate="true"/>
+    </changeSet>
+    <changeSet author="kebrings" id="1689398584253-84">
+        <addForeignKeyConstraint baseColumnNames="tag_vector" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_tag_vector" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="tag_vector" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
