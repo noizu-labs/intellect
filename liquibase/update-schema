@@ -1,0 +1,2 @@
+#!/bin/bash
+bin/liquibase --defaultsFile=liquibase.properties update

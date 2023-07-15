@@ -1,0 +1,657 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="root (generated)" id="1689398584253-1">
+        <createTable tableName="account">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account"/>
+            </column>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-2">
+        <createTable tableName="account_agent">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_agent"/>
+            </column>
+            <column name="account" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-3">
+        <createTable tableName="account_agent_function">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_agent_function"/>
+            </column>
+            <column name="account_agent" type="BIGINT"/>
+            <column name="function" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-4">
+        <createTable tableName="account_agent_service">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_agent_service"/>
+            </column>
+            <column name="account_agent" type="BIGINT"/>
+            <column name="service" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-5">
+        <createTable tableName="account_member">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_member"/>
+            </column>
+            <column name="account" type="BIGINT"/>
+            <column name="user" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-6">
+        <createTable tableName="account_member_role">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_member_role"/>
+            </column>
+            <column name="account_member" type="BIGINT"/>
+            <column name="account_role" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-7">
+        <createTable tableName="agent_message">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_agent_message"/>
+            </column>
+            <column name="account_agent" type="BIGINT"/>
+            <column name="content" type="TEXT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-8">
+        <createTable tableName="agent_message_digest">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_agent_message_digest"/>
+            </column>
+            <column name="agent_message" type="BIGINT"/>
+            <column name="message" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-9">
+        <createTable tableName="channel">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_channel"/>
+            </column>
+            <column name="account" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-10">
+        <createTable tableName="feature">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_feature"/>
+            </column>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-11">
+        <createTable tableName="features">
+            <column name="identifier" type="BIGINT"/>
+            <column name="message" type="BIGINT"/>
+            <column name="feature" type="VARCHAR(50)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-12">
+        <createTable tableName="function">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_function"/>
+            </column>
+            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-13">
+        <createTable tableName="intuition_pump">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_intuition_pump"/>
+            </column>
+            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-14">
+        <createTable tableName="message">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message"/>
+            </column>
+            <column name="sender" type="BIGINT"/>
+            <column name="channel" type="BIGINT"/>
+            <column name="depth" type="SMALLINT"/>
+            <column name="contents" type="TEXT"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-15">
+        <createTable tableName="message_features">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_features"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="feature" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-16">
+        <createTable tableName="message_functions">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_functions"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="function" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-17">
+        <createTable tableName="message_nesting">
+            <column name="message" type="BIGINT"/>
+            <column name="depth" type="BIGINT"/>
+            <column name="ancestor" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-18">
+        <createTable tableName="message_services">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_services"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="service" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-19">
+        <createTable tableName="message_subject">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_subject"/>
+            </column>
+            <column name="message" type="BIGINT"/>
+            <column name="subject_vector" type="BIGINT"/>
+            <column name="account_agent" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-20">
+        <createTable tableName="message_subject_tag">
+            <column name="messsage_subject" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_subject_tag"/>
+            </column>
+            <column name="tag_vector" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_subject_tag"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-21">
+        <createTable tableName="prompt_lingua">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_prompt_lingua"/>
+            </column>
+            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-22">
+        <createTable tableName="service">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_service"/>
+            </column>
+            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-23">
+        <createTable tableName="subject_vector">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_subject_vector"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-24">
+        <createTable tableName="tag_vector">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_tag_vector"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-25">
+        <createTable tableName="user">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-26">
+        <createTable tableName="user_credential">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential"/>
+            </column>
+            <column name="user" type="BIGINT"/>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-27">
+        <createTable tableName="user_credential_oauth">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential_oauth"/>
+            </column>
+            <column name="provider" type="VARCHAR(50)"/>
+            <column name="account" type="VARCHAR(50)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-28">
+        <createTable tableName="user_credential_user_pass">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential_user_pass"/>
+            </column>
+            <column name="account" type="VARCHAR(50)"/>
+            <column name="password" type="VARCHAR(50)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-29">
+        <createTable tableName="versioned_string">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_versioned_string"/>
+            </column>
+            <column name="version" type="BIGINT"/>
+            <column name="title" type="VARCHAR(50)"/>
+            <column name="body" type="VARCHAR(50)"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-30">
+        <createTable tableName="versioned_string_history">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_versioned_string_history"/>
+            </column>
+            <column name="versioned_string" type="BIGINT"/>
+            <column name="version" type="BIGINT"/>
+            <column name="title" type="VARCHAR(50)"/>
+            <column name="body" type="VARCHAR(50)"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-31">
+        <createIndex indexName="IXFK_account_agent_account" tableName="account_agent">
+            <column name="account"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-32">
+        <createIndex indexName="IXFK_account_agent_function_account_agent" tableName="account_agent_function">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-33">
+        <createIndex indexName="IXFK_account_agent_function_function" tableName="account_agent_function">
+            <column name="function"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-34">
+        <createIndex indexName="IXFK_account_agent_service_account_agent" tableName="account_agent_service">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-35">
+        <createIndex indexName="IXFK_account_agent_service_service" tableName="account_agent_service">
+            <column name="service"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-36">
+        <createIndex indexName="IXFK_account_member_account" tableName="account_member">
+            <column name="account"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-37">
+        <createIndex indexName="IXFK_account_member_role_account_member" tableName="account_member_role">
+            <column name="account_member"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-38">
+        <createIndex indexName="IXFK_account_member_user" tableName="account_member">
+            <column name="user"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-39">
+        <createIndex indexName="IXFK_agent_message_account_agent" tableName="agent_message">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-40">
+        <createIndex indexName="IXFK_agent_message_digest_agent_message" tableName="agent_message_digest">
+            <column name="agent_message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-41">
+        <createIndex indexName="IXFK_agent_message_digest_message" tableName="agent_message_digest">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-42">
+        <createIndex indexName="IXFK_channel_account" tableName="channel">
+            <column name="account"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-43">
+        <createIndex indexName="IXFK_message_channel" tableName="message">
+            <column name="channel"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-44">
+        <createIndex indexName="IXFK_message_features_feature" tableName="message_features">
+            <column name="feature"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-45">
+        <createIndex indexName="IXFK_message_features_message" tableName="message_features">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-46">
+        <createIndex indexName="IXFK_message_functions_function" tableName="message_functions">
+            <column name="function"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-47">
+        <createIndex indexName="IXFK_message_functions_message" tableName="message_functions">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-48">
+        <createIndex indexName="IXFK_message_nesting_message" tableName="message_nesting">
+            <column name="ancestor"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-49">
+        <createIndex indexName="IXFK_message_nesting_message_02" tableName="message_nesting">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-50">
+        <createIndex indexName="IXFK_message_services_message" tableName="message_services">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-51">
+        <createIndex indexName="IXFK_message_services_service" tableName="message_services">
+            <column name="service"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-52">
+        <createIndex indexName="IXFK_message_subject_account_agent" tableName="message_subject">
+            <column name="account_agent"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-53">
+        <createIndex indexName="IXFK_message_subject_message" tableName="message_subject">
+            <column name="message"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-54">
+        <createIndex indexName="IXFK_message_subject_subject_vector" tableName="message_subject">
+            <column name="subject_vector"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-55">
+        <createIndex indexName="IXFK_message_subject_tag_message_subject" tableName="message_subject_tag">
+            <column name="messsage_subject"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-56">
+        <createIndex indexName="IXFK_message_subject_tag_tag_vector" tableName="message_subject_tag">
+            <column name="tag_vector"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-57">
+        <createIndex indexName="IXFK_user_credential_user" tableName="user_credential">
+            <column name="user"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-58">
+        <createIndex indexName="IXFK_versioned_string_history_versioned_string" tableName="versioned_string_history">
+            <column name="versioned_string"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-59">
+        <addForeignKeyConstraint baseColumnNames="account" baseTableName="account_agent" constraintName="FK_account_agent_account" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-60">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="account_agent_function" constraintName="FK_account_agent_function_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-61">
+        <addForeignKeyConstraint baseColumnNames="function" baseTableName="account_agent_function" constraintName="FK_account_agent_function_function" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="function" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-62">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="account_agent_service" constraintName="FK_account_agent_service_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-63">
+        <addForeignKeyConstraint baseColumnNames="service" baseTableName="account_agent_service" constraintName="FK_account_agent_service_service" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="service" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-64">
+        <addForeignKeyConstraint baseColumnNames="account" baseTableName="account_member" constraintName="FK_account_member_account" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-65">
+        <addForeignKeyConstraint baseColumnNames="account_member" baseTableName="account_member_role" constraintName="FK_account_member_role_account_member" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_member" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-66">
+        <addForeignKeyConstraint baseColumnNames="user" baseTableName="account_member" constraintName="FK_account_member_user" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-67">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="agent_message" constraintName="FK_agent_message_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-68">
+        <addForeignKeyConstraint baseColumnNames="agent_message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_agent_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="agent_message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-69">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-70">
+        <addForeignKeyConstraint baseColumnNames="account" baseTableName="channel" constraintName="FK_channel_account" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-71">
+        <addForeignKeyConstraint baseColumnNames="channel" baseTableName="message" constraintName="FK_message_channel" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="channel" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-72">
+        <addForeignKeyConstraint baseColumnNames="feature" baseTableName="message_features" constraintName="FK_message_features_feature" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="feature" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-73">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_features" constraintName="FK_message_features_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-74">
+        <addForeignKeyConstraint baseColumnNames="function" baseTableName="message_functions" constraintName="FK_message_functions_function" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="function" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-75">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_functions" constraintName="FK_message_functions_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-76">
+        <addForeignKeyConstraint baseColumnNames="ancestor" baseTableName="message_nesting" constraintName="FK_message_nesting_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-77">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_nesting" constraintName="FK_message_nesting_message_02" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-78">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_services" constraintName="FK_message_services_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-79">
+        <addForeignKeyConstraint baseColumnNames="service" baseTableName="message_services" constraintName="FK_message_services_service" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="service" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-80">
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="message_subject" constraintName="FK_message_subject_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-81">
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_subject" constraintName="FK_message_subject_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-82">
+        <addForeignKeyConstraint baseColumnNames="subject_vector" baseTableName="message_subject" constraintName="FK_message_subject_subject_vector" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="subject_vector" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-83">
+        <addForeignKeyConstraint baseColumnNames="messsage_subject" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_message_subject" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message_subject" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-84">
+        <addForeignKeyConstraint baseColumnNames="tag_vector" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_tag_vector" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="tag_vector" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-85">
+        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential_oauth" constraintName="FK_user_credential_oauth_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-86">
+        <addForeignKeyConstraint baseColumnNames="user" baseTableName="user_credential" constraintName="FK_user_credential_user" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-87">
+        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential_user_pass" constraintName="FK_user_credential_user_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
+    </changeSet>
+    <changeSet author="root (generated)" id="1689398584253-88">
+        <addForeignKeyConstraint baseColumnNames="versioned_string" baseTableName="versioned_string_history" constraintName="FK_versioned_string_history_versioned_string" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="versioned_string" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
