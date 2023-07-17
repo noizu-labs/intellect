@@ -8,16 +8,16 @@
 import Config
 
 config :noizu_intellect,
-  ecto_repos: [NoizuIntellect.Repo]
+  ecto_repos: [Noizu.Intellect.Repo]
 
 # Configures the endpoint
-config :noizu_intellect, NoizuIntellectWeb.Endpoint,
+config :noizu_intellect, Noizu.IntellectWeb.Endpoint,
   url: [host: "localhost"],
   render_errors: [
-    formats: [html: NoizuIntellectWeb.ErrorHTML, json: NoizuIntellectWeb.ErrorJSON],
+    formats: [html: Noizu.IntellectWeb.ErrorHTML, json: Noizu.IntellectWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: NoizuIntellect.PubSub,
+  pubsub_server: Noizu.Intellect.PubSub,
   live_view: [signing_salt: "vMhfcRvA"]
 
 # Configures the mailer
@@ -27,7 +27,7 @@ config :noizu_intellect, NoizuIntellectWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :noizu_intellect, NoizuIntellect.Mailer, adapter: Swoosh.Adapters.Local
+config :noizu_intellect, Noizu.Intellect.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,

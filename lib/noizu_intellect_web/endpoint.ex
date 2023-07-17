@@ -1,4 +1,4 @@
-defmodule NoizuIntellectWeb.Endpoint do
+defmodule Noizu.IntellectWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :noizu_intellect
 
   # The session will be stored in the cookie and signed,
@@ -21,7 +21,7 @@ defmodule NoizuIntellectWeb.Endpoint do
     at: "/",
     from: :noizu_intellect,
     gzip: false,
-    only: NoizuIntellectWeb.static_paths()
+    only: Noizu.IntellectWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
@@ -47,5 +47,5 @@ defmodule NoizuIntellectWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
-  plug NoizuIntellectWeb.Router
+  plug Noizu.IntellectWeb.Router
 end

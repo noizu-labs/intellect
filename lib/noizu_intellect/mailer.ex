@@ -1,3 +1,3 @@
-defmodule NoizuIntellect.Mailer do
+defmodule Noizu.Intellect.Mailer do
   use Swoosh.Mailer, otp_app: :noizu_intellect
 end

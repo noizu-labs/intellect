@@ -1,4 +1,4 @@
-defmodule NoizuIntellectWeb.CoreComponents do
+defmodule Noizu.IntellectWeb.CoreComponents do
   @moduledoc """
   Provides core UI components.
 
@@ -17,7 +17,7 @@ defmodule NoizuIntellectWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import NoizuIntellectWeb.Gettext
+  import Noizu.IntellectWeb.Gettext
 
   @doc """
   Renders a modal.
@@ -625,9 +625,9 @@ defmodule NoizuIntellectWeb.CoreComponents do
     # with our gettext backend as first argument. Translations are
     # available in the errors.po file (as we use the "errors" domain).
     if count = opts[:count] do
-      Gettext.dngettext(NoizuIntellectWeb.Gettext, "errors", msg, msg, count, opts)
+      Gettext.dngettext(Noizu.IntellectWeb.Gettext, "errors", msg, msg, count, opts)
     else
-      Gettext.dgettext(NoizuIntellectWeb.Gettext, "errors", msg, opts)
+      Gettext.dgettext(Noizu.IntellectWeb.Gettext, "errors", msg, opts)
     end
   end
 

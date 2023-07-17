@@ -1,4 +1,4 @@
-defmodule NoizuIntellect.DataCase do
+defmodule Noizu.Intellect.DataCase do
   @moduledoc """
   This module defines the setup for tests requiring
   access to the application's data layer.
@@ -10,7 +10,7 @@ defmodule NoizuIntellect.DataCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use NoizuIntellect.DataCase, async: true`, although
+  by setting `use Noizu.Intellect.DataCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -18,17 +18,17 @@ defmodule NoizuIntellect.DataCase do
 
   using do
     quote do
-      alias NoizuIntellect.Repo
+      alias Noizu.Intellect.Repo
 
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
-      import NoizuIntellect.DataCase
+      import Noizu.Intellect.DataCase
     end
   end
 
   setup tags do
-    NoizuIntellect.DataCase.setup_sandbox(tags)
+    Noizu.Intellect.DataCase.setup_sandbox(tags)
     :ok
   end
 
@@ -36,7 +36,7 @@ defmodule NoizuIntellect.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(NoizuIntellect.Repo, shared: not tags[:async])
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Noizu.Intellect.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 

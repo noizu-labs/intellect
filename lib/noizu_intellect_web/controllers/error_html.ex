@@ -1,5 +1,5 @@
-defmodule NoizuIntellectWeb.ErrorHTML do
-  use NoizuIntellectWeb, :html
+defmodule Noizu.IntellectWeb.ErrorHTML do
+  use Noizu.IntellectWeb, :html
 
   # If you want to customize your error pages,
   # uncomment the embed_templates/1 call below

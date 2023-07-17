@@ -1,4 +1,4 @@
-defmodule NoizuIntellect.Repo do
+defmodule Noizu.Intellect.Repo do
   use Ecto.Repo,
     otp_app: :noizu_intellect,
     adapter: Ecto.Adapters.Postgres

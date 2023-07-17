@@ -1,5 +1,5 @@
-defmodule NoizuIntellectWeb.PageControllerTest do
-  use NoizuIntellectWeb.ConnCase
+defmodule Noizu.IntellectWeb.PageControllerTest do
+  use Noizu.IntellectWeb.ConnCase
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")

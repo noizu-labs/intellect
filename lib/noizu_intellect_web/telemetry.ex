@@ -1,4 +1,4 @@
-defmodule NoizuIntellectWeb.Telemetry do
+defmodule Noizu.IntellectWeb.Telemetry do
   use Supervisor
   import Telemetry.Metrics
 
@@ -86,7 +86,7 @@ defmodule NoizuIntellectWeb.Telemetry do
     [
       # A module, function and arguments to be invoked periodically.
       # This function must call :telemetry.execute/3 and a metric must be added above.
-      # {NoizuIntellectWeb, :count_users, []}
+      # {Noizu.IntellectWeb, :count_users, []}
     ]
   end
 end

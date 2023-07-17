@@ -1,4 +1,4 @@
-defmodule NoizuIntellectWeb.ConnCase do
+defmodule Noizu.IntellectWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
@@ -11,7 +11,7 @@ defmodule NoizuIntellectWeb.ConnCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use NoizuIntellectWeb.ConnCase, async: true`, although
+  by setting `use Noizu.IntellectWeb.ConnCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -20,19 +20,19 @@ defmodule NoizuIntellectWeb.ConnCase do
   using do
     quote do
       # The default endpoint for testing
-      @endpoint NoizuIntellectWeb.Endpoint
+      @endpoint Noizu.IntellectWeb.Endpoint
 
-      use NoizuIntellectWeb, :verified_routes
+      use Noizu.IntellectWeb, :verified_routes
 
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
-      import NoizuIntellectWeb.ConnCase
+      import Noizu.IntellectWeb.ConnCase
     end
   end
 
   setup tags do
-    NoizuIntellect.DataCase.setup_sandbox(tags)
+    Noizu.Intellect.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

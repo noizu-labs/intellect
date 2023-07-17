@@ -9,6 +9,9 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user"/>
             </column>
+
+            <column name="name" type="VARCHAR(256)"/>
+
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
             </column>
@@ -19,11 +22,27 @@
         </createTable>
     </changeSet>
 
+    <changeSet author="kebrings" id="user_term_agreement table">
+        <createTable tableName="user_term_agreement">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_term_agreement"/>
+            </column>
+            <column name="user" type="BIGINT"/>
+            <column name="agreement_version" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
     <changeSet author="kebrings" id="user_credential table">
         <createTable tableName="user_credential">
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential"/>
             </column>
+            <column name="weight" type="BIGINT"/>
             <column name="user" type="BIGINT"/>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
@@ -44,17 +63,17 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential_oauth"/>
             </column>
             <column name="provider" type="VARCHAR(50)"/>
-            <column name="account" type="VARCHAR(50)"/>
+            <column name="account" type="VARCHAR(128)"/>
         </createTable>
     </changeSet>
 
-    <changeSet author="kebrings" id="user_credential_user_pass table">
-        <createTable tableName="user_credential_user_pass">
+    <changeSet author="kebrings" id="user_credential_login_pass table">
+        <createTable tableName="user_credential_login_pass">
             <column name="identifier" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential_user_pass"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential_login_pass"/>
             </column>
-            <column name="account" type="VARCHAR(50)"/>
-            <column name="password" type="VARCHAR(50)"/>
+            <column name="login" type="VARCHAR(128)"/>
+            <column name="password" type="VARCHAR(128)"/>
         </createTable>
     </changeSet>
 
@@ -79,8 +98,8 @@
         <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential_oauth" constraintName="FK_user_credential_oauth_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
     </changeSet>
 
-    <changeSet author="kebrings" id="user_credential_user_pass.user_credential fk">
-        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential_user_pass" constraintName="FK_user_credential_user_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
+    <changeSet author="kebrings" id="user_credential_login_pass.user_credential fk">
+        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential_login_pass" constraintName="FK_user_credential_login_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
     </changeSet>
 
 </databaseChangeLog>

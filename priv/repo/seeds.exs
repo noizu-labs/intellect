@@ -5,7 +5,7 @@
 # Inside the script, you can read and write to any of your
 # repositories directly:
 #
-#     NoizuIntellect.Repo.insert!(%NoizuIntellect.SomeSchema{})
+#     Noizu.Intellect.Repo.insert!(%Noizu.Intellect.SomeSchema{})
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.

@@ -87,7 +87,7 @@ DROP TABLE IF EXISTS public.user_credential CASCADE
 DROP TABLE IF EXISTS public.user_credential_oauth CASCADE
 ;
 
-DROP TABLE IF EXISTS public.user_credential_user_pass CASCADE
+DROP TABLE IF EXISTS public.user_credential_login_pass CASCADE
 ;
 
 DROP TABLE IF EXISTS public.versioned_string CASCADE
@@ -361,7 +361,7 @@ CREATE TABLE public.user_credential_oauth
 )
 ;
 
-CREATE TABLE public.user_credential_user_pass
+CREATE TABLE public.user_credential_login_pass
 (
 	identifier bigint NOT NULL,
 	account varchar(50) NULL,
@@ -580,11 +580,11 @@ ALTER TABLE public.user_credential_oauth ADD CONSTRAINT "PK_user_credential_oaut
 CREATE INDEX "IXFK_user_credential_oauth_user_credential" ON public.user_credential_oauth (identifier ASC)
 ;
 
-ALTER TABLE public.user_credential_user_pass ADD CONSTRAINT "PK_user_credential_user_pass"
+ALTER TABLE public.user_credential_login_pass ADD CONSTRAINT "PK_user_credential_login_pass"
 	PRIMARY KEY (identifier)
 ;
 
-CREATE INDEX "IXFK_user_credential_user_pass_user_credential" ON public.user_credential_user_pass (identifier ASC)
+CREATE INDEX "IXFK_user_credential_login_pass_user_credential" ON public.user_credential_login_pass (identifier ASC)
 ;
 
 ALTER TABLE public.versioned_string ADD CONSTRAINT "PK_versioned_string"
@@ -712,7 +712,7 @@ ALTER TABLE public.user_credential_oauth ADD CONSTRAINT "FK_user_credential_oaut
 	FOREIGN KEY (identifier) REFERENCES public.user_credential (identifier) ON DELETE No Action ON UPDATE No Action
 ;
 
-ALTER TABLE public.user_credential_user_pass ADD CONSTRAINT "FK_user_credential_user_pass_user_credential"
+ALTER TABLE public.user_credential_login_pass ADD CONSTRAINT "FK_user_credential_login_pass_user_credential"
 	FOREIGN KEY (identifier) REFERENCES public.user_credential (identifier) ON DELETE No Action ON UPDATE No Action
 ;
 

@@ -1,0 +1,12 @@
+<div class="flex justify-center items-center">
+  <div class="align-center w-3/5">
+    <div class="min-h-screen w-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <%= live_render(
+      @conn,
+      Noizu.IntellectWeb.LoginForm,
+      container: {:div, [class: "w-full"]},
+      session: %{"active_project" => assigns[:active_project]}
+      ) %>
+    </div>
+  </div>
+</div>

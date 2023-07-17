@@ -1,11 +1,11 @@
-defmodule NoizuIntellectWeb.Router do
-  use NoizuIntellectWeb, :router
+defmodule Noizu.IntellectWeb.Router do
+  use Noizu.IntellectWeb, :router
 
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
-    plug :put_root_layout, {NoizuIntellectWeb.Layouts, :root}
+    plug :put_root_layout, {Noizu.IntellectWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
@@ -14,14 +14,14 @@ defmodule NoizuIntellectWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", NoizuIntellectWeb do
+  scope "/", Noizu.IntellectWeb do
     pipe_through :browser
 
     get "/", PageController, :home
   end
 
   # Other scopes may use custom stacks.
-  # scope "/api", NoizuIntellectWeb do
+  # scope "/api", Noizu.IntellectWeb do
   #   pipe_through :api
   # end
 
@@ -37,7 +37,7 @@ defmodule NoizuIntellectWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: NoizuIntellectWeb.Telemetry
+      live_dashboard "/dashboard", metrics: Noizu.IntellectWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end

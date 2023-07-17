@@ -1,4 +1,4 @@
-defmodule NoizuIntellect.MixProject do
+defmodule Noizu.Intellect.MixProject do
   use Mix.Project
 
   def project do
@@ -9,7 +9,12 @@ defmodule NoizuIntellect.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [
+        summary: [
+          threshold: 0
+        ]
+      ]
     ]
   end
 
@@ -18,8 +23,8 @@ defmodule NoizuIntellect.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {NoizuIntellect.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      mod: {Noizu.Intellect.Application, []},
+      extra_applications: [:logger, :runtime_tools, :noizu_labs_core, :noizu_labs_entities, :noizu_labs_open_ai]
     ]
   end
 
@@ -38,18 +43,43 @@ defmodule NoizuIntellect.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.18.16"},
+      #{:phoenix_live_view, "~> 0.18.16"},
+      {:phoenix_live_view, github: "noizu/phoenix_live_view", branch: "0.18.18", override: true},
+      {:earmark, "~> 1.4"},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.7.2"},
       {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:swoosh, "~> 1.3"},
-      {:finch, "~> 0.13"},
+      {:finch, "~> 0.15"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
-      {:plug_cowboy, "~> 2.5"}
+      {:plug_cowboy, "~> 2.5"},
+      {:quantum, "~> 3.0"},
+      {:bcrypt_elixir, "~> 2.0"},
+      {:elixir_uuid, "~> 1.2" },
+      {:ueberauth, "~> 0.10.5"},
+      {:guardian, "~> 2.3.1"},
+      {:poison, "~> 3.1.0"},
+      {:redix, "~> 1.1"},
+      {:timex, "~> 3.7.9"},
+      {:fast_yaml, "~> 1.0.36"},
+      {:ex_fixer, github: "noizu/ex_fixer", branch: "master", only: [:dev, :test]},
+      # Discord  https://blog.discordapp.com/scaling-elixir-f9b8e1e7c29b
+      {:fastglobal, "~> 1.0"}, # https://github.com/discordapp/fastglobal
+      {:semaphore, "~> 1.0"}, # https://github.com/discordapp/semaphore
+
+
+      {:junit_formatter, "~> 3.3", only: [:test]},
+
+      # Internal - Dev
+
+      {:noizu_github, path: "elixir-framework/apps/noizu_github"},
+      {:noizu_labs_open_ai, path: "elixir-framework/apps/noizu_labs_open_ai"},
+      {:noizu_labs_entities_ecto, path: "elixir-framework/apps/entities/ecto_entities"},
+      {:noizu_labs_services, path: "elixir-framework/apps/noizu_labs_services"},
     ]
   end
 

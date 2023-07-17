@@ -22,13 +22,78 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}})
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+
+
+//----------------------------------
+// Hooks
+//----------------------------------
+let Hooks = {}
+
+
+Hooks.JS_FORWARD = {
+    mounted() {
+        this.handleEvent("js_push", (payload) => {
+            this.liveSocket.execJS(this.el, JSON.stringify(payload.js))
+        })
+    },
+}
+
+let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, params: {_csrf_token: csrfToken}})
+
+
+//---------------------------------
+// Apply Extension
+//---------------------------------
+const jsExtension = new Map();
+jsExtension.set('version', '0.18.18');
+const jsExtensionMethods = new Map();
+jsExtensionMethods.set('exec_toggle_attr', function(eventType, phxEvent, view, sourceEl, el, {attr: [attr, val]}){
+    if (el.hasAttribute(attr)) {
+        if (val == 'true' || value == 'false') {
+            let cur = el.getAttribute(attr);
+            if (cur == 'true') {
+                cur = 'false';
+                this.setOrRemoveAttrs(el, [[attr, cur]], [])
+            } else if (cur == 'false') {
+                cur = 'true';
+                this.setOrRemoveAttrs(el, [[attr, cur]], [])
+            } else {
+                this.setOrRemoveAttrs(el, [], [[attr, val]])
+            }
+        } else {
+            this.setOrRemoveAttrs(el, [], [[attr, val]])
+        }
+    }  else {
+        this.setOrRemoveAttrs(el, [[attr, val]], [])
+    }
+});
+
+jsExtension.set('methods', jsExtensionMethods);
+let live_extension = {
+    jsExtension: jsExtension
+}
+
+liveSocket.loadExtension(live_extension);
+
+
+
+//---------------------------------
+// Proceed
+//---------------------------------
+// Show progress bar on live navigation and form submits
+topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
+window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
+window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+
+
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
@@ -38,4 +103,3 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
-

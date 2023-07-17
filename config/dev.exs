@@ -1,7 +1,7 @@
 import Config
 
 # Configure your database
-config :noizu_intellect, NoizuIntellect.Repo,
+config :noizu_intellect, Noizu.Intellect.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -17,7 +17,7 @@ config :noizu_intellect, NoizuIntellect.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we use it
 # with esbuild to bundle .js and .css sources.
-config :noizu_intellect, NoizuIntellectWeb.Endpoint,
+config :noizu_intellect, Noizu.IntellectWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {0, 0, 0, 0}, port: 4123],
@@ -54,7 +54,7 @@ config :noizu_intellect, NoizuIntellectWeb.Endpoint,
 # different ports.
 
 # Watch static and templates for browser reloading.
-config :noizu_intellect, NoizuIntellectWeb.Endpoint,
+config :noizu_intellect, Noizu.IntellectWeb.Endpoint,
   live_reload: [
     patterns: [
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",

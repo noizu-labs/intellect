@@ -1,12 +1,12 @@
-defmodule NoizuIntellectWeb do
+defmodule Noizu.IntellectWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.
 
   This can be used in your application as:
 
-      use NoizuIntellectWeb, :controller
-      use NoizuIntellectWeb, :html
+      use Noizu.IntellectWeb, :controller
+      use Noizu.IntellectWeb, :html
 
   The definitions below will be executed for every controller,
   component, etc, so keep them short and clean, focused
@@ -17,7 +17,7 @@ defmodule NoizuIntellectWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  def static_paths, do: ~w(assets fonts images favicon.png robots.txt)
 
   def router do
     quote do
@@ -39,11 +39,11 @@ defmodule NoizuIntellectWeb do
   def controller do
     quote do
       use Phoenix.Controller,
-        formats: [:html, :json],
-        layouts: [html: NoizuIntellectWeb.Layouts]
+          formats: [:html, :json],
+          layouts: [html: Noizu.IntellectWeb.Layouts]
 
       import Plug.Conn
-      import NoizuIntellectWeb.Gettext
+      import Noizu.IntellectWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -52,7 +52,7 @@ defmodule NoizuIntellectWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {NoizuIntellectWeb.Layouts, :app}
+          layout: {Noizu.IntellectWeb.Layouts, :app}
 
       unquote(html_helpers())
     end
@@ -72,7 +72,7 @@ defmodule NoizuIntellectWeb do
 
       # Import convenience functions from controllers
       import Phoenix.Controller,
-        only: [get_csrf_token: 0, view_module: 1, view_template: 1]
+             only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
       # Include general helpers for rendering HTML
       unquote(html_helpers())
@@ -84,9 +84,10 @@ defmodule NoizuIntellectWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components and translation
-      import NoizuIntellectWeb.CoreComponents
-      import NoizuIntellectWeb.Gettext
-
+      import Noizu.IntellectWeb.CoreComponents
+      import Noizu.IntellectWeb.Gettext
+      import Noizu.Core.Helpers
+      import Noizu.IntellectWeb.Helpers.Time
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
 
@@ -98,9 +99,9 @@ defmodule NoizuIntellectWeb do
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
-        endpoint: NoizuIntellectWeb.Endpoint,
-        router: NoizuIntellectWeb.Router,
-        statics: NoizuIntellectWeb.static_paths()
+          endpoint: Noizu.IntellectWeb.Endpoint,
+          router: Noizu.IntellectWeb.Router,
+          statics: Noizu.IntellectWeb.static_paths()
     end
   end
 

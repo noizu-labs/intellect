@@ -1,9 +1,36 @@
-defmodule NoizuIntellectWeb.PageController do
-  use NoizuIntellectWeb, :controller
+defmodule Noizu.IntellectWeb.PageController do
+  use Noizu.IntellectWeb, :controller
+  import Noizu.Core.Helpers
+  require Noizu.EntityReference.Records
+  require Noizu.EntityReference.Protocol
+  alias Noizu.EntityReference.Records, as: R
+  alias Noizu.EntityReference.Protocol, as: ERP
 
   def home(conn, _params) do
     # The home page is often custom made,
     # so skip the default app layout.
-    render(conn, :home, layout: false)
+    context = Noizu.Context.system()
+    with active_user = %Noizu.Intellect.User{} <- Noizu.IntellectWeb.Guardian.Plug.current_resource(conn) do
+#      proj = Noizu.Intellect.Project.entity(1006, context) |> ok?()
+#      active_member = Noizu.Intellect.Project.Member.Repo.by_project_and_user(proj, active_user, context, nil) |> ok?()
+#      channel = R.ref(module: Noizu.Intellect.Channel, identifier: 1008)
+#                |> ERP.entity(context)
+#                |> ok?()
+#                |> IO.inspect()
+#
+#      render(conn, :home,
+#        %{
+#          active_member: active_member,
+#          active_user: active_user,
+#          active_project: proj,
+#          active_channel: channel,
+#          layout: false
+#        }
+#      )
+      render(conn, :home, layout: false)
+    else
+      _ ->
+        render(conn, :login, layout: false)
+    end
   end
 end
