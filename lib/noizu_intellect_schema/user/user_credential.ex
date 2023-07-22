@@ -7,7 +7,7 @@ defmodule Noizu.Intellect.Schema.User.Credential do
     field :weight, :integer
     field :type, Noizu.Intellect.Schema.Enum.User.Credential.Type
     belongs_to :user, Noizu.Intellect.Schema.User, references: :identifier
-    has_one :details, Noizu.Intellect.Schema.VersionedString, references: :identifier
+    has_one :details, Noizu.Entity.Reference, references: :identifier
     field :created_on, :utc_datetime_usec
     field :modified_on, :utc_datetime_usec
     field :deleted_on, :utc_datetime_usec
