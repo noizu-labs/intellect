@@ -11,8 +11,8 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_versioned_string"/>
             </column>
             <column name="version" type="BIGINT"/>
-            <column name="title" type="VARCHAR(256)"/>
-            <column name="body" type="VARCHAR(1024)"/>
+            <column name="title" type="VARCHAR(512)"/>
+            <column name="body" type="TEXT"/>
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
             </column>
@@ -30,8 +30,8 @@
             </column>
             <column name="versioned_string" type="BIGINT"/>
             <column name="version" type="BIGINT"/>
-            <column name="title" type="VARCHAR(256)"/>
-            <column name="body" type="VARCHAR(1024)"/>
+            <column name="title" type="VARCHAR(512)"/>
+            <column name="body" type="TEXT"/>
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
             </column>

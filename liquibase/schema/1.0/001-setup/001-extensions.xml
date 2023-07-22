@@ -3,7 +3,9 @@
 
 
     <!-- ========================================================== -->
+    <!-- ========================================================== -->
     <!-- Extensions                                                 -->
+    <!-- ========================================================== -->
     <!-- ========================================================== -->
 
     <changeSet author="kebrings" id="install extensions: cube">
@@ -43,25 +45,5 @@
             CREATE EXTENSION IF NOT EXISTS timescaledb;
         </sql>
     </changeSet>
-
-    <!--
-        <changeSet author="kebrings" id="audit_state">
-        <sql dbms="postgresql" splitStatements="true" stripComments="true">
-            DO $$ BEGIN
-            CREATE TYPE audit_state AS ENUM(
-            'none',
-            'pending',
-            'queued',
-            'processing',
-            'complete',
-            'review',
-            'archived'
-            );
-            EXCEPTION
-            WHEN duplicate_object THEN null;
-            END $$;
-        </sql>
-    </changeSet>
-    -->
 
 </databaseChangeLog>

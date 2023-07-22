@@ -6,14 +6,12 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
 
-    <include relativeToChangelogFile="true" file="initial-setup.xml"/>
-    <include relativeToChangelogFile="true" file="versioned-string.xml"/>
-    <include relativeToChangelogFile="true" file="tools-features.xml"/>
-
-    <include relativeToChangelogFile="true" file="user.xml"/>
-    <include relativeToChangelogFile="true" file="account.xml"/>
-    <include relativeToChangelogFile="true" file="agent.xml"/>
-    <include relativeToChangelogFile="true" file="chat.xml"/>
+    <include relativeToChangelogFile="true" file="001-setup/schema.xml"/>
+    <include relativeToChangelogFile="true" file="002-types/schema.xml"/>
+    <include relativeToChangelogFile="true" file="003-tools/schema.xml"/>
+    <include relativeToChangelogFile="true" file="004-user/schema.xml"/>
+    <include relativeToChangelogFile="true" file="005-project/schema.xml"/>
+    <include relativeToChangelogFile="true" file="006-chat/schema.xml"/>
 
     <!--
         <include relativeToChangelogFile="true" file="1.0/schema.xml"/>

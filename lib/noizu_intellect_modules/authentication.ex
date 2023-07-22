@@ -7,21 +7,19 @@ defmodule Noizu.Intellect.AuthenticationModule do
   import Ecto.Query
 
   def login_exists?(login) do
-#    q = from x in Noizu.Intellect.Schema.Credential.Login,
-#             where: x.login == ^login,
-#             where: is_nil(x.deleted_on),
-#             join: x2 in Noizu.Intellect.Schema.Credential,
-#             on: x2.identifier == x.credential_id,
-#             join: x3 in Noizu.Intellect.Schema.User,
-#             on: x3.identifier == x2.user_id,
-#             select: {x, x3}
-#    case Noizu.Intellect.Repo.all(q) do
-#      [] -> false
-#      v when is_list(v) ->
-#        true
-#      _ -> false
-#    end
-    false
+    q = from ucp in Noizu.Intellect.Schema.Credential.LoginPass,
+        join: uc in Noizu.Intellect.Schema.Credential,
+        on: uc.identifier == ucp.identifier,
+        join: u in Noizu.Intellect.Schema.Yser,
+        on: u.identifier == uc.user_id,
+        where: ucp.login == ^login,
+        where: is_nil(uc.deleted_on),
+        where: is_nil(u.deleted_on),
+        select: true
+    case Noizu.Intellect.Repo.all(q) do
+      [true] -> true
+      _ -> false
+    end
   end
 
   def authenticate(login, password) do

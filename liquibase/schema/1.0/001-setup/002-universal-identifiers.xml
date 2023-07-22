@@ -1,0 +1,165 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+
+    <!-- ========================================================== -->
+    <!-- ========================================================== -->
+    <!-- Universal Identifier                                       -->
+    <!-- ========================================================== -->
+    <!-- ========================================================== -->
+
+    <changeSet author="kebrings" id="UID Tables">
+        <createTable tableName="universal_identifier_repo_index">
+            <column name="identifier" type="UUID">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="index" type="BIGINT"/>
+        </createTable>
+        <createTable tableName="universal_identifier_repo_meta">
+            <column name="identifier" type="UUID">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="TEXT"/>
+            <column name="sequence" type="TEXT"/>
+        </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="UID Sequence">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+            CREATE SEQUENCE universal_identifier_repo_index_sequence START 1 INCREMENT 1;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DELETE SEQUENCE universal_identifier_repo_index_sequence;
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="drop_uid_sequence Function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+CREATE OR REPLACE FUNCTION drop_uid_sequence(uid_uuid UUID)
+RETURNS BOOL AS
+$$
+DECLARE
+    sequence_name TEXT;
+BEGIN
+    -- Get sequence name from universal_identifier_repo_index
+    SELECT sequence INTO sequence_name
+    FROM universal_identifier_repo_index
+    WHERE identifier = uid_uuid;
+
+    IF sequence_name IS NOT NULL THEN
+    -- Drop sequence
+    EXECUTE format('DROP SEQUENCE IF EXISTS "%I"', sequence_name);
+
+    -- Delete entry from universal_identifier_repo_index
+    DELETE FROM universal_identifier_repo_index
+    WHERE identifier = uid_uuid;
+
+    -- Delete entry from universal_identifier_repo_meta
+    DELETE FROM universal_identifier_repo_meta
+    WHERE identifier = uid_uuid;
+    END IF;
+    return true;
+END;
+$$
+LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DO $$
+                DECLARE
+                    repo UUID;
+                BEGIN
+                    FOR repo IN SELECT identifier FROM universal_identifier_repo_index
+                    LOOP
+                        PERFORM drop_uid_sequence(repo);
+                    END LOOP;
+                    DROP FUNCTION IF EXISTS drop_uid_sequence(uid_uuid UUID);
+                END;
+                $$;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="create_uid_sequence Function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+CREATE OR REPLACE FUNCTION create_uid_sequence(repo UUID, repo_name text)
+RETURNS BOOL AS
+$$
+BEGIN
+    -- Create sequence
+    EXECUTE format('CREATE SEQUENCE "uid_sequence_%s" START 1 INCREMENT 1;', repo::TEXT);
+
+    -- Insert into universal_identifier_repo_index table
+    INSERT INTO universal_identifier_repo_index(identifier, index)
+    VALUES (repo, nextval('universal_identifier_repo_index_sequence'));
+
+    -- Insert into universal_identifier_repo_meta table
+    INSERT INTO universal_identifier_repo_meta(identifier, name, sequence)
+    VALUES (repo, repo_name, format('"uid_sequence_%s"', repo::TEXT));
+
+    return true;
+END;
+$$
+LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DROP FUNCTION IF EXISTS create_uid_sequence(repo UUID, repo_name text);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="set_uid_sequence Function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+CREATE OR REPLACE FUNCTION set_uid_sequence(repo UUID, value bigint)
+RETURNS
+    TABLE (current_value BIGINT) AS
+$$
+DECLARE
+    repo_index SMALLINT;
+BEGIN
+    EXECUTE format('SELECT setval(''"uid_sequence_%s"'', value, false)',  repo::TEXT);
+    SELECT index into repo_index from universal_identifier_repo_index where identifier = repo;
+    current_value := value * 1000 + repo_index;
+    RETURN NEXT;
+END;
+$$
+LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DROP FUNCTION IF EXISTS set_uid_sequence(repo UUID, value bigint);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="get_uid_sequence Function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+CREATE OR REPLACE FUNCTION get_uid_sequence(repo UUID)
+RETURNS TABLE (current_value BIGINT) AS
+$$
+DECLARE
+    repo_index SMALLINT;
+BEGIN
+    EXECUTE format('SELECT nextval(''"uid_sequence_%s"'')',  repo::TEXT) into current_value ;
+    SELECT index into repo_index from universal_identifier_repo_index where identifier = repo;
+    current_value := current_value * 1000 + repo_index;
+    RETURN NEXT;
+END;
+$$
+LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DROP FUNCTION IF EXISTS get_uid_sequence(repo UUID);
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

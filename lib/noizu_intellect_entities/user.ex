@@ -59,15 +59,6 @@ defmodule Noizu.Intellect.User do
     {:ok, e}
   end
 
-  def entity(id, _) when is_integer(id) do
-    # temp logic.
-    if record = Noizu.Intellect.Repo.get(Noizu.Intellect.Schema.User, id) do
-      from_record(record)
-    else
-      {:error, :not_found}
-    end
-  end
-
   defimpl Noizu.Entity.Protocol do
     def layer_identifier(entity, _layer) do
       {:ok, entity.identifier}
@@ -78,22 +69,23 @@ defmodule Noizu.Intellect.User do
   defmodule Repo do
     use Noizu.Repo
     def_repo()
-#
-#    def register(name, context, options) do
-#      %Noizu.Intellect.User{
-#        name: name,
-#        last_terms: DateTime.utc_now(),
-#        time_stamp: Noizu.Entity.TimeStamp.now()
-#      } |> Noizu.Intellect.Entity.Repo.create(context, options)
-#    end
-#
-#    def register_with_login(name, email, password, context, options) do
-#      with {:ok, user} <- register(name, context, options),
-#           {:ok, _login} <- Noizu.Intellect.Credential.add_login(user, email, password, context, options) do
-#        {:ok, user}
-#      end
-#    end
 
+    @doc """
+    @todo Handle Terms version agreed to.
+    """
+    def register(name, context, options) do
+      %Noizu.Intellect.User{
+        name: name,
+        time_stamp: Noizu.Entity.TimeStamp.now()
+      } |> Noizu.Intellect.Entity.Repo.create(context, options)
+    end
+
+    def register_with_login(name, email, password, context, options) do
+      with {:ok, user} <- register(name, context, options),
+           {:ok, _login} <- Noizu.Intellect.Credential.Repo.register_login(user, email, password, context, options) do
+        {:ok, user}
+      end
+    end
   end
 
 end

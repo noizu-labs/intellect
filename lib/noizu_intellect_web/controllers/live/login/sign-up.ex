@@ -19,16 +19,6 @@ defmodule Noizu.IntellectWeb.LoginForm.SignUp do
     <% end %>
     <form name="signup" phx-submit="submit:sign-up" >
       <div class="mb-4">
-        <label for="invite"
-          class="block text-gray-700 font-bold mb-2"
-        >Invite Code</label>
-        <input
-          type="text"
-          id="invite"
-          name="invite"
-          class="border rounded-lg py-2 px-3 w-full" value={assigns[:form]["code"]} placeholder="Enter your Noizu Intellect Invite Code" required>
-      </div>
-      <div class="mb-4">
         <label for="name" class="block text-gray-700 font-bold mb-2">Name</label>
         <input type="text" id="name" name="name" class="border rounded-lg py-2 px-3 w-full" value={assigns[:form]["name"]}  placeholder="Enter your name" required>
       </div>
