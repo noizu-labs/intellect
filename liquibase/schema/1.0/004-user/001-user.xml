@@ -21,6 +21,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="user uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Repo') , 'Elixir.Noizu.Intellect.User.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="user_term_agreement table">
         <createTable tableName="user_term_agreement">
             <column name="identifier" type="BIGINT">
@@ -36,14 +48,27 @@
         </createTable>
     </changeSet>
 
+
+
+    <changeSet author="kebrings" id="user_term_agreement uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.TermAgreement.Repo') , 'Elixir.Noizu.Intellect.User.TermAgreement.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.TermAgreement.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="user_credential table">
         <createTable tableName="user_credential">
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential"/>
             </column>
             <column name="weight" type="BIGINT"/>
-            <column name="user" type="BIGINT"/>
-            <column name="details" type="BIGINT">
+            <column name="user_id" type="BIGINT"/>
+            <column name="details_id" type="BIGINT">
                 <constraints nullable="true"/>
             </column>
             <column name="type" type="USER_CREDENTIAL_TYPE"/>
@@ -57,20 +82,32 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="kebrings" id="user_credential_oauth table">
-        <createTable tableName="user_credential_oauth">
+
+    <changeSet author="kebrings" id="user_credential uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Credential.Repo') , 'Elixir.Noizu.Intellect.User.Credential.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Credential.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="user_credential__oauth table">
+        <createTable tableName="user_credential__oauth">
             <column name="identifier" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential_oauth"/>
+                <constraints nullable="false" primaryKey="true"/>
             </column>
             <column name="provider" type="VARCHAR(50)"/>
             <column name="account" type="VARCHAR(128)"/>
         </createTable>
     </changeSet>
 
-    <changeSet author="kebrings" id="user_credential_login_pass table">
-        <createTable tableName="user_credential_login_pass">
+    <changeSet author="kebrings" id="user_credential__login_pass table">
+        <createTable tableName="user_credential__login_pass">
             <column name="identifier" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential_login_pass"/>
+                <constraints nullable="false" primaryKey="true"/>
             </column>
             <column name="login" type="VARCHAR(128)"/>
             <column name="password" type="VARCHAR(128)"/>
@@ -83,7 +120,7 @@
 
     <changeSet author="kebrings" id="user_credential.user index">
         <createIndex indexName="IXFK_user_credential_user" tableName="user_credential">
-            <column name="user"/>
+            <column name="user_id"/>
         </createIndex>
     </changeSet>
 
@@ -91,15 +128,15 @@
     <!-- User : Foreign Keys                                        -->
     <!-- .......................................................... -->
     <changeSet author="kebrings" id="user_credential.user fk">
-        <addForeignKeyConstraint baseColumnNames="user" baseTableName="user_credential" constraintName="FK_user_credential_user" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="user_credential" constraintName="FK_user_credential_user" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
     </changeSet>
 
     <changeSet author="kebrings" id="user_credential_oauth.user_credential fk">
-        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential_oauth" constraintName="FK_user_credential_oauth_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential__oauth" constraintName="FK_user_credential_oauth_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
     </changeSet>
 
     <changeSet author="kebrings" id="user_credential_login_pass.user_credential fk">
-        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential_login_pass" constraintName="FK_user_credential_login_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential__login_pass" constraintName="FK_user_credential_login_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
     </changeSet>
 
 </databaseChangeLog>

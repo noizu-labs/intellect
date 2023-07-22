@@ -3,7 +3,7 @@
 # Copyright (C) 2023 Noizu Labs, Inc. All rights reserved.
 #-------------------------------------------------------------------------------
 
-defmodule Noizu.Intellect.User.Credential do
+defmodule Noizu.Intellect.User.Credential.LoginPass do
   use Noizu.Entities
   use Noizu.Core
   alias Noizu.Intellect.User.Credential
@@ -12,18 +12,11 @@ defmodule Noizu.Intellect.User.Credential do
 
   @vsn 1.0
   @sref "credential"
-  @persistence ecto_store(Noizu.Intellect.Schema.User.Credential, Noizu.Intellect.Repo)
+  @persistence ecto_store(Noizu.Intellect.Schema.User.Credential.LoginPass, Noizu.Intellect.Repo)
   def_entity do
     identifier :integer
-    @store [name: :user_id]
-    field :user, nil, Noizu.Entity.Reference
-
-    @store [name: :details_id]
-    field :details, nil, Noizu.Entity.VersionedString
-
-    field :type
-
-    field :time_stamp, nil, Noizu.Entity.TimeStamp
+    field :login
+    field :password
   end
 
   defimpl Noizu.Entity.Protocol do
@@ -31,7 +24,6 @@ defmodule Noizu.Intellect.User.Credential do
       {:ok, entity.identifier}
     end
   end
-
 
   defmodule Repo do
     use Noizu.Repo
@@ -43,16 +35,14 @@ defmodule Noizu.Intellect.User.Credential do
     def_repo()
 
 
-    def register_login(user, login, pass, context, options) do
+    def add_login(credential, login, password, context, options) do
       now = options[:current_time] || DateTime.utc_now()
-      with {:ok, credential} <- %Credential{
-                                  user: user,
-                                  type: :login,
-                                  details: %{title: "Login", body: "Default Login"},
-                                  time_stamp: TimeStamp.now(now)
-                                } |> create(context, options),
-           {:ok, credential} <- ERP.ref(credential) do
-        LoginPass.Repo.add_login(credential, login, pass, context, options)
+      with {:ok, identifier} <- ERP.id(credential) do
+        %Noizu.Intellect.User.Credential.LoginPass{
+          identifier: identifier,
+          login: login,
+          password: Bcrypt.hash_pwd_salt(password),
+        } |> Noizu.Intellect.Entity.Repo.create(context, options)
       end
     end
   end

@@ -10,13 +10,21 @@ defmodule Noizu.IntellectWeb.Router do
     plug :put_secure_browser_headers
   end
 
+  pipeline :secure_browser do
+    plug Noizu.IntellectWeb.Guardian.AuthPipeline
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
 
   scope "/", Noizu.IntellectWeb do
     pipe_through :browser
+    get "/terms-and-conditions", PageController, :terms
+    post "/login", PageController, :login
+    get "/logout", PageController, :logout
 
+    pipe_through :secure_browser
     get "/", PageController, :home
   end
 

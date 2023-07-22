@@ -22,6 +22,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="account uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Repo') , 'Elixir.Noizu.Intellect.Account.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <!-- ========================================================== -->
     <!-- Account Member Tables                                      -->
     <!-- ========================================================== -->
@@ -45,6 +57,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="account_member uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Repo') , 'Elixir.Noizu.Intellect.Account.Member.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="account_member_role table">
         <createTable tableName="account_member_role">
             <column name="identifier" type="BIGINT">
@@ -63,6 +87,18 @@
             </column>
             <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
         </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="account_member_role uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Role.Repo') , 'Elixir.Noizu.Intellect.Account.Member.Role.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Role.Repo'));
+            </sql>
+        </rollback>
     </changeSet>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->

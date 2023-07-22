@@ -46,4 +46,13 @@
         </sql>
     </changeSet>
 
+    <changeSet author="kebrings" id="install extensions: uuid-ossp">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+            CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+        </sql>
+    </changeSet>
+
+
+
+
 </databaseChangeLog>

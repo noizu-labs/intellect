@@ -24,6 +24,19 @@
     </changeSet>
 
 
+    <changeSet author="kebrings" id="feature uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Feature.Repo') , 'Elixir.Noizu.Intellect.Feature.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Feature.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
     <changeSet author="kebrings" id="function table">
         <createTable tableName="function">
             <column name="identifier" type="BIGINT">
@@ -43,6 +56,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="function uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Function.Repo') , 'Elixir.Noizu.Intellect.Function.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Function.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="intuition_pump table">
         <createTable tableName="intuition_pump">
             <column name="identifier" type="BIGINT">
@@ -60,6 +85,18 @@
             </column>
             <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
         </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="intuition_pump uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.IntuitionPump.Repo') , 'Elixir.Noizu.Intellect.IntuitionPump.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.IntuitionPump.Repo'));
+            </sql>
+        </rollback>
     </changeSet>
 
     <changeSet author="kebrings" id="prompt_lingua table">
@@ -82,6 +119,17 @@
     </changeSet>
 
 
+    <changeSet author="kebrings" id="prompt_lingua uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.PromptLingua.Repo') , 'Elixir.Noizu.Intellect.PromptLingua.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.PromptLingua.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="service table">
         <createTable tableName="service">
             <column name="identifier" type="BIGINT">
@@ -101,5 +149,16 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="service uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Service.Repo') , 'Elixir.Noizu.Intellect.Service.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Service.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
 
 </databaseChangeLog>

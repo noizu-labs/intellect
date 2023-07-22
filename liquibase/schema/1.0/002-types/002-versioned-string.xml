@@ -69,4 +69,27 @@
                 referencedTableName="versioned_string"
                 validate="true"/>
     </changeSet>
+
+    <changeSet author="kebrings" id="versioned_string uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo') , 'Elixir.Noizu.Entity.VersionedString.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_string_history uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo') , 'Elixir.Noizu.Entity.VersionedString.History.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>

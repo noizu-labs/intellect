@@ -23,6 +23,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="account_agent uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Repo') , 'Elixir.Noizu.Intellect.Account.Agent.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="account_agent_function table">
         <createTable tableName="account_agent_function">
             <column name="identifier" type="BIGINT">
@@ -43,6 +55,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="account_agent_function uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Function.Repo') , 'Elixir.Noizu.Intellect.Account.Agent.Function.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Function.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="account_agent_service table">
         <createTable tableName="account_agent_service">
             <column name="identifier" type="BIGINT">
@@ -61,6 +85,18 @@
             </column>
             <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
         </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="account_agent_service uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Service.Repo') , 'Elixir.Noizu.Intellect.Account.Agent.Service.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Service.Repo'));
+            </sql>
+        </rollback>
     </changeSet>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->

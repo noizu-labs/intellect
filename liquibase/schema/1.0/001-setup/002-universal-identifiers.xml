@@ -139,6 +139,30 @@ LANGUAGE plpgsql;
     </changeSet>
 
 
+    <changeSet author="kebrings" id="get_uid_repo Function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+CREATE OR REPLACE FUNCTION get_uid_repo(input_identifier bigint)
+RETURNS TABLE (current_value TEXT) AS
+$$
+DECLARE
+    identifier_index bigint;
+    repo_uuid UUID;
+BEGIN
+    identifier_index := input_identifier % 1000;
+    SELECT identifier into repo_uuid from universal_identifier_repo_index where index = identifier_index;
+    SELECT name into current_value from universal_identifier_repo_meta where identifier = repo_uuid;
+    RETURN NEXT;
+END;
+$$
+LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DROP FUNCTION IF EXISTS get_uid_repo(input_identifier bigint);
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="get_uid_sequence Function">
         <sql dbms="postgresql" splitStatements="false" stripComments="true">
 CREATE OR REPLACE FUNCTION get_uid_sequence(repo UUID)

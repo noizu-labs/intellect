@@ -10,3 +10,28 @@
     </div>
   </div>
 </div>
+
+<script>
+  window.addEventListener("load", (event) => {
+    window.addEventListener(`phx:auth`, (e) => {
+      console.log(e)
+      let body = JSON.stringify({
+        event: e.detail
+      })
+      let xhr = new XMLHttpRequest();
+      xhr.open('POST', '/login', true)
+      xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8')
+      xhr.setRequestHeader('x-csrf-token', "<%= Phoenix.Controller.get_csrf_token() %>")
+      xhr.send(body);
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          let response = JSON.parse(xhr.response);
+          console.log(response);
+          if (response.auth) {
+            window.location = "/";
+          }
+        }
+      }
+    })
+  });
+</script>

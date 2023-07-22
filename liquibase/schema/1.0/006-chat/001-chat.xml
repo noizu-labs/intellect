@@ -26,6 +26,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="agent_message uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Message.Repo') , 'Elixir.Noizu.Intellect.Account.Agent.Message.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Message.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="agent_message_digest table">
         <createTable tableName="agent_message_digest">
             <column name="identifier" type="BIGINT">
@@ -35,6 +47,19 @@
             <column name="message" type="BIGINT"/>
         </createTable>
     </changeSet>
+
+
+    <changeSet author="kebrings" id="agent_message_digest uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Message.Digest.Repo') , 'Elixir.Noizu.Intellect.Account.Agent.Message.Digest.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Message.Digest.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
 
 
     <changeSet author="kebrings" id="channel table">
@@ -56,6 +81,19 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="channel uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Repo') , 'Elixir.Noizu.Intellect.Account.Channel.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
     <changeSet author="kebrings" id="message table">
         <createTable tableName="message">
             <column name="identifier" type="BIGINT">
@@ -75,6 +113,18 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="message uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Repo') , 'Elixir.Noizu.Intellect.Account.Channel.Message.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="message_feature table">
         <createTable tableName="message_feature">
             <column name="identifier" type="BIGINT">
@@ -85,6 +135,19 @@
         </createTable>
     </changeSet>
 
+
+    <changeSet author="kebrings" id="message_feature uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Feature.Repo') , 'Elixir.Noizu.Intellect.Account.Channel.Message.Feature.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Feature.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
     <changeSet author="kebrings" id="message_function table">
         <createTable tableName="message_function">
             <column name="identifier" type="BIGINT">
@@ -94,6 +157,19 @@
             <column name="function" type="BIGINT"/>
         </createTable>
     </changeSet>
+
+
+    <changeSet author="kebrings" id="message_function uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Function.Repo') , 'Elixir.Noizu.Intellect.Account.Channel.Message.Function.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Function.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
 
     <changeSet author="kebrings" id="message_nesting table">
         <createTable tableName="message_nesting">

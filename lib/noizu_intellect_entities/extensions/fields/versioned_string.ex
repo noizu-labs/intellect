@@ -16,57 +16,33 @@ defmodule Noizu.Entity.VersionedString do
     field :body
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
+  use Noizu.Entity.Field.Behaviour
 
-  def id(id) when is_integer(id), do: {:ok, id}
-  def id(R.ref(module: __MODULE__, identifier: id)), do: {:ok, id}
-  def id(%__MODULE__{} = this), do: {:ok, this.identifier}
-
-  #----------------
-  #
-  #----------------
-  def kind(id) when is_integer(id), do: {:ok, __MODULE__}
-  def kind(R.ref(module: __MODULE__, identifier: id)), do: {:ok, __MODULE__}
-  def kind(%__MODULE__{} = this), do: {:ok, __MODULE__}
-
-  def ref(id) when is_integer(id), do: {:ok, R.ref(module: __MODULE__, identifier: id)}
-  def ref(R.ref(module: __MODULE__, identifier: _) = ref), do: {:ok, ref}
-  def ref(%__MODULE__{} = this), do: {:ok, R.ref(module: __MODULE__, identifier: this.identifier)}
-
-  #------------------------
-  #
-  #------------------------
-  def entity(subject, context)
-  def entity(id, _) when is_integer(id) do
-    # temp logic.
-    if record = Noizu.Intellect.Repo.get(Noizu.Intellect.Schema.VersionedString, id) do
-      from_record(record)
-    else
-      {:error, :not_found}
+  def type__before_create(%__MODULE__{} = this,_,context,options) do
+    cond do
+      this.identifier -> {:ok, this}
+      :else -> Noizu.Intellect.Entity.Repo.create(this,context,options)
     end
   end
-  def entity(R.ref(module: __MODULE__, identifier: id), context), do: entity(id, context)
-  def entity(%__MODULE__{} = this, context), do: {:ok, this}
-
-  #------------------------
-  #
-  #------------------------
-  def from_record(record) do
-    e = %__MODULE__{
-      identifier: record.identifier,
-      version: record.version,
-      title: record.title,
-      body: record.body,
-      time_stamp: %Noizu.Entity.TimeStamp{
-        created_on: record.created_on,
-        modified_on: record.modified_on,
-        deleted_on: record.deleted_on,
-      }
+  def type__before_create(%{} = settings,_,context,options) do
+    entity = %__MODULE__{
+      version: 1,
+      title: settings[:title] || "",
+      body: settings[:body] || "",
+      time_stamp: Noizu.Entity.TimeStamp.now()
     }
-    {:ok, e}
+    Noizu.Intellect.Entity.Repo.create(entity,context,options)
   end
-
-  def type_as_entity(this, _, _), do: {:ok, this}
-  def stub, do: {:ok, %__MODULE__{}}
+  def type__before_create(body,_,context,options) when is_bitstring(body) do
+    entity = %__MODULE__{
+      version: 1,
+      title: "",
+      body: body,
+      time_stamp: Noizu.Entity.TimeStamp.now()
+    }
+    Noizu.Intellect.Entity.Repo.create(entity,context,options)
+  end
+  def type__before_create(_,_,_,_), do: nil
 
   defmodule Repo do
     use Noizu.Repo
@@ -80,7 +56,7 @@ defimpl Noizu.Entity.Protocol, for: [Noizu.Entity.VersionedString]  do
   end
 end
 
-defimpl Noizu.Entity.Store.Ecto.Protocol, for: [Noizu.Entity.VersionedString] do
+defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.VersionedString] do
   require  Noizu.Entity.Meta.Persistence
   require  Noizu.Entity.Meta.Field
   alias Noizu.Entity.Meta
@@ -90,21 +66,30 @@ defimpl Noizu.Entity.Store.Ecto.Protocol, for: [Noizu.Entity.VersionedString] do
   def field_as_record(
         field,
         field_settings = Meta.Field.field_settings(name: name, store: field_store),
-        persistence_settings = Meta.Persistence.persistence_settings(store: store, table: table)
+        persistence_settings = Meta.Persistence.persistence_settings(store: store, table: table),
+        _context,
+        _options
       ) do
-    IO.inspect(field, label: "[VersionedString.field]")
-    IO.inspect(field_settings, label: "[VersionedString.field_settings]")
-    IO.inspect(persistence_settings, label: "[VersionedString.persistence_settings]")
-#    name = field_store[table][:name] || field_store[store][:name] || name
-#
-#    # We need to do a universal ecto conversion
-#    with {:ok, id} <- Noizu.EntityReference.Protocol.id(field) do
-#      {name, id}
-#    end
-    {:error, :pending}
+    as_name = field_store[table][:name] || field_store[store][:name] || name
+    {as_name, field}
   end
 
-  def field_from_record(_, record, Meta.Field.field_settings(name: name, store: field_store), Meta.Persistence.persistence_settings(store: store, table: table)) do
-    {:error, :pending}
+  def field_from_record(
+        field,
+        record,
+        Meta.Field.field_settings(name: name, store: field_store),
+        Meta.Persistence.persistence_settings(store: store, table: table),
+        context,
+        options
+      ) do
+    as_name = field_store[table][:name] || field_store[store][:name] || name
+    case Map.get(record, as_name) do
+      ref = {:ref, Noizu.Entity.VersionedString, _} ->
+        with {:ok, entity} <- Noizu.Entity.VersionedString.Repo.get(ref, context, options) do
+          {name, entity}
+        end
+      entity = %Noizu.Entity.VersionedString{} -> {name, entity}
+      _ -> nil
+    end
   end
 end

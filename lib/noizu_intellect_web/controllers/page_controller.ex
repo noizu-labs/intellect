@@ -33,4 +33,48 @@ defmodule Noizu.IntellectWeb.PageController do
         render(conn, :login, layout: false)
     end
   end
+
+
+
+  def terms(conn, _params) do
+    # The home page is often custom made,
+    # so skip the default app layout.
+    render(conn, :terms)
+  end
+
+
+  def logout(conn, _) do
+    conn
+    |> Noizu.IntellectWeb.Guardian.Plug.sign_out()
+    |> redirect(to: "/")
+  end
+
+
+  def logout(conn) do
+    conn
+    |> Noizu.IntellectWeb.Guardian.Plug.sign_out()
+    |> redirect(to: "/")
+  end
+
+  def login(conn, %{"event" => event}) do
+    with {:ok, %{"login-only" => true, "sub" => sub}} <- Noizu.IntellectWeb.Guardian.decode_and_verify(event["jwt"]),
+         {:ok, resource = %Noizu.Intellect.User{}} <- Noizu.IntellectWeb.Guardian.get_resource_by_id(sub) do
+      cond do
+        event["remember_me"] ->
+          conn
+          |> Noizu.IntellectWeb.Guardian.Plug.sign_in(resource)
+          |> Noizu.IntellectWeb.Guardian.Plug.remember_me(resource)
+          |> json(%{auth: true})
+        :else ->
+          conn
+          |> Noizu.IntellectWeb.Guardian.Plug.sign_in(resource)
+          |> json(%{auth: true})
+      end
+    else
+      _ ->
+        conn
+        |> json(%{auth: false})
+    end
+  end
+
 end

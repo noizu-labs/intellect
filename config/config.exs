@@ -7,8 +7,21 @@
 # General application configuration
 import Config
 
+
+config :noizu_labs_entities,
+       uid_provider: Noizu.Intellect.UIDProviderModule,
+       umbrella: true
+
 config :noizu_intellect,
   ecto_repos: [Noizu.Intellect.Repo]
+
+
+config :noizu_intellect, Noizu.IntellectWeb.Guardian,
+       issuer: "noizu_intellect",
+       secret_key: "lIf077euUjrkZiJKBnprpmkogsWDIrDWJZ7UakAOhNsRgje+ko7Xmk5uJbKFGdNv"
+config :noizu_intellect, Noizu.IntellectWeb.Guardian.AuthPipeline,
+       module: Noizu.IntellectWeb.Guardian,
+       error_handler: Noizu.IntellectWeb.Guardian.AuthErrorHandler
 
 # Configures the endpoint
 config :noizu_intellect, Noizu.IntellectWeb.Endpoint,

@@ -13,7 +13,12 @@ defmodule Noizu.IntellectWeb.LoginForm do
   end
 
 
-  def handle_event("nav:login", _,  socket) do
+
+
+  #-----------------------------
+  #
+  #-----------------------------
+  def show_login(socket) do
     # copy sign up details if set
     login = socket.assigns[:login]
             |> update_in([:form], &(&1 || %{}))
@@ -41,7 +46,11 @@ defmodule Noizu.IntellectWeb.LoginForm do
     {:noreply, socket}
   end
 
-  def handle_event("nav:sign-up", _,  socket) do
+
+  #-----------------------------
+  #
+  #-----------------------------
+  def show_sign_up(socket) do
     # copy sign up details if set
     signup = socket.assigns[:signup]
              |> update_in([:form], &(&1 || %{}))
@@ -68,13 +77,17 @@ defmodule Noizu.IntellectWeb.LoginForm do
     {:noreply, socket}
   end
 
-  def handle_event("submit:sign-up", form,  socket) do
+
+  #-----------------------------
+  #
+  #-----------------------------
+  def sign_up(form, socket) do
     context = Noizu.Context.system()
     options = nil
 
     unless Noizu.Intellect.AuthenticationModule.login_exists?(form["email"]) do
       Noizu.Intellect.User.Repo.register_with_login(form["name"], form["email"], form["password"], context, options)
-      socket = (with {:ack, user} <- Noizu.Intellect.AuthenticationModule.authenticate(form["email"], form["password"]),
+      socket = (with {:ack, user} <- Noizu.Intellect.AuthenticationModule.authenticate(form["email"], form["password"], Noizu.Context.system()),
                      {:ok, jwt} <- indirect_auth(user) do
                   socket
                   |> push_event("auth", %{jwt: jwt, remember_me: false})
@@ -87,26 +100,46 @@ defmodule Noizu.IntellectWeb.LoginForm do
                |> assign(signup: %{error: {:error, :user_exists}, form: form})
       {:noreply, socket}
     end
-
   end
 
-
-  def handle_event("submit:login", form, socket) do
-
-    socket = with {:ack, user} <- Noizu.Intellect.AuthenticationModule.authenticate(form["email"], form["password"]),
-                  {:ok, jwt} <- indirect_auth(user) do
+  #-----------------------------
+  #
+  #-----------------------------
+  def login(form, socket) do
+    socket = with {:ack, user} <- Noizu.Intellect.AuthenticationModule.authenticate(form["email"], form["password"], Noizu.Context.system()) |> IO.inspect,
+                  {:ok, jwt} <- indirect_auth(user) |> IO.inspect do
+      IO.puts "SUCCESS"
       socket
       |> push_event("auth", %{jwt: jwt, remember_me: form["remember_me"] == "on"})
     else
       _ -> socket
     end
-
-    {:noreply, socket}
-  end
-  def handle_event(_, _, socket) do
     {:noreply, socket}
   end
 
+
+  #-----------------------------
+  #
+  #-----------------------------
+  def indirect_auth(user) do
+    with {:ok, jwt, _} <- Noizu.IntellectWeb.Guardian.encode_and_sign(user, %{"login-only" => true}, ttl: {1, :minute}) do
+      IO.puts "SUCCESS"
+      {:ok, jwt}
+    end
+  end
+
+  #-----------------------------
+  #
+  #-----------------------------
+  def handle_event("nav:login", _,  socket), do: show_login(socket)
+  def handle_event("nav:sign-up", _,  socket), do: show_sign_up(socket)
+  def handle_event("submit:sign-up", form,  socket), do: sign_up(form, socket)
+  def handle_event("submit:login", form, socket), do: login(form, socket)
+  def handle_event(_, _, socket), do: {:noreply, socket}
+
+  #-----------------------------
+  #
+  #-----------------------------
   def mount(_, session, socket) do
     socket = socket
              |> assign(project: session["project"])
@@ -117,9 +150,4 @@ defmodule Noizu.IntellectWeb.LoginForm do
     {:ok, socket, layout: {Noizu.IntellectWeb.Layouts, :sparse}}
   end
 
-
-  def indirect_auth(user) do
-    {:ok, jwt, _} = Noizu.IntellectWeb.Guardian.encode_and_sign(user, %{"login-only" => true}, ttl: {1, :minute})
-    {:ok, jwt}
-  end
 end
