@@ -46,7 +46,7 @@ defmodule Noizu.Intellect.MixProject do
       #{:phoenix_live_view, "~> 0.18.16"},
       {:phoenix_live_view, github: "noizu/phoenix_live_view", branch: "0.18.18", override: true},
       {:earmark, "~> 1.4"},
-      {:floki, ">= 0.30.0", only: :test},
+      {:floki, ">= 0.30.0"},
       {:phoenix_live_dashboard, "~> 0.7.2"},
       {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
