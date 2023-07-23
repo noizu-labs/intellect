@@ -10,24 +10,19 @@ defmodule Noizu.IntellectWeb.PageController do
     # The home page is often custom made,
     # so skip the default app layout.
     context = Noizu.Context.system()
-    with active_user = %Noizu.Intellect.User{} <- Noizu.IntellectWeb.Guardian.Plug.current_resource(conn) do
-#      proj = Noizu.Intellect.Project.entity(1006, context) |> ok?()
-#      active_member = Noizu.Intellect.Project.Member.Repo.by_project_and_user(proj, active_user, context, nil) |> ok?()
-#      channel = R.ref(module: Noizu.Intellect.Channel, identifier: 1008)
-#                |> ERP.entity(context)
-#                |> ok?()
-#                |> IO.inspect()
-#
-#      render(conn, :home,
-#        %{
-#          active_member: active_member,
-#          active_user: active_user,
-#          active_project: proj,
-#          active_channel: channel,
-#          layout: false
-#        }
-#      )
-      render(conn, :home, layout: false)
+    with active_user = %Noizu.Intellect.User{} <- Noizu.IntellectWeb.Guardian.Plug.current_resource(conn),
+         {:ok, {active_project, active_member}} <- Noizu.Intellect.User.default_project(active_user, context),
+         {:ok, channel} <- Noizu.Intellect.Account.channel_by_slug(active_project, "general", context)
+      do
+      render(conn, :home,
+        %{
+          active_member: active_member,
+          active_user: active_user,
+          active_project: active_project,
+          active_channel: channel,
+          layout: false
+        }
+      )
     else
       _ ->
         render(conn, :login, layout: false)

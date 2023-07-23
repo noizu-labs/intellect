@@ -1,5 +1,21 @@
 import Config
 
+
+require Noizu.ConfigHelper.Extension
+import Noizu.ConfigHelper.Extension
+
+
+config :noizu_labs_open_ai,
+       openai_api_key: env_setting("OPENAI_API_KEY")
+
+
+
+config :noizu_github, NoizuLabs.Github.Config,
+       api_key: env_setting("GITHUB_API_KEY"),
+       owner: "noizu-labs",
+       repo: "the-robot-lives"
+
+
 # Configure your database
 config :noizu_intellect, Noizu.Intellect.Repo,
   username: "postgres",

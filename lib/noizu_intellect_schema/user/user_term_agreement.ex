@@ -12,7 +12,7 @@ defmodule Noizu.Intellect.Schema.User.TermAgreement do
   @doc false
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:agreement_version, :user_id, :created_on])
-    |> validate_required([:agreement_version, :user_id, :created_on])
+    |> cast(attrs, [:agreement_version, :user, :created_on])
+    |> validate_required([:agreement_version, :user, :created_on])
   end
 end

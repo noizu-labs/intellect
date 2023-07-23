@@ -5,6 +5,7 @@
 
 defmodule Noizu.Intellect.User do
   use Noizu.Entities
+  import Ecto.Query
 
   @vsn 1.0
   @sref "user"
@@ -21,6 +22,29 @@ defmodule Noizu.Intellect.User do
     end
   end
 
+  def default_project(active_user, context, options \\ nil) do
+    with {:ok, identifier} <- id(active_user) do
+      q = from account in Noizu.Intellect.Schema.Account,
+               join: member in Noizu.Intellect.Schema.Account.Member,
+               on: account.identifier == member.account,
+               join: user in Noizu.Intellect.Schema.User,
+               on: member.user == user.identifier,
+               where: user.identifier == ^identifier,
+               where: is_nil(member.deleted_on),
+               order_by: member.created_on,
+               select: {account, member},
+               limit: 1
+      case Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "Query") do
+        [{account, member}] ->
+        # Todo extend entity to support from_record here.
+          with {:ok, account} <- Noizu.Intellect.Account.entity(account.identifier, context) |> IO.inspect(label: "ACCOUNT"),
+               {:ok, member} <- Noizu.Intellect.Account.Member.entity(member.identifier, context) |> IO.inspect(label: "MEMBER") do
+            {:ok, {account, member}}
+          end
+          _ -> {:error, :not_found}
+      end
+    end
+  end
 
   defmodule Repo do
     use Noizu.Repo

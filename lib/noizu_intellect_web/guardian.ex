@@ -16,8 +16,8 @@ defmodule Noizu.IntellectWeb.Guardian do
 
   def get_resource_by_id("ref.user." <> id) do
     id = String.to_integer(id)
-    with user = %{} <- Noizu.Intellect.Repo.get(Noizu.Intellect.Schema.User, id) do
-      {:ok, struct(Noizu.Intellect.User, Map.to_list(user))}
+    with user = %{} <- Noizu.Intellect.User.entity(id, Noizu.Context.system()) do
+      {:ok, user}
     end
   end
 

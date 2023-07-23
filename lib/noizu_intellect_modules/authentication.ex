@@ -11,7 +11,7 @@ defmodule Noizu.Intellect.AuthenticationModule do
         join: uc in Noizu.Intellect.Schema.User.Credential,
         on: uc.identifier == ucp.identifier,
         join: u in Noizu.Intellect.Schema.User,
-        on: u.identifier == uc.user_id,
+        on: u.identifier == uc.user,
         where: ucp.login == ^login,
         where: is_nil(uc.deleted_on),
         where: is_nil(u.deleted_on),
@@ -28,7 +28,7 @@ defmodule Noizu.Intellect.AuthenticationModule do
              join: x2 in Noizu.Intellect.Schema.User.Credential,
              on: x2.identifier == x.identifier,
              join: x3 in Noizu.Intellect.Schema.User,
-             on: x3.identifier == x2.user_id,
+             on: x3.identifier == x2.user,
              where: is_nil(x2.deleted_on),
              where: is_nil(x3.deleted_on),
              select: {x, x3}

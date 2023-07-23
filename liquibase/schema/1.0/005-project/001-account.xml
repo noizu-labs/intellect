@@ -9,6 +9,9 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account"/>
             </column>
+            <column name="slug" remarks="account identifier slug" type="CITEXT">
+                <constraints nullable="false"/>
+            </column>
             <column name="details" remarks="versioned string" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -45,7 +48,7 @@
             <column name="account" type="BIGINT"/>
             <column name="user" type="BIGINT"/>
             <column name="details" type="BIGINT">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
@@ -69,6 +72,36 @@
         </rollback>
     </changeSet>
 
+    <changeSet author="kebrings" id="account_role table">
+        <createTable tableName="account_role">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_account_role"/>
+            </column>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="account_role uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Role.Repo') , 'Elixir.Noizu.Intellect.Account.Member.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
     <changeSet author="kebrings" id="account_member_role table">
         <createTable tableName="account_member_role">
             <column name="identifier" type="BIGINT">
@@ -77,7 +110,7 @@
             <column name="account_member" type="BIGINT"/>
             <column name="account_role" type="BIGINT"/>
             <column name="details" type="BIGINT">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
@@ -105,6 +138,12 @@
     <!-- User : Indexes                                             -->
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <changeSet author="kebrings" id="index:account.slug">
+        <createIndex indexName="IDX_account_slug" tableName="account" unique="true">
+            <column name="slug"/>
+        </createIndex>
+    </changeSet>
+
     <changeSet author="kebrings" id="1689398584253-36">
         <createIndex indexName="IXFK_account_member_account" tableName="account_member">
             <column name="account"/>
@@ -127,16 +166,157 @@
     <!-- .......................................................... -->
     <!-- Account : Foreign Keys                                     -->
     <!-- .......................................................... -->
-    <changeSet author="kebrings" id="1689398584253-64">
-        <addForeignKeyConstraint baseColumnNames="account" baseTableName="account_member" constraintName="FK_account_member_account" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
+    <changeSet author="kebrings" id="fk:account->details">
+        <addForeignKeyConstraint baseColumnNames="details" baseTableName="account"
+                                 constraintName="FK_account__details"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="identifier" referencedTableName="versioned_string" validate="true"/>
     </changeSet>
 
-    <changeSet author="kebrings" id="1689398584253-65">
-        <addForeignKeyConstraint baseColumnNames="account_member" baseTableName="account_member_role" constraintName="FK_account_member_role_account_member" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_member" validate="true"/>
+    <changeSet author="kebrings" id="1689398584253-64">
+        <addForeignKeyConstraint baseColumnNames="account" baseTableName="account_member"
+                                 constraintName="FK_account_member_account"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
     </changeSet>
 
     <changeSet author="kebrings" id="1689398584253-66">
-        <addForeignKeyConstraint baseColumnNames="user" baseTableName="account_member" constraintName="FK_account_member_user" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="user" baseTableName="account_member"
+                                 constraintName="FK_account_member_user"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
     </changeSet>
+
+    <changeSet author="kebrings" id="fk:account_member->details">
+        <addForeignKeyConstraint baseColumnNames="details" baseTableName="account_member"
+                                 constraintName="FK_account_member__details"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="identifier" referencedTableName="versioned_string" validate="true"/>
+    </changeSet>
+
+    <changeSet author="kebrings" id="1689398584253-65">
+        <addForeignKeyConstraint baseColumnNames="account_member" baseTableName="account_member_role"
+                                 constraintName="FK_account_member_role__account_member"
+                                 deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="identifier" referencedTableName="account_member" validate="true"/>
+    </changeSet>
+
+    <changeSet author="kebrings" id="fk:account_member_role->account_role">
+        <addForeignKeyConstraint baseColumnNames="account_role" baseTableName="account_member_role"
+                                 constraintName="FK_account_member_role__account_role"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="identifier" referencedTableName="account_role" validate="true"/>
+    </changeSet>
+
+    <changeSet author="kebrings" id="fk:account_member_role->details">
+        <addForeignKeyConstraint baseColumnNames="details" baseTableName="account_member_role"
+                                 constraintName="FK_account_member_role__details"
+                                 deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION"
+                                 referencedColumnNames="identifier" referencedTableName="versioned_string" validate="true"/>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="data-setup: account">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+DO $$
+DECLARE
+    account_identifier bigint;
+    account_member_identifier bigint;
+    account_member_role_identifier bigint;
+    owner_role_identifier bigint;
+    vs_identifier bigint;
+    vsh_identifier bigint;
+    vs_identifier2 bigint;
+    vsh_identifier2 bigint;
+    identifiers RECORD;
+    current_ts TIMESTAMP WITHOUT TIME ZONE;
+            BEGIN
+
+            current_ts := now();
+
+            -- details
+            SELECT current_value into vs_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
+            INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
+            values (vs_identifier, 1, 'Noizu', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
+            -- details history
+            SELECT current_value into vsh_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
+            INSERT into versioned_string_history (identifier, versioned_string, version,
+                                                  title, body, created_on, modified_on, deleted_on)
+            values (vsh_identifier, vs_identifier, 1, 'Noizu', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
+            -- account
+            SELECT current_value into account_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Repo'));
+            insert into account (identifier, slug, details, created_on, modified_on, deleted_on)
+                   values (account_identifier, 'noizu', vs_identifier, current_ts, current_ts, null);
+
+            -- Grab Keith to add as account member
+            SELECT u.identifier as uid, user_credential.identifier as cid, user_credential.details as cdid into identifiers
+            FROM public."user" as u
+                     JOIN user_credential ON user_credential."user" = u.identifier
+                     JOIN user_credential__login_pass ON user_credential__login_pass.identifier = user_credential.identifier
+            WHERE user_credential__login_pass.login = 'keith.brings@noizu.com'
+                LIMIT 1;
+            -- account_member
+            SELECT current_value into account_member_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Repo'));
+            insert into public.account_member (identifier, account, "user", details, created_on, modified_on, deleted_on)
+            values (account_member_identifier, account_identifier, identifiers.uid, NULL, current_ts, current_ts, null);
+
+
+            -- ...................
+            -- account_role
+            -- details
+            SELECT current_value into vs_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
+            INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
+            values (vs_identifier2, 1, 'Owner', 'Account Owner', current_ts, current_ts, null);
+            -- details history
+            SELECT current_value into vsh_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
+            INSERT into versioned_string_history (identifier, versioned_string, version,
+                                                  title, body, created_on, modified_on, deleted_on)
+            values (vsh_identifier2, vs_identifier2, 1, 'Owner', 'Account Owner', current_ts, current_ts, null);
+            SELECT current_value into owner_role_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Role.Repo'));
+
+            insert into public.account_role (identifier, details, created_on, modified_on, deleted_on)
+            values (owner_role_identifier, vs_identifier2, current_ts, current_ts, null);
+
+            -- ...................
+            -- account_member_role
+            -- details
+            SELECT current_value into vs_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
+            INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
+            values (vs_identifier2, 1, 'Owner', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
+            -- details history
+            SELECT current_value into vsh_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
+            INSERT into versioned_string_history (identifier, versioned_string, version,
+                                                  title, body, created_on, modified_on, deleted_on)
+            values (vsh_identifier2, vs_identifier2, 1, 'Owner', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
+
+            SELECT current_value into account_member_role_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Role.Repo'));
+            insert into account_member_role (identifier, account_member, account_role, details, created_on, modified_on, deleted_on)
+            values (account_member_role_identifier, account_member_identifier, owner_role_identifier, vs_identifier2, current_ts, current_ts, NULL);
+
+END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DO $$
+                DECLARE
+                identifiers RECORD;
+                BEGIN
+                SELECT u.identifier as uid, user_credential.identifier as cid, user_credential.details as cdid into identifiers
+                FROM public."user" as u
+                JOIN user_credential ON user_credential."user" = u.identifier
+                JOIN user_credential__login_pass ON user_credential__login_pass.identifier = user_credential.identifier
+                WHERE user_credential__login_pass.login = 'keith.brings@noizu.com'
+                LIMIT 1;
+
+                DELETE FROM public."user" where identifier = identifiers.uid;
+                DELETE FROM versioned_string where identifier = identifiers.cdid;
+                END;
+                $$ LANGUAGE plpgsql;
+            </sql>
+        </rollback>
+    </changeSet>
+
+
 
 </databaseChangeLog>

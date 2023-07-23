@@ -17,7 +17,17 @@
 </head>
 <body class="bg-gray-200">
 
-[ HERE ]
+<%= live_render(
+@conn,
+Noizu.IntellectWeb.Project,
+container: {:div, [class: "w-full h-full p-0 m-0"]},
+session: %{
+"active_channel" => assigns[:active_channel],
+"active_project" => assigns[:active_project],
+"active_user" => assigns[:active_user],
+"active_member" => assigns[:active_member]
+}
+) %>
 
 </body>
 </html>

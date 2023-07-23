@@ -1,17 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" style="scrollbar-gutter: stable;">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title suffix=" · Phoenix Framework">
-      <%= assigns[:page_title] || "Noizu.Intellect" %>
-    </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-    </script>
-  </head>
-  <body class="bg-slate-200 antialiased h-fit min-h-screen" id="base" phx-hook="JS_FORWARD">
-  <%= @inner_content %>
-  </body>
+<html class="h-full bg-white" lang="en" style="">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <meta content={get_csrf_token()} name="csrf-token">
+  <.live_title>
+  <%= assigns[:page_title] || "Noizu.Intellect" %>
+</.live_title>
+<link href="favicon.png" rel="icon" type="image/ico">
+<link href={~p"/assets/app.css"} phx-track-static rel="stylesheet">
+<script defer phx-track-static src={~p"/assets/app.js"} type="text/javascript">
+</script>
+</head>
+<body class="bg-slate-200 antialiased h-fit min-h-screen" id="base" phx-hook="JS_FORWARD">
+<%= @inner_content %>
+</body>
 </html>

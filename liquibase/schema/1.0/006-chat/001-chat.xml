@@ -60,13 +60,12 @@
         </rollback>
     </changeSet>
 
-
-
     <changeSet author="kebrings" id="channel table">
         <createTable tableName="channel">
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_channel"/>
             </column>
+            <column name="slug" type="CITEXT"/>
             <column name="account" type="BIGINT"/>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
@@ -80,7 +79,6 @@
             <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
         </createTable>
     </changeSet>
-
 
     <changeSet author="kebrings" id="channel uid sequencer">
         <sql dbms="postgresql" splitStatements="true" stripComments="true">
@@ -331,57 +329,111 @@
     <!-- .......................................................... -->
 
     <changeSet author="kebrings" id="1689398584253-67">
-        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="agent_message" constraintName="FK_agent_message_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="agent_message" constraintName="FK_agent_message_account_agent" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-68">
-        <addForeignKeyConstraint baseColumnNames="agent_message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_agent_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="agent_message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="agent_message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_agent_message" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="agent_message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-69">
-        <addForeignKeyConstraint baseColumnNames="message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="agent_message_digest" constraintName="FK_agent_message_digest_message" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-70">
-        <addForeignKeyConstraint baseColumnNames="account" baseTableName="channel" constraintName="FK_channel_account" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="account" baseTableName="channel" constraintName="FK_channel_account" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-71">
-        <addForeignKeyConstraint baseColumnNames="channel" baseTableName="message" constraintName="FK_message_channel" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="channel" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="channel" baseTableName="message" constraintName="FK_message_channel" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="channel" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-72">
-        <addForeignKeyConstraint baseColumnNames="feature" baseTableName="message_feature" constraintName="FK_message_feature_feature" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="feature" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="feature" baseTableName="message_feature" constraintName="FK_message_feature_feature" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="feature" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-73">
-        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_feature" constraintName="FK_message_feature_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_feature" constraintName="FK_message_feature_message" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-74">
-        <addForeignKeyConstraint baseColumnNames="function" baseTableName="message_function" constraintName="FK_message_function_function" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="function" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="function" baseTableName="message_function" constraintName="FK_message_function_function" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="function" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-75">
-        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_function" constraintName="FK_message_function_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_function" constraintName="FK_message_function_message" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-76">
-        <addForeignKeyConstraint baseColumnNames="ancestor" baseTableName="message_nesting" constraintName="FK_message_nesting_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="ancestor" baseTableName="message_nesting" constraintName="FK_message_nesting_message" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-77">
-        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_nesting" constraintName="FK_message_nesting_message_02" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_nesting" constraintName="FK_message_nesting_message_02" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-78">
-        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_service" constraintName="FK_message_service_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_service" constraintName="FK_message_service_message" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-79">
-        <addForeignKeyConstraint baseColumnNames="service" baseTableName="message_service" constraintName="FK_message_service_service" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="service" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="service" baseTableName="message_service" constraintName="FK_message_service_service" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="service" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-80">
-        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="message_subject" constraintName="FK_message_subject_account_agent" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="account_agent" baseTableName="message_subject" constraintName="FK_message_subject_account_agent" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="account_agent" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-81">
-        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_subject" constraintName="FK_message_subject_message" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="message" baseTableName="message_subject" constraintName="FK_message_subject_message" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-82">
-        <addForeignKeyConstraint baseColumnNames="subject_vector" baseTableName="message_subject" constraintName="FK_message_subject_subject_vector" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="subject_vector" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="subject_vector" baseTableName="message_subject" constraintName="FK_message_subject_subject_vector" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="subject_vector" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-83">
-        <addForeignKeyConstraint baseColumnNames="messsage_subject" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_message_subject" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message_subject" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="messsage_subject" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_message_subject" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="message_subject" validate="true"/>
     </changeSet>
     <changeSet author="kebrings" id="1689398584253-84">
-        <addForeignKeyConstraint baseColumnNames="tag_vector" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_tag_vector" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="tag_vector" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="tag_vector" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_tag_vector" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="tag_vector" validate="true"/>
     </changeSet>
+
+
+
+
+    <changeSet author="kebrings" id="data-setup: channel">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+            DO $$
+DECLARE
+    channel_identifier bigint;
+    vs_identifier bigint;
+    vsh_identifier bigint;
+    identifiers RECORD;
+    current_ts TIMESTAMP WITHOUT TIME ZONE;
+BEGIN
+    current_ts := now();
+
+    -- Grab Account
+    SELECT a.identifier as aid into identifiers
+    FROM public."account" as a
+    WHERE a.slug = 'noizu'
+        LIMIT 1;
+
+    -- details
+    SELECT current_value into vs_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
+    INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
+    values (vs_identifier, 1, 'Team', 'Team Chat', current_ts, current_ts, null);
+    -- details history
+    SELECT current_value into vsh_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
+    INSERT into versioned_string_history (identifier, versioned_string, version,
+                                          title, body, created_on, modified_on, deleted_on)
+    values (vsh_identifier, vs_identifier, 1, 'Team', 'Team Chat', current_ts, current_ts, null);
+
+    -- agent
+    SELECT current_value into channel_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Repo'));
+    insert into public.channel(identifier, slug, account, details, created_on, modified_on, deleted_on)
+    values (channel_identifier, 'General', identifiers.aid, vs_identifier, current_ts, current_ts, null);
+    END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DO $$
+                BEGIN
+                -- todo
+                END;
+                $$ LANGUAGE plpgsql;
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+
+
 </databaseChangeLog>

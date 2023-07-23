@@ -67,8 +67,8 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_user_credential"/>
             </column>
             <column name="weight" type="BIGINT"/>
-            <column name="user_id" type="BIGINT"/>
-            <column name="details_id" type="BIGINT">
+            <column name="user" type="BIGINT"/>
+            <column name="details" type="BIGINT">
                 <constraints nullable="true"/>
             </column>
             <column name="type" type="USER_CREDENTIAL_TYPE"/>
@@ -109,9 +109,19 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true"/>
             </column>
-            <column name="login" type="VARCHAR(128)"/>
+            <column name="login" type="CITEXT"/>
             <column name="password" type="VARCHAR(128)"/>
         </createTable>
+    </changeSet>
+
+
+    <!-- ......................................... -->
+    <!--                                           -->
+    <!-- ......................................... -->
+    <changeSet author="kebrings" id="unique:user_credential__login_pass:login">
+        <createIndex indexName="uidx_user_credential__login_pass" tableName="user_credential__login_pass" unique="true">
+            <column name="login"/>
+        </createIndex>
     </changeSet>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
@@ -120,7 +130,7 @@
 
     <changeSet author="kebrings" id="user_credential.user index">
         <createIndex indexName="IXFK_user_credential_user" tableName="user_credential">
-            <column name="user_id"/>
+            <column name="user"/>
         </createIndex>
     </changeSet>
 
@@ -128,15 +138,71 @@
     <!-- User : Foreign Keys                                        -->
     <!-- .......................................................... -->
     <changeSet author="kebrings" id="user_credential.user fk">
-        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="user_credential" constraintName="FK_user_credential_user" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="user" baseTableName="user_credential" constraintName="FK_user_credential_user" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user" validate="true"/>
     </changeSet>
 
     <changeSet author="kebrings" id="user_credential_oauth.user_credential fk">
-        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential__oauth" constraintName="FK_user_credential_oauth_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential__oauth" constraintName="FK_user_credential_oauth_user_credential" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
     </changeSet>
 
     <changeSet author="kebrings" id="user_credential_login_pass.user_credential fk">
-        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential__login_pass" constraintName="FK_user_credential_login_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential__login_pass" constraintName="FK_user_credential_login_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
     </changeSet>
+
+    <changeSet author="kebrings" id="data-setup: user">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+DO $$
+DECLARE
+    user_identifier bigint;
+    vs_identifier bigint;
+    vsh_identifier bigint;
+    credential_identifier bigint;
+    current_ts TIMESTAMP WITHOUT TIME ZONE;
+BEGIN
+    SELECT current_value into user_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Repo'));
+    current_ts := now();
+    INSERT into public."user" (identifier, name, created_on, modified_on, deleted_on)
+        values (user_identifier, 'Keith Brings', current_ts, current_ts, null);
+
+    SELECT current_value into vs_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
+    INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
+        values (vs_identifier, 1, 'Login', 'Default Login', current_ts, current_ts, null);
+
+    SELECT current_value into vsh_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
+    INSERT into versioned_string_history (identifier, versioned_string, version,
+                                          title, body, created_on, modified_on, deleted_on)
+        values (vsh_identifier, vs_identifier, 1, 'Login', 'Default Login', current_ts, current_ts, null);
+
+    SELECT current_value into credential_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Credential.Repo'));
+    INSERT into user_credential (identifier, weight, "user", details, type, created_on, modified_on, deleted_on)
+        values (credential_identifier, 100, user_identifier, vs_identifier, 'login', current_ts, current_ts, null);
+
+    INSERT into user_credential__login_pass (identifier, login, password)
+        values (credential_identifier, 'keith.brings@noizu.com', '$2b$12$mzpvliJdK6jfXfI4FEBti.2nVnbGLKbRn5uh7mi083XLxde/VhSKG');
+
+END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+DO $$
+DECLARE
+    identifiers RECORD;
+BEGIN
+    SELECT u.identifier as uid, user_credential.identifier as cid, user_credential.details as cdid into identifiers
+    FROM public."user" as u
+    JOIN user_credential ON user_credential."user" = u.identifier
+    JOIN user_credential__login_pass ON user_credential__login_pass.identifier = user_credential.identifier
+    WHERE user_credential__login_pass.login = 'keith.brings@noizu.com'
+    LIMIT 1;
+
+    DELETE FROM public."user" where identifier = identifiers.uid;
+    DELETE FROM versioned_string where identifier = identifiers.cdid;
+END;
+$$ LANGUAGE plpgsql;
+            </sql>
+        </rollback>
+    </changeSet>
+
 
 </databaseChangeLog>
