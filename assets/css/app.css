@@ -170,6 +170,11 @@
         @apply mt-4;
     }
 
+
+    #noizu-chat-input-select-mood[aria-selected="false"],#noizu-chat-input-select-mood[aria-enabled="false"] {
+        display: none;
+    }
+
     /* This file is for your main application CSS */
     #user-menu[aria-expanded="false"] #user-menu-drop {
         display: none;

@@ -44,6 +44,114 @@ Hooks.JS_FORWARD = {
     },
 }
 
+
+
+Hooks.AriaEnableToggle = {
+    mounted() {
+        this.selectListener = event => {
+            if (this.el.contains(event.target)) {
+                let hook_target = this.el.getAttribute('data-phx-hook-target');
+                if (hook_target) {
+                    let target = document.querySelector(hook_target);
+                    if (target) {
+                        this.liveSocket.execJS(target, JSON.stringify([["toggle_attr", {attr: ["aria-enabled", "true"]}]]))
+                    }
+                } else {
+                    this.liveSocket.execJS(this.el, JSON.stringify([["toggle_attr", {attr: ["aria-enabled", "true"]}]]))
+                }
+            }
+        }
+        document.addEventListener('click', this.selectListener)
+    },
+    destroyed() {
+        document.removeEventListener('click', this.selectListener)
+    }
+}
+
+
+
+Hooks.AriaSelectToggle = {
+    mounted() {
+        // if element or it's target are clicked then set self to aria-selected, otherwise set to false if enabled
+        this.toggleListener = event => {
+            let enabled = this.el.getAttribute('aria-enabled');
+            if (enabled === 'true') {
+                let hook_target = this.el.getAttribute('data-phx-hook-focus');
+                let target = (hook_target && hook_target !== "") ? document.querySelector(hook_target) : null;
+                if (this.el.contains(event.target) || (target && target.contains(event.target))) {
+                    this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-selected", "true"]}]]))
+                } else {
+                    this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-selected", "false"]}]]))
+                }
+            }
+        }
+        document.addEventListener('click', this.toggleListener)
+    },
+    destroyed() {
+        document.removeEventListener('click', this.toggleListener)
+    }
+}
+
+Hooks.AriaSelect = {
+    mounted() {
+        // if element or it's target are clicked then set self and target to aria-selected, otherwise set to false
+        this.selectListener = event => {
+
+
+
+            if (this.el.contains(event.target)) {
+                let hook_target = this.el.getAttribute('data-phx-hook-target');
+                if (hook_target && hook_target !== "") {
+                    let target = document.querySelector(hook_target);
+                    if (target) {
+                        this.liveSocket.execJS(target, JSON.stringify([["set_attr", {attr: ["aria-selected", "true"]}]]))
+                    }
+                }
+                this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-selected", "true"]}]]))
+            } else {
+                let hook_target = this.el.getAttribute('data-phx-hook-target');
+                if (hook_target && hook_target !== "") {
+                    let target = document.querySelector(hook_target);
+                    if (target.contains(event.target)) {
+                        this.liveSocket.execJS(target, JSON.stringify([["set_attr", {attr: ["aria-selected", "true"]}]]))
+                        this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-selected", "true"]}]]))
+                    }
+                }
+            }
+
+
+        }
+        document.addEventListener('click', this.selectListener)
+    },
+    destroyed() {
+        document.removeEventListener('click', this.selectListener)
+    }
+}
+
+Hooks.AriaUnselect = {
+    mounted() {
+        // neither self nor hook target selected then set self and hook target to unselected.
+        this.unselectListener = event => {
+            if (!this.el.contains(event.target)) {
+                let hook_target = this.el.getAttribute('data-phx-hook-target');
+                if (hook_target && hook_target !== "") {
+                    let target = document.querySelector(hook_target);
+                    if (target && !target.contains(event.target)) {
+                        this.liveSocket.execJS(target, JSON.stringify([["set_attr", {attr: ["aria-selected", "false"]}]]))
+                        this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-selected", "false"]}]]))
+                    }
+                } else {
+                    this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-selected", "false"]}]]))
+                }
+            }
+        }
+        document.addEventListener('click', this.unselectListener)
+    },
+    destroyed() {
+        document.removeEventListener('click', this.unselectListener)
+    }
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, params: {_csrf_token: csrfToken}})
 
