@@ -92,4 +92,340 @@
         </rollback>
     </changeSet>
 
+
+
+    <changeSet author="kebrings" id="versioned_string: create">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+CREATE OR REPLACE FUNCTION create_versioned_string(title VARCHAR(512), body TEXT)
+RETURNS BIGINT AS $$
+DECLARE
+    vs_id BIGINT;
+    vsh_id BIGINT;
+    current_timestamp TIMESTAMP WITHOUT TIME ZONE := NOW();
+BEGIN
+    -- Get new identifiers from generators
+    vs_id := generate_uid('Elixir.Noizu.Entity.VersionedString.Repo');
+    vsh_id := generate_uid('Elixir.Noizu.Entity.VersionedString.History.Repo');
+    -- Create the new versioned string
+    INSERT INTO versioned_string (identifier, version, title, body, created_on, modified_on)
+    VALUES (vs_id, 1, title, body, current_timestamp, current_timestamp);
+
+    -- Create the history entry for version 1
+    INSERT INTO versioned_string_history (identifier, versioned_string, version, title, body, created_on, modified_on)
+    VALUES (vsh_id, vs_id, 1, title, body, current_timestamp, current_timestamp);
+
+    RETURN vs_id;
+END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION create_versioned_string(title VARCHAR(512), body TEXT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_string: update">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION update_versioned_string(for_identifier BIGINT, new_title VARCHAR(512), new_body TEXT)
+        RETURNS BIGINT AS $$
+        DECLARE
+            current_version BIGINT;
+            new_version BIGINT;
+            vsh_id BIGINT;
+            current_title VARCHAR(512);
+            current_body TEXT;
+
+            existing_version_string BIGINT;
+            existing_version BIGINT;
+
+            current_timestamp TIMESTAMP WITHOUT TIME ZONE := NOW();
+            BEGIN
+            -- Check if the title or body has changed
+            SELECT version, title, body INTO current_version, current_title, current_body FROM versioned_string WHERE identifier = for_identifier;
+
+            IF current_version IS NULL THEN
+                RAISE EXCEPTION 'Versioned string with identifier % not found.', for_identifier;
+            END IF;
+
+            IF (new_title &lt;&gt; current_title OR new_body &lt;&gt; current_body) THEN
+                SELECT versioned_string, version INTO existing_version_string, existing_version FROM versioned_string_history WHERE versioned_string = for_identifier AND title = new_title AND body = new_body;
+                IF existing_version_string IS NOT NULL THEN
+                    UPDATE versioned_string set version = existing_version, title = new_title, body = new_body, modified_on = current_timestamp WHERE identifier = for_identifier;
+                    RETURN existing_version;
+                ELSE
+                    -- Get new identifier from generator
+                    vsh_id := generate_uid('VersionedString.History');
+                    new_version := (SELECT COALESCE(MAX(version), current_version) FROM versioned_string_history WHERE versioned_string = for_identifier) + 1;
+
+                    -- Update the new versioned string
+                    UPDATE versioned_string set version = new_version, title = new_title, body = new_body, modified_on = current_timestamp WHERE identifier = for_identifier;
+
+                    -- Create the history entry for the new version
+                    INSERT INTO versioned_string_history (identifier, versioned_string, version, title, body, created_on, modified_on)
+                    VALUES (vsh_id, for_identifier, new_version, new_title, new_body, current_timestamp, current_timestamp);
+                    return new_version;
+                END IF;
+            ELSE
+                return current_version;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION update_versioned_string(for_identifier BIGINT, new_title VARCHAR(512), new_body TEXT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_string: delete_version">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION delete_versioned_string_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS VOID AS $$
+        BEGIN
+            IF for_version = (SELECT version FROM versioned_string WHERE identifier = for_identifier) THEN
+                RAISE EXCEPTION 'Cannot delete the current version (%, %) of the versioned string.', for_identifier, for_version;
+            ELSE
+                DELETE FROM versioned_string_history WHERE versioned_string = for_identifier AND version = for_version;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION delete_versioned_string_version(for_identifier BIGINT, for_version BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_string: delete">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION delete_versioned_string(for_identifier BIGINT)
+        RETURNS VOID AS $$
+            BEGIN
+            DELETE FROM versioned_string WHERE identifier = for_identifier;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION delete_versioned_string(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_string: get_vsn">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION get_versioned_string_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS TABLE (
+            identifier BIGINT,
+            version BIGINT,
+            title VARCHAR(512),
+            body TEXT,
+            created_on TIMESTAMP WITHOUT TIME ZONE,
+            modified_on TIMESTAMP WITHOUT TIME ZONE,
+            deleted_on TIMESTAMP WITHOUT TIME ZONE
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+                SELECT versioned_string_history.versioned_string as identifier, versioned_string_history.version, versioned_string_history.title, versioned_string_history.body, versioned_string_history.created_on, versioned_string_history.modified_on, versioned_string_history.deleted_on
+                FROM versioned_string_history
+                WHERE versioned_string_history.versioned_string = for_identifier AND versioned_string_history.version = for_version;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION get_versioned_string_version(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_string: get">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION get_versioned_string(for_identifier BIGINT)
+        RETURNS TABLE (
+            identifier BIGINT,
+            version BIGINT,
+            title VARCHAR(512),
+            body TEXT,
+            created_on TIMESTAMP WITHOUT TIME ZONE,
+            modified_on TIMESTAMP WITHOUT TIME ZONE,
+            deleted_on TIMESTAMP WITHOUT TIME ZONE
+        ) AS $$
+            BEGIN
+            RETURN QUERY
+            SELECT versioned_string.identifier, versioned_string.version, versioned_string.title, versioned_string.body, versioned_string.created_on, versioned_string.modified_on, versioned_string.deleted_on
+            FROM versioned_string
+            WHERE versioned_string.identifier = for_identifier;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION get_versioned_string(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_string: title">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION versioned_string_title(for_identifier BIGINT)
+        RETURNS VARCHAR(512) AS $$
+        DECLARE
+            out_title VARCHAR(512);
+            BEGIN
+            SELECT versioned_string.title INTO out_title
+            FROM versioned_string
+            WHERE versioned_string.identifier = for_identifier;
+            return out_title;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION versioned_string_title(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_string: body">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION versioned_string_body(for_identifier BIGINT)
+        RETURNS TEXT AS $$
+        DECLARE
+            out_body TEXT;
+        BEGIN
+            SELECT versioned_string.body INTO out_body
+            FROM versioned_string
+            WHERE versioned_string.identifier = for_identifier;
+            return out_body;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION versioned_string_body(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_string: set_version">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION set_versioned_string_to_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS VOID AS $$
+        DECLARE
+            to_version BIGINT;
+            to_title VARCHAR(512);
+            to_body TEXT;
+        BEGIN
+            -- Check if the version exists for the given identifier
+            SELECT version, title, body INTO to_version, to_title, to_body FROM versioned_string_history WHERE versioned_string = for_identifier AND version = for_version;
+
+            IF to_version IS NULL THEN
+                RAISE EXCEPTION 'Version % of the versioned string with identifier % not found.', for_version, for_identifier;
+            ELSE
+                -- Update the versioned string with the specified version
+                UPDATE versioned_string SET title = to_title, body = to_body, version = to_version, modified_on = NOW() WHERE identifier = for_identifier;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION set_versioned_string_to_version(for_identifier BIGINT, for_version BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+
+    <changeSet author="kebrings" id="versioned_string: test suite">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+CREATE OR REPLACE FUNCTION noizu_psql_test_suit__versioned_strings()
+RETURNS BOOL AS $$
+DECLARE
+            ts_a TIMESTAMP WITHOUT TIME ZONE;
+    ts_b TIMESTAMP WITHOUT TIME ZONE;
+    int_a BIGINT;
+    int_b BIGINT;
+    int_c BIGINT;
+    varc_a VARCHAR(512);
+    text_a TEXT;
+    record_a RECORD;
+    outcome BOOL = TRUE;
+            BEGIN
+    -- create_versioned_string
+    int_a := create_versioned_string('test-create', 'versioned-string');
+    outcome := NOIZU_ASSERT(int_a IS NOT NULL, 'create_versioned_string') AND outcome;
+    IF int_a IS NOT NULL THEN
+        -- get_versioned_string
+        record_a := get_versioned_string(int_a);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'get_versioned_string') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.title = 'test-create', 'get_versioned_string') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.body = 'versioned-string', 'get_versioned_string') AND outcome;
+
+        -- update
+        int_b := update_versioned_string(int_a, 'test-create-2', 'versioned-string-2');
+        outcome := NOIZU_ASSERT(int_b = 2, 'update_versioned_string') AND outcome;
+        int_b := update_versioned_string(int_a, 'test-create-3', 'versioned-string');
+        outcome := NOIZU_ASSERT(int_b = 3, 'update_versioned_string') AND outcome;
+        int_b := update_versioned_string(int_a, 'test-create-2', 'versioned-string-2');
+        outcome := NOIZU_ASSERT(int_b = 2, 'update_versioned_string - to existing') AND outcome;
+        int_b := update_versioned_string(int_a, 'test-create-4', 'versioned-string');
+        outcome := NOIZU_ASSERT(int_b = 4, 'update_versioned_string - version jump') AND outcome;
+
+        -- get_versioned_string_version
+        record_a := get_versioned_string_version(int_a, 2);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'get_versioned_string_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.title = 'test-create-2', 'get_versioned_string_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.body = 'versioned-string-2', 'get_versioned_string_version') AND outcome;
+
+        -- set_versioned_string_version
+        PERFORM set_versioned_string_to_version(int_a, 4);
+        record_a := get_versioned_string(int_a);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'set_versioned_string_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.title = 'test-create-4', 'set_versioned_string_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.body = 'versioned-string', 'set_versioned_string_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.version = 4, 'set_versioned_string_to_version') AND outcome;
+
+        -- delete version
+            select identifier into int_b FROM versioned_string_history where versioned_string = int_a AND version = 2;
+            PERFORM delete_versioned_string_version(int_a, 2);
+            select identifier into int_c FROM versioned_string_history where versioned_string = int_a AND version = 2;
+            outcome := NOIZU_ASSERT(int_b IS NOT NULL, 'delete_versioned_string_version - entry exists') AND outcome;
+        outcome := NOIZU_ASSERT(int_c IS NULL, 'delete_versioned_string_version - entry not removed') AND outcome;
+
+        -- versioned_string_title
+        outcome := NOIZU_ASSERT(versioned_string_title(int_a) = 'test-create-4', 'versioned_string_title') AND outcome;
+        -- versioned_string_body
+        outcome := NOIZU_ASSERT(versioned_string_body(int_a) = 'versioned-string', 'versioned_string_body') AND outcome;
+
+        -- delete
+        PERFORM delete_versioned_string(int_a);
+            select identifier into int_b FROM versioned_string where identifier = int_a;
+            outcome := NOIZU_ASSERT(int_b IS NULL, 'Delete versioned_string') AND outcome;
+            END IF;
+            return outcome;
+            END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION noizu_psql_test_suit__versioned_strings();
+            </sql>
+        </rollback>
+    </changeSet>
+
+
 </databaseChangeLog>

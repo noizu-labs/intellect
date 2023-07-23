@@ -149,37 +149,60 @@
         <addForeignKeyConstraint baseColumnNames="identifier" baseTableName="user_credential__login_pass" constraintName="FK_user_credential_login_pass_user_credential" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="user_credential" validate="true"/>
     </changeSet>
 
+
+
+    <changeSet author="kebrings" id="get_user_and_credentials_by_login: function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION get_user_and_credentials_by_login(for_login TEXT)
+        RETURNS TABLE(user_identifier BIGINT, credential_identifier BIGINT) AS $$
+        BEGIN
+            SELECT u.identifier, uc.identifier INTO user_identifier, credential_identifier
+            FROM public."user" as u
+                     JOIN user_credential uc ON uc."user" = u.identifier
+                     JOIN user_credential__login_pass uclp ON uclp.identifier = uc.identifier
+            WHERE uclp.login = for_login
+            LIMIT 1;
+            return NEXT;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION get_user_and_credentials_by_login(for_login TEXT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
     <changeSet author="kebrings" id="data-setup: user">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
 DO $$
 DECLARE
     user_identifier bigint;
-    vs_identifier bigint;
-    vsh_identifier bigint;
     credential_identifier bigint;
-    current_ts TIMESTAMP WITHOUT TIME ZONE;
+    current_ts TIMESTAMP WITHOUT TIME ZONE := NOW();
 BEGIN
-    SELECT current_value into user_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Repo'));
-    current_ts := now();
+    user_identifier := generate_uid('User');
     INSERT into public."user" (identifier, name, created_on, modified_on, deleted_on)
-        values (user_identifier, 'Keith Brings', current_ts, current_ts, null);
+    values (user_identifier, 'Keith Brings', current_ts, current_ts, null);
 
-    SELECT current_value into vs_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
-    INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
-        values (vs_identifier, 1, 'Login', 'Default Login', current_ts, current_ts, null);
-
-    SELECT current_value into vsh_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
-    INSERT into versioned_string_history (identifier, versioned_string, version,
-                                          title, body, created_on, modified_on, deleted_on)
-        values (vsh_identifier, vs_identifier, 1, 'Login', 'Default Login', current_ts, current_ts, null);
-
-    SELECT current_value into credential_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.User.Credential.Repo'));
-    INSERT into user_credential (identifier, weight, "user", details, type, created_on, modified_on, deleted_on)
-        values (credential_identifier, 100, user_identifier, vs_identifier, 'login', current_ts, current_ts, null);
-
+    credential_identifier := generate_uid('User.Credential');
+    INSERT into user_credential (identifier, weight, "user", details, type, created_on, modified_on)
+    values (
+        credential_identifier,
+        100,
+        user_identifier,
+        create_versioned_string('Login', 'Default Login'),
+        'login',
+        current_ts,
+        current_ts
+    );
     INSERT into user_credential__login_pass (identifier, login, password)
-        values (credential_identifier, 'keith.brings@noizu.com', '$2b$12$mzpvliJdK6jfXfI4FEBti.2nVnbGLKbRn5uh7mi083XLxde/VhSKG');
-
+    values (
+        credential_identifier,
+        'keith.brings@noizu.com',
+        '$2b$12$mzpvliJdK6jfXfI4FEBti.2nVnbGLKbRn5uh7mi083XLxde/VhSKG'
+    );
 END;
 $$ LANGUAGE plpgsql;
         </sql>
@@ -191,13 +214,12 @@ DECLARE
 BEGIN
     SELECT u.identifier as uid, user_credential.identifier as cid, user_credential.details as cdid into identifiers
     FROM public."user" as u
-    JOIN user_credential ON user_credential."user" = u.identifier
-    JOIN user_credential__login_pass ON user_credential__login_pass.identifier = user_credential.identifier
+        JOIN user_credential ON user_credential."user" = u.identifier
+        JOIN user_credential__login_pass ON user_credential__login_pass.identifier = user_credential.identifier
     WHERE user_credential__login_pass.login = 'keith.brings@noizu.com'
-    LIMIT 1;
-
+        LIMIT 1;
     DELETE FROM public."user" where identifier = identifiers.uid;
-    DELETE FROM versioned_string where identifier = identifiers.cdid;
+    delete_versioned_string(identifiers.cdid);
 END;
 $$ LANGUAGE plpgsql;
             </sql>

@@ -18,6 +18,25 @@
     </changeSet>
 
 
+    <changeSet author="kebrings" id="NOIZU_ASSERT function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+CREATE OR REPLACE FUNCTION NOIZU_ASSERT(assert_check BOOL, assert_message TEXT DEFAULT 'Assertion Failed')
+RETURNS BOOL AS $$
+BEGIN
+    IF NOT assert_check THEN
+    RAISE WARNING '[TEST FAIL] %', assert_message;
+    END IF;
+
+    RETURN assert_check;
+END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION NOIZU_ASSERT;
+            </sql>
+        </rollback>
+    </changeSet>
 
 
 </databaseChangeLog>

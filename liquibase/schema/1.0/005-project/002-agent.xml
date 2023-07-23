@@ -155,66 +155,32 @@
         <addForeignKeyConstraint baseColumnNames="service" baseTableName="account_agent_service" constraintName="FK_account_agent_service_service" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="service" validate="true"/>
     </changeSet>
 
-
-
-
-
     <changeSet author="kebrings" id="data-setup: agent">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
-DO $$
-DECLARE
-    agent_identifier bigint;
-    vs_identifier bigint;
-    vsh_identifier bigint;
-    vs_identifier2 bigint;
-    vsh_identifier2 bigint;
-    identifiers RECORD;
-    current_ts TIMESTAMP WITHOUT TIME ZONE;
-BEGIN
-    current_ts := now();
+        DO $$
+        DECLARE
+            agent_identifier bigint;
+            account_identifier bigint;
+            current_ts TIMESTAMP WITHOUT TIME ZONE = NOW();
+        BEGIN
+            -- Get Account
+            SELECT a.identifier into account_identifier
+            FROM public."account" as a
+            WHERE a.slug = 'noizu'
+            LIMIT 1;
 
-    -- Grab Keith to add as account member
-    SELECT a.identifier as aid into identifiers
-    FROM public."account" as a
-    WHERE a.slug = 'noizu'
-    LIMIT 1;
-
-    -- details
-    SELECT current_value into vs_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
-    INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
-    values (vs_identifier, 1, 'Grace', 'Agent Back Story', current_ts, current_ts, null);
-    -- details history
-    SELECT current_value into vsh_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
-    INSERT into versioned_string_history (identifier, versioned_string, version,
-                                          title, body, created_on, modified_on, deleted_on)
-    values (vsh_identifier, vs_identifier, 1, 'Grace', 'Agent Back Story', current_ts, current_ts, null);
-
-
-    -- prompt
-    SELECT current_value into vs_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
-    INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
-    values (vs_identifier2, 1, 'Grace', 'Agent Back Story', current_ts, current_ts, null);
-    -- prompt history
-    SELECT current_value into vsh_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
-    INSERT into versioned_string_history (identifier, versioned_string, version,
-                                          title, body, created_on, modified_on, deleted_on)
-    values (vsh_identifier2, vs_identifier2, 1, 'Grace', 'Agent Back Story', current_ts, current_ts, null);
-
-    -- agent
-    SELECT current_value into agent_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Repo'));
-    insert into public.account_agent (identifier, slug, account, details, prompt, created_on, modified_on, deleted_on)
-    values (agent_identifier, 'grace', identifiers.aid, vs_identifier, vs_identifier2, current_ts, current_ts, null);
-END;
-$$ LANGUAGE plpgsql;
+            -- agent : Grace
+            agent_identifier := generate_uid('Account.Agent');
+            insert into public.account_agent (identifier, slug, account, details, prompt, created_on, modified_on)
+            values (
+                agent_identifier,
+                'grace',
+                account_identifier,
+                create_versioned_string('Grace.', 'Agent Back Story'),
+                create_versioned_string('Grace.', 'Agent Back Story'),
+                current_ts, current_ts
+            );
+        END $$ LANGUAGE plpgsql;
         </sql>
-        <rollback>
-            <sql dbms="postgresql" splitStatements="false" stripComments="true">
-                DO $$
-                BEGIN
-                -- todo
-                END;
-                $$ LANGUAGE plpgsql;
-            </sql>
-        </rollback>
     </changeSet>
 </databaseChangeLog>

@@ -220,101 +220,40 @@
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
 DO $$
 DECLARE
-    account_identifier bigint;
-    account_member_identifier bigint;
-    account_member_role_identifier bigint;
-    owner_role_identifier bigint;
-    vs_identifier bigint;
-    vsh_identifier bigint;
-    vs_identifier2 bigint;
-    vsh_identifier2 bigint;
+    aid bigint;
+    amid bigint;
+    amrid bigint;
+    orid bigint;
     identifiers RECORD;
-    current_ts TIMESTAMP WITHOUT TIME ZONE;
-            BEGIN
+    current_ts TIMESTAMP WITHOUT TIME ZONE := NOW();
+BEGIN
+    -- account
+    aid := generate_uid('Account');
+    insert into account (identifier, slug, details, created_on, modified_on)
+    values (aid, 'noizu', create_versioned_string('Noizu', 'Noizu Labs, Inc.'), current_ts, current_ts);
 
-            current_ts := now();
+    -- Grab Keith to add as account member
+    identifiers := get_user_and_credentials_by_login('keith.brings@noizu.com');
 
-            -- details
-            SELECT current_value into vs_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
-            INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
-            values (vs_identifier, 1, 'Noizu', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
-            -- details history
-            SELECT current_value into vsh_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
-            INSERT into versioned_string_history (identifier, versioned_string, version,
-                                                  title, body, created_on, modified_on, deleted_on)
-            values (vsh_identifier, vs_identifier, 1, 'Noizu', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
-            -- account
-            SELECT current_value into account_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Repo'));
-            insert into account (identifier, slug, details, created_on, modified_on, deleted_on)
-                   values (account_identifier, 'noizu', vs_identifier, current_ts, current_ts, null);
+    -- account_member
+    amid := generate_uid('Account.Member');
+    insert into public.account_member (identifier, account, "user", details, created_on, modified_on)
+    values (amid, aid, identifiers.user_identifier, create_versioned_string('CEO', 'Master of the House'), current_ts, current_ts);
 
-            -- Grab Keith to add as account member
-            SELECT u.identifier as uid, user_credential.identifier as cid, user_credential.details as cdid into identifiers
-            FROM public."user" as u
-                     JOIN user_credential ON user_credential."user" = u.identifier
-                     JOIN user_credential__login_pass ON user_credential__login_pass.identifier = user_credential.identifier
-            WHERE user_credential__login_pass.login = 'keith.brings@noizu.com'
-                LIMIT 1;
-            -- account_member
-            SELECT current_value into account_member_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Repo'));
-            insert into public.account_member (identifier, account, "user", details, created_on, modified_on, deleted_on)
-            values (account_member_identifier, account_identifier, identifiers.uid, NULL, current_ts, current_ts, null);
+    -- ...................
+    -- account_role
+    orid = generate_uid('Account.Role');
+    insert into public.account_role (identifier, details, created_on, modified_on)
+    values (orid, create_versioned_string('Owner', 'Account Owner'), current_ts, current_ts);
 
-
-            -- ...................
-            -- account_role
-            -- details
-            SELECT current_value into vs_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
-            INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
-            values (vs_identifier2, 1, 'Owner', 'Account Owner', current_ts, current_ts, null);
-            -- details history
-            SELECT current_value into vsh_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
-            INSERT into versioned_string_history (identifier, versioned_string, version,
-                                                  title, body, created_on, modified_on, deleted_on)
-            values (vsh_identifier2, vs_identifier2, 1, 'Owner', 'Account Owner', current_ts, current_ts, null);
-            SELECT current_value into owner_role_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Role.Repo'));
-
-            insert into public.account_role (identifier, details, created_on, modified_on, deleted_on)
-            values (owner_role_identifier, vs_identifier2, current_ts, current_ts, null);
-
-            -- ...................
-            -- account_member_role
-            -- details
-            SELECT current_value into vs_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.Repo'));
-            INSERT into versioned_string(identifier, version, title, body, created_on, modified_on, deleted_on)
-            values (vs_identifier2, 1, 'Owner', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
-            -- details history
-            SELECT current_value into vsh_identifier2 FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedString.History.Repo'));
-            INSERT into versioned_string_history (identifier, versioned_string, version,
-                                                  title, body, created_on, modified_on, deleted_on)
-            values (vsh_identifier2, vs_identifier2, 1, 'Owner', 'Noizu Labs, Inc. Account', current_ts, current_ts, null);
-
-            SELECT current_value into account_member_role_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Member.Role.Repo'));
-            insert into account_member_role (identifier, account_member, account_role, details, created_on, modified_on, deleted_on)
-            values (account_member_role_identifier, account_member_identifier, owner_role_identifier, vs_identifier2, current_ts, current_ts, NULL);
-
+    -- ...................
+    -- account_member_role
+    amrid = generate_uid('Account.Member.Role');
+    insert into account_member_role (identifier, account_member, account_role, created_on, modified_on)
+    values (amrid, amid, orid, current_ts, current_ts);
 END;
 $$ LANGUAGE plpgsql;
         </sql>
-        <rollback>
-            <sql dbms="postgresql" splitStatements="false" stripComments="true">
-                DO $$
-                DECLARE
-                identifiers RECORD;
-                BEGIN
-                SELECT u.identifier as uid, user_credential.identifier as cid, user_credential.details as cdid into identifiers
-                FROM public."user" as u
-                JOIN user_credential ON user_credential."user" = u.identifier
-                JOIN user_credential__login_pass ON user_credential__login_pass.identifier = user_credential.identifier
-                WHERE user_credential__login_pass.login = 'keith.brings@noizu.com'
-                LIMIT 1;
-
-                DELETE FROM public."user" where identifier = identifiers.uid;
-                DELETE FROM versioned_string where identifier = identifiers.cdid;
-                END;
-                $$ LANGUAGE plpgsql;
-            </sql>
-        </rollback>
     </changeSet>
 
 

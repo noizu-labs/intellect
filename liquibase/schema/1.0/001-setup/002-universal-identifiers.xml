@@ -186,4 +186,33 @@ LANGUAGE plpgsql;
         </rollback>
     </changeSet>
 
+
+
+    <changeSet author="kebrings" id="generate_uid Function">
+        <sql dbms="postgresql" splitStatements="false" stripComments="true">
+CREATE OR REPLACE FUNCTION generate_uid(for_repo TEXT)
+RETURNS BIGINT AS
+$$
+DECLARE
+    out_identifier BIGINT;
+    starts_with_prefix BOOLEAN;
+BEGIN
+    starts_with_prefix := for_repo LIKE ('Elixir.' || '%');
+    IF starts_with_prefix THEN
+        SELECT current_value into out_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), for_repo));
+    ELSE
+        SELECT current_value into out_identifier FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.' || for_repo || '.Repo' ));
+    END IF;
+    return out_identifier;
+END;
+$$
+LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="true">
+                DROP FUNCTION IF EXISTS generate_uid(for_repo TEXT);
+            </sql>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>
