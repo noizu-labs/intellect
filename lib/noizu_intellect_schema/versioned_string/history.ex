@@ -5,7 +5,7 @@ defmodule Noizu.Intellect.Schema.VersionedString.History do
   @primary_key {:identifier, :integer, autogenerate: false}
   schema "versioned_string_history" do
     field :version, :integer
-    belongs_to :versioned_string, Noizu.Intellect.Schema.VersionedString, references: :identifier
+    field :versioned_string, :integer
     field :title, :string
     field :body, :string
     field :created_on, :utc_datetime_usec
@@ -16,7 +16,7 @@ defmodule Noizu.Intellect.Schema.VersionedString.History do
   @doc false
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:version, :versioned_string_id, :title, :body, :created_on, :modified_on, :deleted_on])
-    |> validate_required([:version, :versioned_string_id, :title, :body, :created_on, :modified_on, :deleted_on])
+    |> cast(attrs, [:version, :versioned_string, :title, :body, :created_on, :modified_on, :deleted_on])
+    |> validate_required([:version, :versioned_string, :title, :body, :created_on, :modified_on, :deleted_on])
   end
 end

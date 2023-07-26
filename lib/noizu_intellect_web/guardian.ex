@@ -32,6 +32,7 @@ defmodule Noizu.IntellectWeb.Guardian do
     Noizu.IntellectWeb.Guardian.get_resource_by_id(id)
   end
   def resource_from_claims(_claims) do
+    IO.puts "NO MATCH"
     {:error, :reason_for_error}
   end
 end

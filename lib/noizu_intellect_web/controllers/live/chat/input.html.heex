@@ -1,11 +1,20 @@
 <div id="chat-input" class="mt-6 flex gap-x-3">
-    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" class="h-6 w-6 flex-none rounded-full bg-gray-50">
-    <form action="#" class="relative flex-auto">
+    <img src={image_service(:profile, @user.profile_image)}
+            alt="" class="h-6 w-6 flex-none rounded-full bg-gray-50">
+    <form action="#" class="relative flex-auto" phx-submit="message:submit" phx-target={@myself}>
         <div class="overflow-hidden rounded-lg p-2 pb-12 shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
-            <label for="comment" class="sr-only">Add your comment</label>
-            <textarea rows="2" name="comment" id="comment" class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6" placeholder="Add your comment..."></textarea>
+            <label for="chat-input-comment" class="sr-only">Add your comment</label>
+            <textarea
+                    rows="5"
+                    name="comment"
+                    id="chat-input-comment"
+                    phx-update="ignore"
+                    class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
+                    placeholder="Add your comment..."
+            >
+            </textarea>
         </div>
-
+        <input type="hidden" name="current-mood" value={@mood.selected}/>
         <div class="absolute inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
             <div class="flex items-center space-x-5">
                 <div class="flex items-center">
@@ -16,7 +25,7 @@
                         <span class="sr-only">Attach a file</span>
                     </button>
                 </div>
-                <Noizu.IntellectWeb.Chat.Mood.selector mood={@mood} />
+                <.mood_selector id="chat-input-mood" target={@myself} mood={@mood} />
 
             </div>
             <button type="submit" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Comment</button>

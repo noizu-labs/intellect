@@ -5,23 +5,49 @@ defmodule Noizu.IntellectWeb.Issues do
   require Logger
   def render(assigns) do
     ~H"""
-
-    <div id="human-contacts" class="ml-2 card">
-    <div class="heading">Team Members</div>
-    <ul>
-
-
-    <%= for issue <- @issues do %>
-    <li><span class="status"><%= issue.number %></span><span><a href={ issue.html_url }><%= issue.title %></a></span></li>
-    <% end %>
-    <li phx-click={show_create_issue()}>
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+    <div id="human-contacts" class="card">
+      <h1 class="heading prose prose-xl">Github Issues!</h1>
+      <ul class="divide-y divide-gray-100">
+        <%= if @issues do %>
+          <%= for issue <- @issues.issues do %>
+            <li class="flex flex-col gap-x-4 py-1">
+              <span class="">
+                <a class="text-slate-500 underline" target="_new" href={issue.html_url }>#<%= issue.number %></a>
+                <span phx-click="show:issue" phx-value-issue={issue.number} ><%= issue.title %></span>
+              </span>
+            </li>
+          <% end %>
+        <% else %>
+          <li class="flex justify-center">
+    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
       </svg>
-    </li>
+          </li>
+        <% end %>
+        <li phx-click={show_create_issue()} class="flex gap-x-4 py-4 mx-auto justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+          </svg>
+        </li>
+      </ul>
 
-    </ul>
+
+
+
+
     </div>
+
+    <.modal show={false} title="hello" id="show-issue">
+      <%= if @selected do %>
+      <h1 class="prose prose-xl">#<%= @selected.number %> <%= @selected.title %></h1>
+      <div class="card">
+        <div class="card-body">
+          <pre class="overflow-scroll"><%= @selected.body %></pre>
+        </div>
+      </div>
+      <% end %>
+    </.modal>
 
     <.modal show={false} id="create-issue">
     <h2>Create GitHub Issue</h2>
@@ -60,9 +86,22 @@ defmodule Noizu.IntellectWeb.Issues do
     show_modal("create-issue")
   end
 
+  def show_issue(issue, socket) do
+    with %{issues: issues} <- socket.assigns[:issues],
+         {:ok, issue} <- Enum.find_value(issues, &(&1.number == issue && {:ok, &1}))
+      do
+        Logger.error("SHOW ISSUE")
+      js = show_modal("show-issue")
+      socket = socket
+               |> assign(selected: issue)
+               |> push_event("js_push", %{js: js.ops})
+      {:noreply, socket}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
 
-  def handle_event("submit:issue" = event, body, socket) do
-
+  def submit_issue(body, socket) do
     title = body["issue-title"]
     description = body["issue-description"]
     labels = String.split(body["issue-labels"], ",")
@@ -81,8 +120,19 @@ defmodule Noizu.IntellectWeb.Issues do
       labels: labels
     }
 
-    Noizu.Github.Api.Issues.create(body, nil) |> IO.inspect(label: "CREATE ISSUE")
+    Noizu.Github.Api.Issues.create(body, nil)
     {:noreply, socket}
+  end
+
+
+  #=========================
+  #
+  #=========================
+  def handle_event("submit:issue" = event, body, socket) do
+    submit_issue(body, socket)
+  end
+  def handle_event("show:issue" , %{"issue" => issue}, socket) do
+    show_issue(String.to_integer(issue), socket)
   end
 
   def handle_event(event, body, socket) do
@@ -90,15 +140,42 @@ defmodule Noizu.IntellectWeb.Issues do
     Uncaught EVENT: #{__MODULE__} <- #{inspect event}
     Body #{inspect body}
     """
-
     {:noreply, socket}
   end
 
+  #=========================
+  #
+  #=========================
+  def handle_info({:issues_loaded, issues}, socket) do
+    socket = socket
+             |> assign(issues: issues)
+    {:noreply, socket}
+  end
+
+  def handle_info(info, socket) do
+    Logger.info """
+    Uncaught Info: #{__MODULE__} <- #{inspect info}
+    """
+    {:noreply, socket}
+  end
+
+  def load_issues(s \\ nil) do
+    s = s || self()
+    spawn fn ->
+      issues = case Noizu.Github.Api.Issues.list() do
+        {:ok, issues} -> send(s, {:issues_loaded, issues})
+        _ ->
+          Process.sleep(5000)
+          load_issues(s)
+      end
+    end
+  end
 
   def mount(_, session, socket) do
-    {:ok, issues} = Noizu.Github.Api.Issues.list()
+    load_issues()
     socket = socket
-             |> assign(issues: issues.issues)
+             |> assign(issues: nil)
+             |> assign(selected: nil)
     {:ok, socket, layout: {Noizu.IntellectWeb.Layouts, :sparse}}
   end
 end

@@ -207,5 +207,7 @@
     <orderEntry type="library" name="nimble_parsec" level="project" />
     <orderEntry type="library" name="unicode_set" level="project" />
     <orderEntry type="library" name="benchee_markdown" level="project" />
+    <orderEntry type="library" name="ecto_sqlite3_extras" level="project" />
+    <orderEntry type="library" name="ecto_sqlite3" level="project" />
   </component>
 </module>

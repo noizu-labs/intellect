@@ -14,6 +14,7 @@
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
+            <column name="profile_image" type="UUID"/>
             <column name="prompt" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -38,6 +39,15 @@
             </sql>
         </rollback>
     </changeSet>
+
+
+    <changeSet author="kebrings" id="index:account_agent.slug">
+        <createIndex indexName="IDX_account_agent_slug" tableName="account_agent" unique="true">
+            <column name="account"/>
+            <column name="slug"/>
+        </createIndex>
+    </changeSet>
+
 
     <changeSet author="kebrings" id="account_agent_function table">
         <createTable tableName="account_agent_function">

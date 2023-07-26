@@ -16,6 +16,7 @@ defmodule Noizu.Intellect.Account do
   def_entity do
     identifier :integer
     field :slug, nil
+    field :profile_image, nil, Noizu.Entity.VersionedURI
     field :details, nil, Noizu.Entity.VersionedString
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
@@ -29,7 +30,7 @@ defmodule Noizu.Intellect.Account do
                where: is_nil(account.deleted_on),
                select: channel,
                limit: 1
-      case Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "Query") do
+      case Noizu.Intellect.Repo.all(q) do
         [channel] ->
           # Todo extend entity to support from_record here.
           with {:ok, channel} <- Noizu.Intellect.Account.Channel.entity(channel.identifier, context) do

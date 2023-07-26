@@ -16,7 +16,7 @@ defmodule Noizu.Intellect.AuthenticationModule do
         where: is_nil(uc.deleted_on),
         where: is_nil(u.deleted_on),
         select: uc
-    case Noizu.Intellect.Repo.all(q) |> IO.inspect do
+    case Noizu.Intellect.Repo.all(q) do
       [true] -> true
       _ -> false
     end
@@ -32,7 +32,7 @@ defmodule Noizu.Intellect.AuthenticationModule do
              where: is_nil(x2.deleted_on),
              where: is_nil(x3.deleted_on),
              select: {x, x3}
-    case Noizu.Intellect.Repo.all(q) |> IO.inspect do
+    case Noizu.Intellect.Repo.all(q) do
       [{l,u}] ->
         if Bcrypt.verify_pass(password, l.password) do
           with {:ok, user} <- Noizu.Intellect.User.entity(u.identifier, context) do

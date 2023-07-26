@@ -12,6 +12,7 @@
             <column name="slug" remarks="account identifier slug" type="CITEXT">
                 <constraints nullable="false"/>
             </column>
+            <column name="profile_image" type="UUID"/>
             <column name="details" remarks="versioned string" type="BIGINT">
                 <constraints nullable="false"/>
             </column>

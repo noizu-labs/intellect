@@ -1,0 +1,431 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+
+    <!-- ========================================================== -->
+    <!-- Versioned URI Tables                                       -->
+    <!-- ========================================================== -->
+    <changeSet author="kebrings" id="versioned_uri table">
+        <createTable tableName="versioned_uri">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_versioned_uri"/>
+            </column>
+            <column name="version" type="BIGINT"/>
+            <column name="title" type="VARCHAR(512)"/>
+            <column name="uri" type="VARCHAR(1024)"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_uri_history table">
+        <createTable tableName="versioned_uri_history">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_versioned_uri_history"/>
+            </column>
+            <column name="versioned_uri" type="BIGINT"/>
+            <column name="version" type="BIGINT"/>
+            <column name="title" type="VARCHAR(512)"/>
+            <column name="uri" type="VARCHAR(1024)"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- Versioned String : indexes                                 -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <changeSet author="kebrings" id="IXFK_versioned_uri_history_versioned_uri index">
+        <createIndex
+                indexName="IXFK_versioned_uri_history_versioned_uri"
+                tableName="versioned_uri_history">
+            <column name="versioned_uri"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- .......................................................... -->
+    <!-- Versioned String : Foreign Keys                            -->
+    <!-- .......................................................... -->
+    <changeSet author="kebrings" id="versioned_uri_history.versioned_uri fk">
+        <addForeignKeyConstraint
+                baseColumnNames="versioned_uri"
+                baseTableName="versioned_uri_history"
+                constraintName="FK_versioned_uri_history_versioned_uri"
+                deferrable="false"
+                initiallyDeferred="false"
+                onDelete="CASCADE"
+                onUpdate="NO ACTION"
+                referencedColumnNames="identifier"
+                referencedTableName="versioned_uri"
+                validate="true"/>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_uri uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedURI.Repo') , 'Elixir.Noizu.Entity.VersionedURI.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedURI.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_uri_history uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedURI.History.Repo') , 'Elixir.Noizu.Entity.VersionedURI.History.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedURI.History.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_uri: create">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+CREATE OR REPLACE FUNCTION create_versioned_uri(title VARCHAR(512), uri VARCHAR(1024))
+RETURNS BIGINT AS $$
+DECLARE
+    vs_id BIGINT;
+    vsh_id BIGINT;
+    current_timestamp TIMESTAMP WITHOUT TIME ZONE := NOW();
+BEGIN
+    -- Get new identifiers from generators
+    vs_id := generate_uid('Elixir.Noizu.Entity.VersionedURI.Repo');
+    vsh_id := generate_uid('Elixir.Noizu.Entity.VersionedURI.History.Repo');
+    -- Create the new versioned string
+    INSERT INTO versioned_uri (identifier, version, title, uri, created_on, modified_on)
+    VALUES (vs_id, 1, title, uri, current_timestamp, current_timestamp);
+
+    -- Create the history entry for version 1
+    INSERT INTO versioned_uri_history (identifier, versioned_uri, version, title, uri, created_on, modified_on)
+    VALUES (vsh_id, vs_id, 1, title, uri, current_timestamp, current_timestamp);
+
+    RETURN vs_id;
+END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION create_versioned_uri(title VARCHAR(512), uri VARCHAR(1024));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_uri: update">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION update_versioned_uri(for_identifier BIGINT, new_title VARCHAR(512), new_uri VARCHAR(1024))
+        RETURNS BIGINT AS $$
+        DECLARE
+            current_version BIGINT;
+            new_version BIGINT;
+            vsh_id BIGINT;
+            current_title VARCHAR(512);
+            current_uri VARCHAR(1024);
+
+            existing_version_string BIGINT;
+            existing_version BIGINT;
+
+            current_timestamp TIMESTAMP WITHOUT TIME ZONE := NOW();
+            BEGIN
+            -- Check if the title or uri has changed
+            SELECT version, title, uri INTO current_version, current_title, current_uri FROM versioned_uri WHERE identifier = for_identifier;
+
+            IF current_version IS NULL THEN
+                RAISE EXCEPTION 'Versioned string with identifier % not found.', for_identifier;
+            END IF;
+
+            IF (new_title &lt;&gt; current_title OR new_uri &lt;&gt; current_uri) THEN
+                SELECT versioned_uri, version INTO existing_version_string, existing_version FROM versioned_uri_history WHERE versioned_uri = for_identifier AND title = new_title AND uri = new_uri;
+                IF existing_version_string IS NOT NULL THEN
+                    UPDATE versioned_uri set version = existing_version, title = new_title, uri = new_uri, modified_on = current_timestamp WHERE identifier = for_identifier;
+                    RETURN existing_version;
+                ELSE
+                    -- Get new identifier from generator
+                    vsh_id := generate_uid('VersionedURI.History');
+                    new_version := (SELECT COALESCE(MAX(version), current_version) FROM versioned_uri_history WHERE versioned_uri = for_identifier) + 1;
+
+                    -- Update the new versioned string
+                    UPDATE versioned_uri set version = new_version, title = new_title, uri = new_uri, modified_on = current_timestamp WHERE identifier = for_identifier;
+
+                    -- Create the history entry for the new version
+                    INSERT INTO versioned_uri_history (identifier, versioned_uri, version, title, uri, created_on, modified_on)
+                    VALUES (vsh_id, for_identifier, new_version, new_title, new_uri, current_timestamp, current_timestamp);
+                    return new_version;
+                END IF;
+            ELSE
+                return current_version;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION update_versioned_uri(for_identifier BIGINT, new_title VARCHAR(512), new_uri VARCHAR(1024));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_uri: delete_version">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION delete_versioned_uri_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS VOID AS $$
+        BEGIN
+            IF for_version = (SELECT version FROM versioned_uri WHERE identifier = for_identifier) THEN
+                RAISE EXCEPTION 'Cannot delete the current version (%, %) of the versioned string.', for_identifier, for_version;
+            ELSE
+                DELETE FROM versioned_uri_history WHERE versioned_uri = for_identifier AND version = for_version;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION delete_versioned_uri_version(for_identifier BIGINT, for_version BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_uri: delete">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION delete_versioned_uri(for_identifier BIGINT)
+        RETURNS VOID AS $$
+            BEGIN
+            DELETE FROM versioned_uri WHERE identifier = for_identifier;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION delete_versioned_uri(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_uri: get_vsn">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION get_versioned_uri_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS TABLE (
+            identifier BIGINT,
+            version BIGINT,
+            title VARCHAR(512),
+            uri VARCHAR(1024),
+            created_on TIMESTAMP WITHOUT TIME ZONE,
+            modified_on TIMESTAMP WITHOUT TIME ZONE,
+            deleted_on TIMESTAMP WITHOUT TIME ZONE
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+                SELECT versioned_uri_history.versioned_uri as identifier, versioned_uri_history.version, versioned_uri_history.title, versioned_uri_history.uri, versioned_uri_history.created_on, versioned_uri_history.modified_on, versioned_uri_history.deleted_on
+                FROM versioned_uri_history
+                WHERE versioned_uri_history.versioned_uri = for_identifier AND versioned_uri_history.version = for_version;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION get_versioned_uri_version(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_uri: get">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION get_versioned_uri(for_identifier BIGINT)
+        RETURNS TABLE (
+            identifier BIGINT,
+            version BIGINT,
+            title VARCHAR(512),
+            uri VARCHAR(1024),
+            created_on TIMESTAMP WITHOUT TIME ZONE,
+            modified_on TIMESTAMP WITHOUT TIME ZONE,
+            deleted_on TIMESTAMP WITHOUT TIME ZONE
+        ) AS $$
+            BEGIN
+            RETURN QUERY
+            SELECT versioned_uri.identifier, versioned_uri.version, versioned_uri.title, versioned_uri.uri, versioned_uri.created_on, versioned_uri.modified_on, versioned_uri.deleted_on
+            FROM versioned_uri
+            WHERE versioned_uri.identifier = for_identifier;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION get_versioned_uri(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_uri: title">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION versioned_uri_title(for_identifier BIGINT)
+        RETURNS VARCHAR(512) AS $$
+        DECLARE
+            out_title VARCHAR(512);
+            BEGIN
+            SELECT versioned_uri.title INTO out_title
+            FROM versioned_uri
+            WHERE versioned_uri.identifier = for_identifier;
+            return out_title;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION versioned_uri_title(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_uri: uri">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION versioned_uri_uri(for_identifier BIGINT)
+        RETURNS VARCHAR(1024) AS $$
+        DECLARE
+            out_uri VARCHAR(1024);
+        BEGIN
+            SELECT versioned_uri.uri INTO out_uri
+            FROM versioned_uri
+            WHERE versioned_uri.identifier = for_identifier;
+            return out_uri;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION versioned_uri_uri(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_uri: set_version">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION set_versioned_uri_to_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS VOID AS $$
+        DECLARE
+            to_version BIGINT;
+            to_title VARCHAR(512);
+            to_uri VARCHAR(1024);
+        BEGIN
+            -- Check if the version exists for the given identifier
+            SELECT version, title, uri INTO to_version, to_title, to_uri FROM versioned_uri_history WHERE versioned_uri = for_identifier AND version = for_version;
+
+            IF to_version IS NULL THEN
+                RAISE EXCEPTION 'Version % of the versioned string with identifier % not found.', for_version, for_identifier;
+            ELSE
+                -- Update the versioned string with the specified version
+                UPDATE versioned_uri SET title = to_title, uri = to_uri, version = to_version, modified_on = NOW() WHERE identifier = for_identifier;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION set_versioned_uri_to_version(for_identifier BIGINT, for_version BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+
+    <changeSet author="kebrings" id="versioned_uri: test suite">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+CREATE OR REPLACE FUNCTION noizu_psql_test_suit__versioned_uris()
+RETURNS BOOL AS $$
+DECLARE
+            ts_a TIMESTAMP WITHOUT TIME ZONE;
+    ts_b TIMESTAMP WITHOUT TIME ZONE;
+    int_a BIGINT;
+    int_b BIGINT;
+    int_c BIGINT;
+    varc_a VARCHAR(512);
+    text_a VARCHAR(1024);
+    record_a RECORD;
+    outcome BOOL = TRUE;
+            BEGIN
+    -- create_versioned_uri
+    int_a := create_versioned_uri('test-create', 'versioned-string');
+    outcome := NOIZU_ASSERT(int_a IS NOT NULL, 'create_versioned_uri') AND outcome;
+    IF int_a IS NOT NULL THEN
+        -- get_versioned_uri
+        record_a := get_versioned_uri(int_a);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'get_versioned_uri') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.title = 'test-create', 'get_versioned_uri') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.uri = 'versioned-string', 'get_versioned_uri') AND outcome;
+
+        -- update
+        int_b := update_versioned_uri(int_a, 'test-create-2', 'versioned-string-2');
+        outcome := NOIZU_ASSERT(int_b = 2, 'update_versioned_uri') AND outcome;
+        int_b := update_versioned_uri(int_a, 'test-create-3', 'versioned-string');
+        outcome := NOIZU_ASSERT(int_b = 3, 'update_versioned_uri') AND outcome;
+        int_b := update_versioned_uri(int_a, 'test-create-2', 'versioned-string-2');
+        outcome := NOIZU_ASSERT(int_b = 2, 'update_versioned_uri - to existing') AND outcome;
+        int_b := update_versioned_uri(int_a, 'test-create-4', 'versioned-string');
+        outcome := NOIZU_ASSERT(int_b = 4, 'update_versioned_uri - version jump') AND outcome;
+
+        -- get_versioned_uri_version
+        record_a := get_versioned_uri_version(int_a, 2);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'get_versioned_uri_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.title = 'test-create-2', 'get_versioned_uri_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.uri = 'versioned-string-2', 'get_versioned_uri_version') AND outcome;
+
+        -- set_versioned_uri_version
+        PERFORM set_versioned_uri_to_version(int_a, 4);
+        record_a := get_versioned_uri(int_a);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'set_versioned_uri_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.title = 'test-create-4', 'set_versioned_uri_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.uri = 'versioned-string', 'set_versioned_uri_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.version = 4, 'set_versioned_uri_to_version') AND outcome;
+
+        -- delete version
+            select identifier into int_b FROM versioned_uri_history where versioned_uri = int_a AND version = 2;
+            PERFORM delete_versioned_uri_version(int_a, 2);
+            select identifier into int_c FROM versioned_uri_history where versioned_uri = int_a AND version = 2;
+            outcome := NOIZU_ASSERT(int_b IS NOT NULL, 'delete_versioned_uri_version - entry exists') AND outcome;
+        outcome := NOIZU_ASSERT(int_c IS NULL, 'delete_versioned_uri_version - entry not removed') AND outcome;
+
+        -- versioned_uri_title
+        outcome := NOIZU_ASSERT(versioned_uri_title(int_a) = 'test-create-4', 'versioned_uri_title') AND outcome;
+        -- versioned_uri_uri
+        outcome := NOIZU_ASSERT(versioned_uri_uri(int_a) = 'versioned-string', 'versioned_uri_uri') AND outcome;
+
+        -- delete
+        PERFORM delete_versioned_uri(int_a);
+            select identifier into int_b FROM versioned_uri where identifier = int_a;
+            outcome := NOIZU_ASSERT(int_b IS NULL, 'Delete versioned_uri') AND outcome;
+            END IF;
+            return outcome;
+            END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION noizu_psql_test_suit__versioned_uris();
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+</databaseChangeLog>

@@ -1,5 +1,5 @@
 defmodule Noizu.IntellectWeb.Nav.Tags do
-  use Noizu.IntellectWeb, :live_component
+  use Noizu.IntellectWeb, :component
 
 
 
@@ -70,12 +70,6 @@ defmodule Noizu.IntellectWeb.Nav.Tags do
            end)
     classes = base ++ top ++ right ++ left ++ bottom
     Enum.join(classes, " ")
-  end
-
-  def render(assigns) do
-    ~H"""
-
-    """
   end
 
   attr :id, :string

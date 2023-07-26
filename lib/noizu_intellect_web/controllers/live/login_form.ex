@@ -106,7 +106,7 @@ defmodule Noizu.IntellectWeb.LoginForm do
   #
   #-----------------------------
   def login(form, socket) do
-    socket = with {:ack, user} <- Noizu.Intellect.AuthenticationModule.authenticate(form["email"], form["password"], Noizu.Context.system()) |> IO.inspect,
+    socket = with {:ack, user} <- Noizu.Intellect.AuthenticationModule.authenticate(form["email"], form["password"], Noizu.Context.system()),
                   {:ok, jwt} <- indirect_auth(user) do
       socket
       |> push_event("auth", %{jwt: jwt, remember_me: form["remember_me"] == "on"})

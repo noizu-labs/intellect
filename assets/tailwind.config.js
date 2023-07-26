@@ -9,8 +9,11 @@ module.exports = {
   content: [
     "./js/**/*.js",
     "../lib/*_web.ex",
-    "../lib/*_web/**/*.*ex"
+    "../lib/*_web/**/*.*ex",
+    "./src/**/*.{html,js}",
+    "./node_modules/tw-elements/dist/js/**/*.js"
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -20,6 +23,8 @@ module.exports = {
   },
   plugins: [
     require("@tailwindcss/forms"),
+    require('@tailwindcss/typography'),
+    require('tw-elements/dist/plugin.cjs'),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
     //

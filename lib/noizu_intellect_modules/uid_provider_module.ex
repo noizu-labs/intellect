@@ -15,7 +15,7 @@ defmodule Noizu.Intellect.UIDProviderModule do
     case FastGlobal.get(key, :__noizu_not_found__) do
       :__noizu_not_found__ ->
         query = "SELECT current_value FROM get_uid_repo($1)"
-        case Ecto.Adapters.SQL.query(Noizu.Intellect.Repo, query, [identifier]) |> IO.inspect(label: "UID.ref") do
+        case Ecto.Adapters.SQL.query(Noizu.Intellect.Repo, query, [identifier])  do
           {:ok, %{rows: [[v]]}} when is_bitstring(v) ->
             repo = String.to_atom(v)
             entity = Module.split(repo)

@@ -13,7 +13,8 @@ defmodule Noizu.Intellect.Application do
       # Start the Ecto repository
       Noizu.Intellect.Repo,
       # Start the PubSub system
-      {Phoenix.PubSub, name: Noizu.Intellect.PubSub},
+      Supervisor.child_spec({Phoenix.PubSub, name: Noizu.Intellect.PubSub}, id: :pubsub_standard),
+      Supervisor.child_spec({Phoenix.PubSub, name: Noizu.Intellect.LiveViewEvent}, id: :pubsub_live_event),
       # Start Finch
       {Finch, name: Noizu.Intellect.Finch},
       # Start the Endpoint (http/https)

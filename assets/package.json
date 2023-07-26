@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "github-markdown-css": "^5.2.0"
+    "github-markdown-css": "^5.2.0",
+    "tw-elements": "^1.0.0-beta2"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.9"
   }
 }

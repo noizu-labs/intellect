@@ -1,260 +1,69 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
-@import "github-markdown-css/github-markdown-dark.css";
+@import "github-markdown-css/github-markdown-light.css";
 
 @layer components {
+
+    #right-aside[aria-expanded="false"] {
+        /*@apply hidden;*/
+    }
+
+    #right-aside .aside-contents {
+        @apply transition duration-1000 ease-in-out;
+    }
+
+    #right-aside[aria-expanded="false"] .aside-contents {
+        @apply translate-x-96;
+    }
+
+    #right-aside[aria-expanded="true"] .aside-content {
+        @apply translate-x-96;
+    }
+
+    #right-aside[aria-expanded="false"] .aside-overlay {
+        @apply -z-10;
+    }
+
+    #right-aside[aria-expanded="true"] .aside-overlay {
+        @apply z-10;
+    }
+
 
     .markdown-body.msg {
         @apply text-black text-lg max-w-[55vw] min-w-[55vw];
     }
 
-    #chat-messages.chat-messages {
-        @apply bg-black;
-    }
-
-    .chat-messages .markdown-body pre {
-        display: block;
-        border: none;
-        background-color: transparent;
-        overflow: hidden;
-        @apply m-2 p-0;
-    }
-
-    .chat-messages .markdown-body pre code.inline {
-        display: inline;
-        border: none;
-    }
-
-    .chat-messages .markdown-body pre code {
-        @apply block border border-white border-solid bg-black p-2 m-2 pl-2 pr-0 ml-2 mr-0 pt-0 pt-10;
-        @apply overflow-x-auto text-white  right-[0px] ;
-    }
-
-
-    .chat-messages .markdown-body pre code.inline {
-        @apply border-0;
-    }
-
-
-    .markdown-body code.inline {
-        @apply text-red-500  underline italic font-bold bg-inherit;
-    }
-
-
-    llm-fim-content, llm-command {
-        @apply block m-2 mt-4 mb-4 p-2;
-    }
-
-    llm-title {
-        @apply block bg-black text-white text-xs w-full text-center;
-    }
-
-
-    llm-code-type{
-        @apply block  text-center bg-purple-400 m-0 p-1 pt-0 mb-2 rounded-sm relative top-[-40px] float-right text-slate-900 w-fit antialiased text-2xl font-mono tracking-wider underline decoration-slate-200 uppercase font-bold ;
-    }
-
-    llm-command::before {
-        position: relative;
-        top: -11px;
-        left: -4px;
-        font-size: x-small;
-        background-color: white;
-        color: black;
-        padding: 2px 5px;
-        font-weight: bold;
-    }
-
-
-    llm-command::before {
-        content: "command"
-    }
-
-    nlp-intent, nlp-meta, nlp-interop, nlp-reply,  nlp-reason, nlp-pub, nlp-minder-prompt, nlp-cot, nlp-conclusion, nlp-math, nlp-git, nlp-qa {
-        @apply block border border-slate-600 m-2 mt-4 mb-4 p-2;
-    }
-
-    nlp-query {
-        @apply block border border-slate-600 m-0 p-1;
-    }
-
-
-    nlp-fim {
-        @apply block border border-slate-800 bg-slate-900 m-0 mt-2 mb-2 pb-2 text-center flex flex-col items-center text-xl ;
-    }
-    nlp-fim llm-title, nlp-fim llm-fim-title {
-        @apply mb-2 bg-white text-black w-full text-2xl;
-    }
-    nlp-fim llm-fim-content {
-        @apply bg-white m-0 p-0;
-    }
-
-    nlp-intent::before, nlp-meta::before, nlp-interop::before, nlp-reply::before, nlp-query::before, nlp-request::before, nlp-fim::before,
-    nlp-reason::before, nlp-pub::before, nlp-minder-prompt::before, nlp-cot::before, nlp-conclusion::before, nlp-math::before, nlp-git::before, nlp-qa::before  {
-        position: relative;
-        top: -11px;
-        left: -4px;
-        font-size: x-small;
-        background-color: white;
-        color: black;
-        padding: 2px 5px;
-        font-weight: bold;
-    }
-
-
-    nlp-intent::before {
-        content: "intent"
-    }
-
-    nlp-meta::before {
-        content: "meta"
-    }
-
-    nlp-interop::before {
-        content: "interop"
-    }
-
-    nlp-reply::before {
-        content: "reply"
-    }
-
-    nlp-interop::before {
-        content: "interop"
-    }
-
-
-    nlp-query::before {
-        content: "query"
-    }
-
-    /*
-        nlp-request::before {
-            content: "request"
-        }
-    */
-    nlp-reason::before {
-        content: "reason"
-    }
-
-    nlp-pub::before{
-        content: "pubsub"
-    }
-    nlp-minder-prompt::before {
-        content: "minder"
-    }
-
-    nlp-cot::before {
-        content: "chain-of-thought"
-    }
-
-    nlp-conclusion::before {
-        content: "conclusion"
-    }
-
-    nlp-math::before {
-        content: "math"
-    }
-
-    nlp-git::before {
-        content: "git"
-    }
-
-    nlp-qa::before {
-        content: "qa"
-    }
-
-
-    nlp-reply {
-        display: block;
-        @apply mt-4;
-    }
-
-
-    #noizu-chat-input-select-mood[aria-selected="false"],#noizu-chat-input-select-mood[aria-enabled="false"] {
+    button[aria-expanded="false"] ~ .nz-flyout-body {
         display: none;
     }
 
-    /* This file is for your main application CSS */
-    #user-menu[aria-expanded="false"] #user-menu-drop {
+    button[aria-expanded="false"] ~ .nz-flyout-bg {
         display: none;
     }
 
-    .chat-messages {
-        @apply h-[70%] min-h-[20vh] w-full mb-4 border rounded-lg p-1 pl-1 pr-3 bg-white shadow-lg;
+    button[aria-expanded="false"] ~ .noizu-chat-input-select-mood {
+        display: none;
     }
 
-    .chat-messages .message {
-        @apply flex flex-col h-fit w-full  items-end;
-    }
-    .chat-messages .message .msg {
-        @apply bg-slate-700  text-white text-xl shadow-inner p-2  mr-1 ml-8 rounded-lg rounded-br-none;
-    }
-    .chat-messages .message .sender {
-        @apply mt-1 mb-4 text-white text-lg;
-
+    button[aria-expanded="false"] ~ .noizu-chat-input-bg {
+        display: none;
     }
 
-    .chat-messages .message .sent {
-        @apply text-[.75rem] text-slate-400;
-    }
-
-    .chat-messages .message.self {
-        @apply items-start;
-    }
-    .chat-messages .message.self .msg {
-        @apply bg-slate-800 text-slate-200 rounded-bl-none rounded-br-lg ml-1 mr-8 ;
-    }
-
-    .chat-messages .message.pending .msg {
-        @apply ring-green-300 ring-2;
-    }
-
-    #editor-container {
-        @apply w-full h-fit min-h-full px-2 py-2 bg-slate-900 text-white border border-gray-300 rounded-md shadow-sm;
-    }
-
-    .code {
-        display: block;
-        white-space: pre;
-        @apply w-full min-h-[50px]  bg-slate-500 px-2 py-0 m-0 shadow-sm shadow-inner shadow-slate-600;
-    }
-
-    .text-input {
-        @apply w-full h-fit min-h-[50px] rounded-sm focus:outline-0 outline-1 ;
-    }
-
-    code.text-input {
-        @apply w-full;
-    }
-
-    .contacts {
+    .card {
         @apply w-full h-fit mb-4 border rounded-lg px-4 py-2 bg-white shadow-lg;
-    .heading {
+    }
+
+    .card .heading {
         @apply border-b-2 border-gray-200 border-dashed mb-2 text-center align-middle pt-0 pb-1 mt-0;
     }
-    .status {
+
+    .card .status {
         @apply inline-block w-3 h-3 mr-2 rounded-full;
     }
-}
-.contacts ul {
-    @apply space-y-2;
-}
 
-
-
-.card {
-    @apply w-full h-fit mb-4 border rounded-lg px-4 py-2 bg-white shadow-lg;
-.heading {
-    @apply border-b-2 border-gray-200 border-dashed mb-2 text-center align-middle pt-0 pb-1 mt-0;
-}
-.status {
-    @apply inline-block w-3 h-3 mr-2 rounded-full;
-}
-}
-.card ul {
-    @apply space-y-2;
-}
-
+    .card ul {
+        @apply space-y-2;
+    }
 
 }

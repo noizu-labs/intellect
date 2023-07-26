@@ -34,11 +34,11 @@ defmodule Noizu.Intellect.LiveEventModule do
     instance: s_instance,
     event: s_event
   ) ) do
-    IO.inspect(msg, label: "PUBSUB Subscribe")
+
     key = [s_subject, s_instance, s_event]
           |> Enum.map(&("#{&1 || "*"}"))
           |> Enum.join(":")
-          |> IO.inspect(label: "PUBSUB Subscribe - key")
+
     #Logger.warn("PUBSUB Subscribe: #{key}")
     PubSub.subscribe(Noizu.Intellect.LiveViewEvent, key)
   end
@@ -49,7 +49,6 @@ defmodule Noizu.Intellect.LiveEventModule do
     event: s_event,
     payload: _payload
   ) = msg) do
-    IO.inspect(%{subject: s_subject, instance: s_instance, event: s_event}, label: "PUBSUB Event")
     # This is super inefficient, better routing will be needed in the future.
     # - Consider just switching to Syn and dedicating a message coordinater per User or User Session, although there are some upsides to pushing updates
     # - via pub sub for keeping pages synched across users/devices/sessions with out needing to add a bunch of addtiional logic.
@@ -58,7 +57,7 @@ defmodule Noizu.Intellect.LiveEventModule do
       "#{s_subject}:#{s_instance}:*",
       "#{s_subject}:#{s_instance}:#{s_event}",
       "#{s_subject}:*:#{s_event}",
-    ] |>     IO.inspect(label: "PUBSUB Event - Keys")
+    ]
 
     #Logger.info("PUB-SUB-EMIT: #{inspect keys} -> #{inspect msg}")
     Enum.map(keys, fn(key) ->

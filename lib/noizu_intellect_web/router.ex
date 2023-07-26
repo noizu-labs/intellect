@@ -19,6 +19,10 @@ defmodule Noizu.IntellectWeb.Router do
   end
 
   scope "/", Noizu.IntellectWeb do
+    scope "/documents/v1.0", Documents.V1_0 do
+      get "/image/:type/:image", ImageController, :get
+    end
+
     pipe_through :browser
     get "/terms-and-conditions", PageController, :terms
     post "/login", PageController, :login
@@ -26,6 +30,7 @@ defmodule Noizu.IntellectWeb.Router do
 
     pipe_through :secure_browser
     get "/", PageController, :home
+    live "/profile", Profile
   end
 
   # Other scopes may use custom stacks.

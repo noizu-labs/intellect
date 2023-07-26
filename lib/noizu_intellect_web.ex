@@ -66,6 +66,15 @@ defmodule Noizu.IntellectWeb do
     end
   end
 
+  def component do
+    quote do
+      use Phoenix.Component
+      alias Phoenix.LiveView.JS
+      import Noizu.IntellectWeb.Gettext
+      unquote(html_helpers())
+    end
+  end
+
   def html do
     quote do
       use Phoenix.Component

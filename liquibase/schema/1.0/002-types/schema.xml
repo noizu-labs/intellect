@@ -8,4 +8,6 @@
 
     <include relativeToChangelogFile="true" file="001-types.xml"/>
     <include relativeToChangelogFile="true" file="002-versioned-string.xml"/>
+    <include relativeToChangelogFile="true" file="003-versioned-uri.xml"/>
+    <include relativeToChangelogFile="true" file="004-versioned-name.xml"/>
 </databaseChangeLog>

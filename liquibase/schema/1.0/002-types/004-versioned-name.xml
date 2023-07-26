@@ -1,0 +1,451 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+
+    <!-- ========================================================== -->
+    <!-- Versioned Name Tables                                      -->
+    <!-- ========================================================== -->
+    <changeSet author="kebrings" id="versioned_name table">
+        <createTable tableName="versioned_name">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_versioned_name"/>
+            </column>
+            <column name="version" type="BIGINT"/>
+            <column name="first_name" type="VARCHAR(512)"/>
+            <column name="middle_name" type="VARCHAR(512)"/>
+            <column name="last_name" type="VARCHAR(512)"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_name_history table">
+        <createTable tableName="versioned_name_history">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_versioned_name_history"/>
+            </column>
+            <column name="versioned_name" type="BIGINT"/>
+            <column name="version" type="BIGINT"/>
+            <column name="first_name" type="VARCHAR(512)"/>
+            <column name="middle_name" type="VARCHAR(512)"/>
+            <column name="last_name" type="VARCHAR(512)"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- Versioned String : indexes                                 -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <changeSet author="kebrings" id="IXFK_versioned_name_history_versioned_name index">
+        <createIndex
+                indexName="IXFK_versioned_name_history_versioned_name"
+                tableName="versioned_name_history">
+            <column name="versioned_name"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- .......................................................... -->
+    <!-- Versioned String : Foreign Keys                            -->
+    <!-- .......................................................... -->
+    <changeSet author="kebrings" id="versioned_name_history.versioned_name fk">
+        <addForeignKeyConstraint
+                baseColumnNames="versioned_name"
+                baseTableName="versioned_name_history"
+                constraintName="FK_versioned_name_history_versioned_name"
+                deferrable="false"
+                initiallyDeferred="false"
+                onDelete="CASCADE"
+                onUpdate="NO ACTION"
+                referencedColumnNames="identifier"
+                referencedTableName="versioned_name"
+                validate="true"/>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_name uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedName.Repo') , 'Elixir.Noizu.Entity.VersionedName.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedName.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_name_history uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedName.History.Repo') , 'Elixir.Noizu.Entity.VersionedName.History.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Entity.VersionedName.History.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_name: create">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+CREATE OR REPLACE FUNCTION create_versioned_name(first_name VARCHAR(512), middle_name VARCHAR(512), last_name VARCHAR(512))
+RETURNS BIGINT AS $$
+DECLARE
+    vs_id BIGINT;
+    vsh_id BIGINT;
+    current_timestamp TIMESTAMP WITHOUT TIME ZONE := NOW();
+BEGIN
+    -- Get new identifiers from generators
+    vs_id := generate_uid('Elixir.Noizu.Entity.VersionedName.Repo');
+    vsh_id := generate_uid('Elixir.Noizu.Entity.VersionedName.History.Repo');
+    -- Create the new versioned string
+    INSERT INTO versioned_name (identifier, version, first_name, middle_name, last_name, created_on, modified_on)
+    VALUES (vs_id, 1, first_name, middle_name, last_name, current_timestamp, current_timestamp);
+
+    -- Create the history entry for version 1
+    INSERT INTO versioned_name_history (identifier, versioned_name, version, first_name, middle_name, last_name, created_on, modified_on)
+    VALUES (vsh_id, vs_id, 1, first_name, middle_name, last_name, current_timestamp, current_timestamp);
+
+    RETURN vs_id;
+END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION create_versioned_name(first_name VARCHAR(512), middle_name VARCHAR(512), last_name VARCHAR(512));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_name: update">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION update_versioned_name(for_identifier BIGINT, new_first_name VARCHAR(512), new_middle_name VARCHAR(512), new_last_name VARCHAR(512))
+        RETURNS BIGINT AS $$
+        DECLARE
+            current_version BIGINT;
+            new_version BIGINT;
+            vsh_id BIGINT;
+            current_first_name VARCHAR(512);
+            current_middle_name VARCHAR(512);
+            current_last_name VARCHAR(512);
+
+            existing_versioned_name BIGINT;
+            existing_version BIGINT;
+
+            current_timestamp TIMESTAMP WITHOUT TIME ZONE := NOW();
+            BEGIN
+            -- Check if the first_name or last_name has changed
+            SELECT version, first_name, middle_name, last_name INTO current_version, current_first_name, current_middle_name, current_last_name FROM versioned_name WHERE identifier = for_identifier;
+
+            IF current_version IS NULL THEN
+                RAISE EXCEPTION 'Versioned Name with identifier % not found.', for_identifier;
+            END IF;
+
+            IF (new_first_name &lt;&gt; current_first_name OR  new_middle_name &lt;&gt; current_middle_name OR new_last_name &lt;&gt; current_last_name) THEN
+                SELECT versioned_name, version INTO existing_versioned_name, existing_version FROM versioned_name_history WHERE versioned_name = for_identifier AND first_name = new_first_name AND middle_name = new_middle_name AND last_name = new_last_name;
+                IF existing_versioned_name IS NOT NULL THEN
+                    UPDATE versioned_name set version = existing_version, first_name = new_first_name, middle_name = new_middle_name, last_name = new_last_name, modified_on = current_timestamp WHERE identifier = for_identifier;
+                    RETURN existing_version;
+                ELSE
+                    -- Get new identifier from generator
+                    vsh_id := generate_uid('VersionedName.History');
+                    new_version := (SELECT COALESCE(MAX(version), current_version) FROM versioned_name_history WHERE versioned_name = for_identifier) + 1;
+
+                    -- Update the new versioned string
+                    UPDATE versioned_name set version = new_version, first_name = new_first_name, middle_name = new_middle_name, last_name = new_last_name, modified_on = current_timestamp WHERE identifier = for_identifier;
+
+                    -- Create the history entry for the new version
+                    INSERT INTO versioned_name_history (identifier, versioned_name, version, first_name, middle_name, last_name, created_on, modified_on)
+                    VALUES (vsh_id, for_identifier, new_version, new_first_name, new_middle_name, new_last_name, current_timestamp, current_timestamp);
+                    return new_version;
+                END IF;
+            ELSE
+                return current_version;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION update_versioned_name(for_identifier BIGINT, new_first_name VARCHAR(512), new_last_name VARCHAR(512));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_name: delete_version">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION delete_versioned_name_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS VOID AS $$
+        BEGIN
+            IF for_version = (SELECT version FROM versioned_name WHERE identifier = for_identifier) THEN
+                RAISE EXCEPTION 'Cannot delete the current version (%, %) of the versioned string.', for_identifier, for_version;
+            ELSE
+                DELETE FROM versioned_name_history WHERE versioned_name = for_identifier AND version = for_version;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION delete_versioned_name_version(for_identifier BIGINT, for_version BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_name: delete">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION delete_versioned_name(for_identifier BIGINT)
+        RETURNS VOID AS $$
+            BEGIN
+            DELETE FROM versioned_name WHERE identifier = for_identifier;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION delete_versioned_name(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_name: get_vsn">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION get_versioned_name_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS TABLE (
+            identifier BIGINT,
+            version BIGINT,
+            first_name VARCHAR(512),
+            middle_name VARCHAR(512),
+            last_name VARCHAR(512),
+            created_on TIMESTAMP WITHOUT TIME ZONE,
+            modified_on TIMESTAMP WITHOUT TIME ZONE,
+            deleted_on TIMESTAMP WITHOUT TIME ZONE
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+                SELECT versioned_name_history.versioned_name as identifier,
+                       versioned_name_history.version,
+                       versioned_name_history.first_name,
+                       versioned_name_history.middle_name,
+                       versioned_name_history.last_name,
+                       versioned_name_history.created_on,
+                       versioned_name_history.modified_on,
+                       versioned_name_history.deleted_on
+                FROM versioned_name_history
+                WHERE versioned_name_history.versioned_name = for_identifier AND versioned_name_history.version = for_version;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION get_versioned_name_version(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="versioned_name: get">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION get_versioned_name(for_identifier BIGINT)
+        RETURNS TABLE (
+            identifier BIGINT,
+            version BIGINT,
+            first_name VARCHAR(512),
+            middle_name VARCHAR(512),
+            last_name VARCHAR(512),
+            created_on TIMESTAMP WITHOUT TIME ZONE,
+            modified_on TIMESTAMP WITHOUT TIME ZONE,
+            deleted_on TIMESTAMP WITHOUT TIME ZONE
+        ) AS $$
+            BEGIN
+            RETURN QUERY
+            SELECT versioned_name.identifier,
+                   versioned_name.version,
+                   versioned_name.first_name,
+                   versioned_name.middle_name,
+                   versioned_name.last_name,
+                   versioned_name.created_on,
+                   versioned_name.modified_on,
+                   versioned_name.deleted_on
+            FROM versioned_name
+            WHERE versioned_name.identifier = for_identifier;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION get_versioned_name(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_name: first_name">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION versioned_name_first_name(for_identifier BIGINT)
+        RETURNS VARCHAR(512) AS $$
+        DECLARE
+            out_first_name VARCHAR(512);
+            BEGIN
+            SELECT versioned_name.first_name INTO out_first_name
+            FROM versioned_name
+            WHERE versioned_name.identifier = for_identifier;
+            return out_first_name;
+            END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION versioned_name_first_name(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="versioned_name: last_name">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION versioned_name_last_name(for_identifier BIGINT)
+        RETURNS VARCHAR(512) AS $$
+        DECLARE
+            out_last_name VARCHAR(512);
+        BEGIN
+            SELECT versioned_name.last_name INTO out_last_name
+            FROM versioned_name
+            WHERE versioned_name.identifier = for_identifier;
+            return out_last_name;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION versioned_name_last_name(for_identifier BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="versioned_name: set_version">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+        CREATE OR REPLACE FUNCTION set_versioned_name_to_version(for_identifier BIGINT, for_version BIGINT)
+        RETURNS VOID AS $$
+        DECLARE
+            to_version BIGINT;
+            to_first_name VARCHAR(512);
+            to_middle_name VARCHAR(512);
+            to_last_name VARCHAR(512);
+        BEGIN
+            -- Check if the version exists for the given identifier
+            SELECT version, first_name, middle_name, last_name INTO to_version, to_first_name, to_middle_name, to_last_name FROM versioned_name_history WHERE versioned_name = for_identifier AND version = for_version;
+
+            IF to_version IS NULL THEN
+                RAISE EXCEPTION 'Version % of the versioned name with identifier % not found.', for_version, for_identifier;
+            ELSE
+                -- Update the versioned string with the specified version
+                UPDATE versioned_name SET first_name = to_first_name, middle_name = to_middle_name, last_name = to_last_name, version = to_version, modified_on = NOW() WHERE identifier = for_identifier;
+            END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION set_versioned_name_to_version(for_identifier BIGINT, for_version BIGINT);
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+
+
+    <changeSet author="kebrings" id="versioned_name: test suite">
+        <sql dbms="postgresql" splitStatements="false" stripComments="false">
+CREATE OR REPLACE FUNCTION noizu_psql_test_suit__versioned_names()
+RETURNS BOOL AS $$
+DECLARE
+            ts_a TIMESTAMP WITHOUT TIME ZONE;
+    ts_b TIMESTAMP WITHOUT TIME ZONE;
+    int_a BIGINT;
+    int_b BIGINT;
+    int_c BIGINT;
+    varc_a VARCHAR(512);
+    text_a VARCHAR(512);
+    record_a RECORD;
+    outcome BOOL = TRUE;
+            BEGIN
+    -- create_versioned_name
+    int_a := create_versioned_name('test-create', 'middle', 'versioned-string');
+    outcome := NOIZU_ASSERT(int_a IS NOT NULL, 'create_versioned_name') AND outcome;
+    IF int_a IS NOT NULL THEN
+        -- get_versioned_name
+        record_a := get_versioned_name(int_a);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'get_versioned_name') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.first_name = 'test-create', 'get_versioned_name') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.last_name = 'versioned-string', 'get_versioned_name') AND outcome;
+
+        -- update
+        int_b := update_versioned_name(int_a, 'test-create-2', NULL, 'versioned-string-2');
+        outcome := NOIZU_ASSERT(int_b = 2, 'update_versioned_name') AND outcome;
+        int_b := update_versioned_name(int_a, 'test-create-3', NULL,  'versioned-string');
+        outcome := NOIZU_ASSERT(int_b = 3, 'update_versioned_name') AND outcome;
+        int_b := update_versioned_name(int_a, 'test-create-2', NULL,  'versioned-string-2');
+        outcome := NOIZU_ASSERT(int_b = 2, 'update_versioned_name - to existing') AND outcome;
+        int_b := update_versioned_name(int_a, 'test-create-4', NULL,  'versioned-string');
+        outcome := NOIZU_ASSERT(int_b = 4, 'update_versioned_name - version jump') AND outcome;
+
+        -- get_versioned_name_version
+        record_a := get_versioned_name_version(int_a, 2);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'get_versioned_name_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.first_name = 'test-create-2', 'get_versioned_name_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.last_name = 'versioned-string-2', 'get_versioned_name_version') AND outcome;
+
+        -- set_versioned_name_version
+        PERFORM set_versioned_name_to_version(int_a, 4);
+        record_a := get_versioned_name(int_a);
+        outcome := NOIZU_ASSERT(record_a.identifier IS NOT NULL, 'set_versioned_name_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.first_name = 'test-create-4', 'set_versioned_name_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.last_name = 'versioned-string', 'set_versioned_name_to_version') AND outcome;
+        outcome := NOIZU_ASSERT(record_a.version = 4, 'set_versioned_name_to_version') AND outcome;
+
+        -- delete version
+            select identifier into int_b FROM versioned_name_history where versioned_name = int_a AND version = 2;
+            PERFORM delete_versioned_name_version(int_a, 2);
+            select identifier into int_c FROM versioned_name_history where versioned_name = int_a AND version = 2;
+            outcome := NOIZU_ASSERT(int_b IS NOT NULL, 'delete_versioned_name_version - entry exists') AND outcome;
+        outcome := NOIZU_ASSERT(int_c IS NULL, 'delete_versioned_name_version - entry not removed') AND outcome;
+
+        -- versioned_name_first_name
+        outcome := NOIZU_ASSERT(versioned_name_first_name(int_a) = 'test-create-4', 'versioned_name_first_name') AND outcome;
+        -- versioned_name_last_name
+        outcome := NOIZU_ASSERT(versioned_name_last_name(int_a) = 'versioned-string', 'versioned_name_last_name') AND outcome;
+
+        -- delete
+        PERFORM delete_versioned_name(int_a);
+            select identifier into int_b FROM versioned_name where identifier = int_a;
+            outcome := NOIZU_ASSERT(int_b IS NULL, 'Delete versioned_name') AND outcome;
+            END IF;
+            return outcome;
+            END;
+$$ LANGUAGE plpgsql;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="false" stripComments="false">
+                DROP FUNCTION noizu_psql_test_suit__versioned_names();
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+</databaseChangeLog>

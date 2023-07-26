@@ -17,6 +17,9 @@
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html"
+// import {initTE, Animate} from "tw-elements";
+// initTE({Animate});
+// alert('inited');
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
@@ -69,6 +72,27 @@ Hooks.AriaEnableToggle = {
 }
 
 
+Hooks.AriaExpandedToggle = {
+    mounted() {
+        // if element or it's target are clicked then set self to aria-selected, otherwise set to false if enabled
+        this.toggleListener = event => {
+            let enabled = this.el.getAttribute('aria-expanded');
+            if (enabled === 'true') {
+                let hook_target = this.el.getAttribute('data-phx-hook-focus');
+                let target = (hook_target && hook_target !== "") ? document.querySelector(hook_target) : null;
+                if (this.el.contains(event.target) || (target && target.contains(event.target))) {
+                    this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-expanded", "true"]}]]))
+                } else {
+                    this.liveSocket.execJS(this.el, JSON.stringify([["set_attr", {attr: ["aria-expanded", "false"]}]]))
+                }
+            }
+        }
+        document.addEventListener('click', this.toggleListener)
+    },
+    destroyed() {
+        document.removeEventListener('click', this.toggleListener)
+    }
+}
 
 Hooks.AriaSelectToggle = {
     mounted() {
@@ -152,45 +176,84 @@ Hooks.AriaUnselect = {
     }
 }
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, params: {_csrf_token: csrfToken}})
 
+Hooks.SubmitChatInput = {
+    mounted() {
+        this.el.addEventListener("submit", this.handleFormSubmit.bind(this))
+    },
 
-//---------------------------------
-// Apply Extension
-//---------------------------------
-const jsExtension = new Map();
-jsExtension.set('version', '0.18.18');
-const jsExtensionMethods = new Map();
-jsExtensionMethods.set('exec_toggle_attr', function(eventType, phxEvent, view, sourceEl, el, {attr: [attr, val]}){
-    if (el.hasAttribute(attr)) {
-        if (val == 'true' || value == 'false') {
-            let cur = el.getAttribute(attr);
-            if (cur == 'true') {
-                cur = 'false';
-                this.setOrRemoveAttrs(el, [[attr, cur]], [])
-            } else if (cur == 'false') {
-                cur = 'true';
-                this.setOrRemoveAttrs(el, [[attr, cur]], [])
-            } else {
-                this.setOrRemoveAttrs(el, [], [[attr, val]])
-            }
-        } else {
-            this.setOrRemoveAttrs(el, [], [[attr, val]])
+    handleFormSubmit(event) {
+        event.preventDefault()
+        let formData = new FormData(event.target)
+        let formValues = Object.fromEntries(formData.entries())
+        console.log(formValues, this.liveSocket);
+
+        // Find the live component hook by its DOM id
+        let liveComponent = this.liveSocket.findComponent("project-chat-input");
+        if (liveComponent) {
+            liveComponent.pushEvent("message:submit", { form: formValues});
         }
-    }  else {
-        this.setOrRemoveAttrs(el, [[attr, val]], [])
-    }
-});
 
-jsExtension.set('methods', jsExtensionMethods);
-let live_extension = {
-    jsExtension: jsExtension
+    }
 }
 
-liveSocket.loadExtension(live_extension);
+Hooks.UpdateElapsedTime = {
+    setElapsedTime(currentTime, element) {
+        const elapsedTime = currentTime - element.dataset.startTime;
+        if (elapsedTime >= (3600 * 24 * 365)) element.innerText = `${Math.floor(elapsedTime / (3600 * 24 * 365))}y ago`;
+        else if (elapsedTime >= (3600 * 24)) element.innerText = `${Math.floor(elapsedTime / (3600 * 24))}d ago`;
+        else if (elapsedTime >= (3600)) element.innerText = `${Math.floor(elapsedTime / (3600))}h ago`;
+        else if (elapsedTime >= (60)) element.innerText = `${Math.floor(elapsedTime / (60))}m ago`;
+        else if (elapsedTime >= (15)) element.innerText = `${elapsedTime}s ago`;
+        else element.innerText = 'just now';
+    },
+    updateElapsedTime() {
+        console.log("Update Times");
+        const children = this.el.querySelectorAll('time.nz-elapsed-time');
+        const viewportTop = window.scrollY || document.documentElement.scrollTop;
+        const viewportBottom = viewportTop + window.innerHeight;
+        let childrenInView = [];
+        const currentTime = Math.floor(Date.now() / 1000);
+        children.forEach((child) => {
+            const rect = child.getBoundingClientRect();
+            const isVisible =
+                rect.top >= viewportTop &&
+                rect.left >= 0 &&
+                rect.bottom <= viewportBottom &&
+                rect.right <= window.innerWidth;
 
+            if (isVisible) {
+                this.setElapsedTime(currentTime, child);
+            } else {
+                console.log("Not Visible");
+            }
+        });
 
+    },
+    mounted() {
+        const children = this.el.querySelectorAll('time.nz-elapsed-time');
+        children.forEach((child) => {
+            child.dataset.startTime = Math.floor(Date.parse(child.getAttribute("datetime")) / 1000);
+        });
+        this.interval = setInterval(() => {this.updateElapsedTime()}, 5000);
+    },
+    updated() {
+        const children = this.el.querySelectorAll('time.nz-elapsed-time');
+        children.forEach((child) => {
+            if (!child.dataset.startTime) {
+                child.dataset.startTime = Math.floor(Date.parse(child.getAttribute("datetime")) / 1000);
+            }
+        });
+    },
+    destroyed() {
+        if (this.interval) {
+            clearInterval(this.interval)
+        }
+    },
+};
+
+let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, params: {_csrf_token: csrfToken}})
 
 //---------------------------------
 // Proceed
@@ -211,3 +274,9 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
+
+
+window.addEventListener("value:clear", el =>  {
+    console.log("Clear", el.target);
+    el.target.value = "";
+});

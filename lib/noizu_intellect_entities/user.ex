@@ -12,7 +12,9 @@ defmodule Noizu.Intellect.User do
   @persistence ecto_store(Noizu.Intellect.Schema.User, Noizu.Intellect.Repo)
   def_entity do
     identifier :integer
+    field :slug
     field :name
+    field :profile_image, nil, Noizu.Entity.VersionedURI
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
 
@@ -34,11 +36,11 @@ defmodule Noizu.Intellect.User do
                order_by: member.created_on,
                select: {account, member},
                limit: 1
-      case Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "Query") do
+      case Noizu.Intellect.Repo.all(q) do
         [{account, member}] ->
         # Todo extend entity to support from_record here.
-          with {:ok, account} <- Noizu.Intellect.Account.entity(account.identifier, context) |> IO.inspect(label: "ACCOUNT"),
-               {:ok, member} <- Noizu.Intellect.Account.Member.entity(member.identifier, context) |> IO.inspect(label: "MEMBER") do
+          with {:ok, account} <- Noizu.Intellect.Account.entity(account.identifier, context),
+               {:ok, member} <- Noizu.Intellect.Account.Member.entity(member.identifier, context) do
             {:ok, {account, member}}
           end
           _ -> {:error, :not_found}
