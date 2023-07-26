@@ -11,6 +11,7 @@ defmodule Noizu.IntellectWeb.PageController do
     # so skip the default app layout.
     context = Noizu.Context.system()
     with active_user = %Noizu.Intellect.User{} <- Noizu.IntellectWeb.Guardian.Plug.current_resource(conn),
+         {:ok, context} <- Noizu.Context.dummy_for_user(active_user, context),
          {:ok, {active_project, active_member}} <- Noizu.Intellect.User.default_project(active_user, context),
          {:ok, channel} <- Noizu.Intellect.Account.channel_by_slug(active_project, "general", context)
       do
@@ -20,6 +21,7 @@ defmodule Noizu.IntellectWeb.PageController do
           active_user: active_user,
           active_project: active_project,
           active_channel: channel,
+          context: context,
           layout: false
         }
       )

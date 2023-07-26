@@ -39,8 +39,9 @@ defmodule Noizu.Intellect.UIDProviderModule do
 
   def generate(repo, _) do
     uuid = repo_uuid(repo)
-    query = "SELECT current_value FROM get_uid_sequence(uuid_generate_v3(uuid_ns_dns(), $1))"
-    case Ecto.Adapters.SQL.query(Noizu.Intellect.Repo, query, ["#{repo}"]) do
+    IO.puts "GENEREATE FOR #{repo}"
+    query = "SELECT generate_uid($1)"
+    case Ecto.Adapters.SQL.query(Noizu.Intellect.Repo, query, ["#{repo}"]) |> IO.inspect do
       {:ok, %{rows: [[v]]}} when is_integer(v) -> {:ok, v}
       error -> {:error, error}
     end

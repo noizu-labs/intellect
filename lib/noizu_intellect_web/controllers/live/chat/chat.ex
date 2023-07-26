@@ -6,6 +6,7 @@ defmodule Noizu.IntellectWeb.Message do
     typing: false,
     timestamp: nil,
     user_name: nil,
+    user: nil,
     profile_image: nil,
     mood: nil,
     body: nil,
@@ -20,8 +21,8 @@ defmodule Noizu.IntellectWeb.Chat do
   require Noizu.Intellect.LiveEventModule
   import Noizu.Intellect.LiveEventModule
   def render(assigns) do
-
     ~H"""
+    <%= unless @error do %>
     <div class="bg-white shadow-md rounded h-full p-2 mt-4 flex flex-col">
       <div id="project-chat-history-container" class="m-0 p-0 pr-4 min-h-[60vh] flex flex-col  ">
         <.live_component module={Noizu.IntellectWeb.Chat.History}, id="project-chat-history" unique="main" messages={@messages} />
@@ -33,8 +34,24 @@ defmodule Noizu.IntellectWeb.Chat do
     </div>
 
     <div class="fixed bottom-0 left-0 h-[20vh] w-full">
-     <.live_component module={Noizu.IntellectWeb.Chat.Input}, id="project-chat-input" user={@active_user} channel={@active_channel} />
+     <.live_component
+        module={Noizu.IntellectWeb.Chat.Input},
+        id="project-chat-input"
+        user={@active_user}
+        channel={@active_channel_ref}
+        project={@active_project_ref}
+        member={@active_member_ref}
+
+      />
     </div>
+    <% else %>
+      <div class="w-full h-[90vh] flex flex-col">
+        <div class="my-auto">
+          <.display_error id="chat-error" error={@error}/>
+        </div>
+      </div>
+    <% end %>
+
 
     """
   end
@@ -60,9 +77,9 @@ defmodule Noizu.IntellectWeb.Chat do
 #  end
   def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "sent", payload: message, options: options), socket) do
     Logger.error("HANDLE_INFO: #{inspect info}")
-
+    messages = socket.assigns[:messages] ++ [message]
     socket = socket
-             |> assign(messages: socket.assigns[:messages] ++ [message])
+             |> assign(messages: messages)
              |> then(
                   fn(socket) ->
                     cond do
@@ -73,10 +90,6 @@ defmodule Noizu.IntellectWeb.Chat do
                       :else -> socket
                     end
                   end)
-
-
-
-
     {:noreply, socket}
   end
 
@@ -85,67 +98,61 @@ defmodule Noizu.IntellectWeb.Chat do
   #
   #===========================
   def mount(_, session, socket) do
-    now = DateTime.utc_now()
-    img = "a0074078-c6c3-465b-b210-edd7e5fd33be"
-    messages = [
-      %Noizu.IntellectWeb.Message{
-        type: :event,
-        timestamp: Timex.shift(now, days: -7),
-        user_name: "Chelsea Hagon",
-        profile_image: img,
-        body: "created the invoice."
-      },
-      %Noizu.IntellectWeb.Message{
-        type: :event,
-        timestamp: Timex.shift(now, days: -6),
-        user_name: "Chelsea Hagon",
-        profile_image: img,
-        body: "edited the invoice."
-      },
-      %Noizu.IntellectWeb.Message{
-        type: :event,
-        timestamp: Timex.shift(now, days: -5),
-        user_name: "Chelsea Hagon",
-        profile_image: img,
-        body: "sent the invoice."
-      },
-      %Noizu.IntellectWeb.Message{
-        type: :message,
-        timestamp: Timex.shift(now, days: -3),
-        user_name: "Chelsea Hagon",
-        profile_image: img,
-        mood: :loved,
-        body: "Called client, they reassured me the invoice would be paid by the 27th."
-      },
-      %Noizu.IntellectWeb.Message{
-        type: :event,
-        timestamp: Timex.shift(now, days: -2),
-        user_name: "Alex Current",
-        profile_image: img,
-        body: "Viewed the invoice."
-      },
-      %Noizu.IntellectWeb.Message{
-        type: :event,
-        glyph: :check,
-        timestamp: DateTime.utc_now(),
-        user_name: "Alex Current",
-        profile_image: img,
-        body: "Paid the invoice."
-      },
-    ]
 
-    with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(session["active_channel"]) do
-      Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: sref, event: "sent"))
-      #Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: sref, event: "typing"))
-    end
+    context = session["context"]
 
-    socket = socket
-             |> assign(mood: session["mood"])
-             |> assign(active_user: session["active_user"])
-             |> assign(active_project: session["active_project"])
-             |> assign(active_channel: session["active_channel"])
-             |> assign(active_member: session["active_member"])
-             |> assign(messages: messages)
-    {:ok, socket}
+    (with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(session["active_channel"]),
+          {:ok, active_project_ref} <- Noizu.EntityReference.Protocol.ref(session["active_project"]),
+          {:ok, active_channel_ref} <- Noizu.EntityReference.Protocol.ref(session["active_channel"]),
+          {:ok, active_member_ref} <- Noizu.EntityReference.Protocol.ref(session["active_member"]),
+          {:ok, messages} <- Noizu.IntellectApi.Messages.recent(active_channel_ref, context, limit: 20)
+       do
+       Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: sref, event: "sent"))
+       messages = messages
+                  |> Noizu.Intellect.LiveView.Encoder.encode!(context)
+                  |> Enum.reverse()
+                  |> IO.inspect(label: "Prepped")
+
+#       error = try do
+#         raise ArgumentError, "Example Error Raise"
+#         rescue e ->
+#           %Noizu.IntellectWeb.LiveViewError{
+#              title: Noizu.IntellectWeb.Gettext.gettext("Argument Error"),
+#              body: Noizu.IntellectWeb.Gettext.gettext("Demo of Error Functionality"),
+#              error: e,
+#              trace: __STACKTRACE__,
+#              time_stamp: DateTime.utc_now(),
+#              context: context
+#           }
+#       end
+       socket = socket
+                |> assign(active_project_ref: active_project_ref)
+                |> assign(active_channel_ref: active_channel_ref)
+                |> assign(active_member_ref: active_member_ref)
+                |> assign(mood: session["mood"])
+                |> assign(active_user: session["active_user"])
+                |> assign(active_project: session["active_project"])
+                |> assign(active_channel: session["active_channel"])
+                |> assign(active_member: session["active_member"])
+                |> assign(messages: messages)
+                |> assign(error: nil)
+       {:ok, socket}
+     else
+       error ->
+     error = %Noizu.IntellectWeb.LiveViewError{
+                    title: Noizu.IntellectWeb.Gettext.gettext("Ref Failure"),
+                    body: Noizu.IntellectWeb.Gettext.gettext("Required Account Details Not Found."),
+                    error: error,
+                    trace: nil,
+                    time_stamp: DateTime.utc_now(),
+                    context: context
+                 }
+
+         socket = socket
+                  |> assign(error: error)
+         {:ok, socket}
+     end)
+
+
   end
 end

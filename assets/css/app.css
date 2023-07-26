@@ -6,6 +6,24 @@
 @layer components {
 
 
+
+    .alert.glyph {
+        @apply bg-blue-500 flex h-10 w-10 items-center justify-center rounded-full;
+    }
+    .alert.glyph.info-alert {
+        @apply bg-gray-500;
+    }
+    .alert.glyph.warning-alert {
+        @apply bg-orange-500;
+    }
+    .alert.glyph.error-alert {
+        @apply bg-red-500;
+    }
+    .alert.glyph.success-alert {
+        @apply bg-green-500;
+    }
+
+
     .chat-spacer {
         @apply h-[20vh];
     }
@@ -33,6 +51,18 @@
         @apply z-10;
     }
 
+    .markdown-body ul {
+        @apply list-disc list-inside;
+    }
+    .markdown-body ul li {
+        @apply list-disc list-inside;
+    }
+    .markdown-body ol {
+        @apply list-decimal list-inside;
+    }
+    .markdown-body ol li {
+        @apply list-decimal list-inside;
+    }
 
     .markdown-body.msg {
         @apply text-black text-lg max-w-[55vw] min-w-[55vw];

@@ -28,10 +28,19 @@ defmodule Noizu.IntellectWeb.Chat.Input do
       mood: socket.assigns[:mood].selected,
       body: form["comment"]
     }
-#
-#
-#    socket = socket
-#             |> assign(messages: socket.assigns[:messages] ++ [append] )
+
+
+
+    %Noizu.Intellect.Account.Message{
+      sender: socket.assigns[:user],
+      channel: socket.assigns[:channel],
+      depth: 0,
+      user_mood: nil,
+      event: nil,
+      contents: form["comment"],
+      time_stamp: Noizu.Entity.TimeStamp.now()
+    }  |> IO.inspect() |> Noizu.Intellect.Entity.Repo.create(socket.assigns[:context]) |> IO.inspect
+
     with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(socket.assigns[:channel]) |> IO.inspect(label: "sref") do
       Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
     end

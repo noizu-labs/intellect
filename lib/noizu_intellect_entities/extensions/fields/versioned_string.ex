@@ -71,7 +71,7 @@ defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.Version
         _options
       ) do
     as_name = field_store[table][:name] || field_store[store][:name] || name
-    {as_name, field}
+    {:ok, {as_name, field}}
   end
 
   def field_from_record(
@@ -86,9 +86,9 @@ defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.Version
     case Map.get(record, as_name) do
       ref = {:ref, Noizu.Entity.VersionedString, _} ->
         with {:ok, entity} <- Noizu.Entity.VersionedString.Repo.get(ref, context, options) do
-          {name, entity}
+          {:ok, {name, entity}}
         end
-      entity = %Noizu.Entity.VersionedString{} -> {name, entity}
+      entity = %Noizu.Entity.VersionedString{} -> {:ok,{name, entity}}
       _ -> nil
     end
   end

@@ -62,6 +62,7 @@ defmodule Noizu.IntellectWeb.Project do
              |> assign(active_user: session["active_user"])
              |> assign(active_channel: session["active_channel"])
              |> assign(active_member: session["active_member"])
+             |> assign(context: session["context"])
     {:ok, socket}
   end
 end

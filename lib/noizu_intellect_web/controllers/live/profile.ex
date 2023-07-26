@@ -20,10 +20,12 @@ defmodule Noizu.IntellectWeb.Profile do
 
   def mount(conn, session, socket) do
     context = Noizu.Context.system()
-    with {:ok, active_user = %Noizu.Intellect.User{}, _} <- Noizu.IntellectWeb.Guardian.resource_from_token(session["guardian_default_token"]) |> IO.inspect
+    with {:ok, active_user = %Noizu.Intellect.User{}, _} <- Noizu.IntellectWeb.Guardian.resource_from_token(session["guardian_default_token"]),
+         {:ok, context} <- Noizu.Context.dummy_for_user(active_user, context)
       do
       socket = socket
                |> assign(active_user: active_user)
+               |> assign(context: context)
       {:ok, socket}
     else
       _ ->

@@ -17,7 +17,6 @@
         </customChange>
     </changeSet>
 
-
     <changeSet author="kebrings" id="NOIZU_ASSERT function">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
 CREATE OR REPLACE FUNCTION NOIZU_ASSERT(assert_check BOOL, assert_message TEXT DEFAULT 'Assertion Failed')

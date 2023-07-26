@@ -180,16 +180,27 @@
             LIMIT 1;
 
             -- agent : Grace
-            agent_identifier := generate_uid('Account.Agent');
             insert into public.account_agent (identifier, slug, account, details, prompt, created_on, modified_on)
             values (
-                agent_identifier,
+                generate_uid('Account.Agent'),
                 'grace',
                 account_identifier,
                 create_versioned_string('Grace.', 'Agent Back Story'),
                 create_versioned_string('Grace.', 'Agent Back Story'),
                 current_ts, current_ts
             );
+
+            -- agent : Mindy
+            insert into public.account_agent (identifier, slug, account, details, prompt, created_on, modified_on)
+            values (
+                   generate_uid('Account.Agent'),
+                   'mindy',
+                   account_identifier,
+                   create_versioned_string('Mindy.', 'Agent Back Story'),
+                   create_versioned_string('Mindy.', 'Agent Back Story'),
+                   current_ts, current_ts
+               );
+
         END $$ LANGUAGE plpgsql;
         </sql>
     </changeSet>

@@ -92,15 +92,12 @@
     </changeSet>
 
 
-    <changeSet author="kebrings" id="message table">
-        <createTable tableName="message">
+    <changeSet author="kebrings" id="emoji table">
+        <createTable tableName="emoji">
             <column name="identifier" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message"/>
+                <constraints nullable="false" primaryKey="true" />
             </column>
-            <column name="sender" type="BIGINT"/>
-            <column name="channel" type="BIGINT"/>
-            <column name="depth" type="SMALLINT"/>
-            <column name="contents" type="TEXT"/>
+            <column name="details" type="BIGINT" />
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
             </column>
@@ -112,13 +109,75 @@
     </changeSet>
 
 
-    <changeSet author="kebrings" id="message uid sequencer">
+    <changeSet author="kebrings" id="emoji uid sequencer">
         <sql dbms="postgresql" splitStatements="true" stripComments="true">
-            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Repo') , 'Elixir.Noizu.Intellect.Account.Channel.Message.Repo');
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Emoji.Repo') , 'Elixir.Noizu.Intellect.Emoji.Repo');
         </sql>
         <rollback>
             <sql dbms="postgresql" splitStatements="true" stripComments="true">
-                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Channel.Message.Repo'));
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Emoji.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="message_event table">
+        <createTable tableName="message_event">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" />
+            </column>
+            <column name="slug" type="CITEXT" />
+            <column name="details" type="BIGINT" />
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="message_event uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Message.Event.Repo') , 'Elixir.Noizu.Intellect.Message.Event.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Message.Event.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message table">
+        <createTable tableName="message">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" />
+            </column>
+            <column name="sender" type="BIGINT"/>
+            <column name="channel" type="BIGINT"/>
+            <column name="depth" type="SMALLINT"/>
+            <column name="user_mood" remarks="Emoji of Mood type" type="BIGINT"/>
+            <column name="event" type="BIGINT" />
+            <column name="contents" type="BIGINT"/>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="message uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Message.Repo') , 'Elixir.Noizu.Intellect.Account.Message.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Message.Repo'));
             </sql>
         </rollback>
     </changeSet>
@@ -383,9 +442,6 @@
         <addForeignKeyConstraint baseColumnNames="tag_vector" baseTableName="message_subject_tag" constraintName="FK_message_subject_tag_tag_vector" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="identifier" referencedTableName="tag_vector" validate="true"/>
     </changeSet>
 
-
-
-
     <changeSet author="kebrings" id="data-setup: channel">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
         DO $$
@@ -400,8 +456,83 @@
             WHERE a.slug = 'noizu'
                 LIMIT 1;
 
-            -- agent
-            channel_identifier := generate_uid('Account.Channel');
+
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                   generate_uid('Emoji'),
+                   create_versioned_string('Happy', 'They Feel Happy'),
+                   current_ts, current_ts
+               );
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                       generate_uid('Emoji'),
+                       create_versioned_string('Loved', 'They Feel Loved'),
+                       current_ts, current_ts
+                   );
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                       generate_uid('Emoji'),
+                       create_versioned_string('Sad', 'They Feel Sad'),
+                       current_ts, current_ts
+                   );
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                       generate_uid('Emoji'),
+                       create_versioned_string('Angry', 'They Feel Angry or Frustrated'),
+                       current_ts, current_ts
+                   );
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                       generate_uid('Emoji'),
+                       create_versioned_string('Excited', 'They Feels Excited'),
+                       current_ts, current_ts
+                   );
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                       generate_uid('Emoji'),
+                       create_versioned_string('Thumbs Up', 'They Approve'),
+                       current_ts, current_ts
+                   );
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                       generate_uid('Emoji'),
+                       create_versioned_string('Thumbs Down', 'They Disapprove'),
+                       current_ts, current_ts
+                   );
+            insert into emoji (identifier, details, created_on, modified_on)
+            values (
+                   generate_uid('Emoji'),
+                   create_versioned_string('Thumbs Down', 'They Disapprove'),
+                   current_ts, current_ts
+               );
+
+            -- Message Event
+            insert into message_event (identifier, slug, details, created_on, modified_on)
+            values (
+                    generate_uid('Message.Event'),
+                    'message',
+                    create_versioned_string('Message', 'A message was sent'),
+                    current_ts, current_ts
+                   );
+            -- Online Event
+        insert into message_event (identifier, slug, details, created_on, modified_on)
+        values (
+                   generate_uid('Message.Event'),
+                   'online',
+                   create_versioned_string('Online', 'user online'),
+                   current_ts, current_ts
+               );
+            -- Offline Event
+        insert into message_event (identifier, slug, details, created_on, modified_on)
+        values (
+                   generate_uid('Message.Event'),
+                   'offline',
+                   create_versioned_string('Offline', 'user away'),
+                   current_ts, current_ts
+               );
+
+
+            -- Channel
             insert into public.channel(identifier, slug, account, details, created_on, modified_on)
             values (
                        generate_uid('Account.Channel'),
@@ -409,6 +540,22 @@
                        account_identifier,
                        create_versioned_string('General', 'General Chat'),
                        current_ts, current_ts);
+
+            insert into public.channel(identifier, slug, account, details, created_on, modified_on)
+            values (
+                       generate_uid('Account.Channel'),
+                       'News',
+                       account_identifier,
+                       create_versioned_string('News', 'Events Chat'),
+                       current_ts, current_ts);
+
+        insert into public.channel(identifier, slug, account, details, created_on, modified_on)
+        values (
+                   generate_uid('Account.Channel'),
+                   'Devs',
+                   account_identifier,
+                   create_versioned_string('Developer', 'Work Channel'),
+                   current_ts, current_ts);
         END;
         $$ LANGUAGE plpgsql;
         </sql>
