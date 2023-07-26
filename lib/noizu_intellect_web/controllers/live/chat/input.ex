@@ -32,15 +32,12 @@ defmodule Noizu.IntellectWeb.Chat.Input do
 #
 #    socket = socket
 #             |> assign(messages: socket.assigns[:messages] ++ [append] )
-
-
-    IO.inspect(socket.assigns[:channel])
     with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(socket.assigns[:channel]) |> IO.inspect(label: "sref") do
-      IO.puts "PUBLISH"
-      Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message))
+      Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
     end
 
     js = JS.dispatch("value:clear", to: "#chat-input-comment")
+         |> JS.dispatch("height:clear", to: "#chat-input-comment")
     socket = socket
              |> assign(mood: %{selected: nil})
              |> push_event("js_push", %{js: js.ops})

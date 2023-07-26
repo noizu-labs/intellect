@@ -1,34 +1,11 @@
-<div id="chat-input" class="mt-6 flex gap-x-3">
-    <img src={image_service(:profile, @user.profile_image)}
-            alt="" class="h-6 w-6 flex-none rounded-full bg-gray-50">
-    <form action="#" class="relative flex-auto" phx-submit="message:submit" phx-target={@myself}>
-        <div class="overflow-hidden rounded-lg p-2 pb-12 shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
-            <label for="chat-input-comment" class="sr-only">Add your comment</label>
-            <textarea
-                    rows="5"
-                    name="comment"
-                    id="chat-input-comment"
-                    phx-update="ignore"
-                    class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
-                    placeholder="Add your comment..."
-            >
-            </textarea>
+<div id="chat-input" class="">
+    <div class="absolute bottom-36 left-0 w-screen pl-0 flex flex-col items-center pl-20">
+        <div class="w-10/12 p-2">
+            <.message_input
+                id="chat-input"
+                target={@myself}
+                mood_selector={@mood}>
+            </.message_input>
         </div>
-        <input type="hidden" name="current-mood" value={@mood.selected}/>
-        <div class="absolute inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
-            <div class="flex items-center space-x-5">
-                <div class="flex items-center">
-                    <button type="button" class="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-gray-400 hover:text-gray-500">
-                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z" clip-rule="evenodd" />
-                        </svg>
-                        <span class="sr-only">Attach a file</span>
-                    </button>
-                </div>
-                <.mood_selector id="chat-input-mood" target={@myself} mood={@mood} />
-
-            </div>
-            <button type="submit" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Comment</button>
-        </div>
-    </form>
+    </div>
 </div>

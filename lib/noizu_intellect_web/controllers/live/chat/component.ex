@@ -53,7 +53,7 @@ defmodule Noizu.IntellectWeb.Chat.Component do
               </span> commented</div>
               <.elapsedTime since={@message.timestamp}/>
           </div>
-          <p class="text-sm leading-6 text-gray-500"><%= @message.body %></p>
+          <div class="markdown-body"><%= raw(Earmark.as_html!(@message.body)) %></div>
       </div>
     """
   end

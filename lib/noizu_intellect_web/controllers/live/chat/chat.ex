@@ -1,5 +1,6 @@
 defmodule Noizu.IntellectWeb.Message do
   defstruct [
+    identifier: nil,
     type: nil,
     glyph: nil,
     typing: false,
@@ -8,6 +9,7 @@ defmodule Noizu.IntellectWeb.Message do
     profile_image: nil,
     mood: nil,
     body: nil,
+    state: :sent,
   ]
 end
 
@@ -20,14 +22,18 @@ defmodule Noizu.IntellectWeb.Chat do
   def render(assigns) do
 
     ~H"""
-    <div class="bg-white shadow-md rounded p-2">
-    <div class="mb-4">
-      <.live_component module={Noizu.IntellectWeb.Chat.History}, id="project-chat-history" unique="main" messages={@messages} />
+    <div class="bg-white shadow-md rounded h-full p-2 mt-4 flex flex-col">
+      <div id="project-chat-history-container" class="m-0 p-0 pr-4 min-h-[60vh] flex flex-col  ">
+        <.live_component module={Noizu.IntellectWeb.Chat.History}, id="project-chat-history" unique="main" messages={@messages} />
+      </div>
+
     </div>
 
-    <div>
-      <.live_component module={Noizu.IntellectWeb.Chat.Input}, id="project-chat-input" user={@active_user} channel={@active_channel} />
+    <div class="chat-spacer">
     </div>
+
+    <div class="fixed bottom-0 left-0 h-[20vh] w-full">
+     <.live_component module={Noizu.IntellectWeb.Chat.Input}, id="project-chat-input" user={@active_user} channel={@active_channel} />
     </div>
 
     """
@@ -46,17 +52,31 @@ defmodule Noizu.IntellectWeb.Chat do
   #===========================
   #
   #===========================
-  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "typing", payload: message), socket) do
-    Logger.error("HANDLE_INFO: #{inspect info}")
-    socket = socket
-             |> assign(messages: socket.assigns[:messages] ++ [message])
-    {:noreply, socket}
-  end
-  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "sent", payload: message), socket) do
+#  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "typing", payload: message, options: options), socket) do
+#    Logger.error("HANDLE_INFO: #{inspect info}")
+#    socket = socket
+#             |> assign(messages: socket.assigns[:messages] ++ [message])
+#    {:noreply, socket}
+#  end
+  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "sent", payload: message, options: options), socket) do
     Logger.error("HANDLE_INFO: #{inspect info}")
 
     socket = socket
              |> assign(messages: socket.assigns[:messages] ++ [message])
+             |> then(
+                  fn(socket) ->
+                    cond do
+                      options[:scroll] ->
+                        js = JS.dispatch("scroll:bottom", to: "html")
+                             socket
+                             |> push_event("js_push", %{js: js.ops})
+                      :else -> socket
+                    end
+                  end)
+
+
+
+
     {:noreply, socket}
   end
 
@@ -116,7 +136,7 @@ defmodule Noizu.IntellectWeb.Chat do
 
     with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(session["active_channel"]) do
       Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: sref, event: "sent"))
-      Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: sref, event: "typing"))
+      #Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: sref, event: "typing"))
     end
 
     socket = socket

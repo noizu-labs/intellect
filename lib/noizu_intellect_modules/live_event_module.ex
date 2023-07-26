@@ -13,7 +13,7 @@ defmodule Noizu.Intellect.LiveEventModule do
   require Logger
   alias Phoenix.PubSub
 
-  Record.defrecord(:event, [subject: nil, instance: nil, event: nil, payload: nil])
+  Record.defrecord(:event, [subject: nil, instance: nil, event: nil, payload: nil, options: nil])
 
 
 

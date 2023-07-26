@@ -168,6 +168,149 @@ defmodule Noizu.IntellectWeb.CoreComponents do
 
 
   attr :id, :string, required: true
+  attr :target, :any, required: true
+  attr :mood_selector, :any, default: %{selected: nil}
+  attr :expanding, :boolean, default: true
+  attr :placeholder, :string, default: "Add your message..."
+  attr :phx_submit, :any, default: "message:submit"
+  def message_input(assigns) do
+  ~H"""
+  <div class="relative top-32 left-0 w-full h-[20vh] ">
+  <form id={@id} action="#" class="relative w-full h-full bottom-0 left-0 right-0" phx-submit={@phx_submit} phx-target={@target}>
+            <div class="w-full h-fit">
+                <div
+                    class="overflow-hidden
+                        bg-white rounded-lg min-h-[15vh]
+                        focus:outline-none
+                        absolute bottom-0 w-full
+                        p-4 pb-12 shadow-lg shadow-black focus-within:ring-1 ring-gray-300 "
+                    >
+                    <label for={"#{@id}-comment"} class="sr-only">Add your message.</label>
+                    <%= if @expanding do %>
+                      <textarea
+                        phx-hook="ExpandingTextArea"
+                        name="comment"
+                        id={"#{@id}-comment"}
+                        phx-update="ignore"
+                        class="
+                              resize-none
+                              block
+                              w-full
+                              min-h-16
+                              max-h-[30vh]
+                              overflow-y-auto
+                              mx-auto
+                              focus:outline-none
+                              border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6
+                        "
+                        placeholder="Add your message..."
+                      ></textarea>
+                    <% else %>
+                      <textarea
+                        name="comment"
+                        id={"#{@id}-comment"}
+                        phx-update="ignore"
+                        class="
+                              resize-none
+                              bottom-0
+                              block
+                              w-full
+                              min-h-16
+                              max-h-[30vh]
+                              overflow-y-auto
+                              mx-auto
+                              focus:outline-none
+                              border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6
+                        "
+                        placeholder="Add your message..."
+                      ></textarea>
+                    <% end %>
+                </div>
+            </div>
+
+
+
+            <input type="hidden" name="current-mood" value={@mood_selector.selected}/>
+            <div class="absolute inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
+                <div class="flex items-center space-x-5">
+                    <div class="flex items-center">
+                        <button type="button" class="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-gray-400 hover:text-gray-500">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="sr-only">Attach a file</span>
+                        </button>
+                    </div>
+                    <.mood_selector id={"#{@id}-select-mood"} target={@target} mood={@mood_selector} />
+                </div>
+                <button type="submit" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Comment</button>
+            </div>
+
+        </form>
+  </div>
+  """
+  end
+
+
+  attr :id, :string, required: true
+  attr :title, :string, default: ""
+  attr :show, :boolean, default: false
+  attr :on_collapse, JS, default: %JS{}
+  slot :inner_block, required: true
+  def side_bar(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-remove={JS.set_attribute({"aria-expanded", "false"})}
+      data-collapse={JS.exec(@on_collapse, "phx-remove")}
+      class="relative side-bar z-10" aria-labelledby="slide-over-title" role="dialog" aria-expanded={@show && "true" || "false"}>
+        <!-- Background backdrop, show/hide based on slide-over state. -->
+        <!-- <div class="fixed inset-0"></div> -->
+
+    <div class="aside-overlay z-10 fixed inset-0 overflow-hidden w-fit ">
+    <div class="absolute inset-0 overflow-hidden z-10 ">
+      <div class="pointer-events-none  fixed inset-y-0 -right-96 flex max-w-full pl-10 ">
+          <div class="pointer-events-auto  w-screen max-w-md">
+          <div
+            phx-window-keydown={JS.exec("data-collapse", to: "##{@id}")}
+            phx-key="escape"
+            phx-click-away={JS.exec("data-collapse", to: "##{@id}")}
+            phx-click={JS.set_attribute({"aria-expanded", "true"}, to: "##{@id}")}
+            class=".contents aside-contents flex h-full flex-col overflow-y-scroll bg-white py-6 shadow-xl z-50"
+          >
+            <div class="px-4 sm:px-6">
+              <div class="flex items-start justify-between pt-16">
+                <h2 class="prose prose-xl  font-semibold text-gray-900" id="slide-over-title"><%= @title %></h2>
+                <div class="ml-3 flex h-7 items-center">
+                  <button
+                      phx-click={JS.set_attribute({"aria-expanded", "false"}, to: "##{@id}")}
+                      type="button"
+                      class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  >
+                    <span class="sr-only">Close panel</span>
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="relative mt-6 flex-1 px-4 sm:px-6 z-20">
+                    <%= render_slot(@inner_block) %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+    </div>
+    """
+  end
+
+
+
+
+  attr :id, :string, required: true
   attr :title, :string, required: true
   attr :show, :boolean, default: false
   attr :target, :any, required: true

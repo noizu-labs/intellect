@@ -5,27 +5,31 @@
 
 @layer components {
 
-    #right-aside[aria-expanded="false"] {
+
+    .chat-spacer {
+        @apply h-[20vh];
+    }
+
+    .side-bar[aria-expanded="false"] {
         /*@apply hidden;*/
     }
 
-    #right-aside .aside-contents {
+    .side-bar .aside-contents {
         @apply transition duration-1000 ease-in-out;
     }
 
-    #right-aside[aria-expanded="false"] .aside-contents {
-        @apply translate-x-96;
+
+    .side-bar[aria-expanded="true"] .aside-contents {
+        @apply -translate-x-96;
     }
 
-    #right-aside[aria-expanded="true"] .aside-content {
-        @apply translate-x-96;
-    }
 
-    #right-aside[aria-expanded="false"] .aside-overlay {
+
+    .side-bar[aria-expanded="false"] .aside-overlay {
         @apply -z-10;
     }
 
-    #right-aside[aria-expanded="true"] .aside-overlay {
+    .side-bar[aria-expanded="true"] .aside-overlay {
         @apply z-10;
     }
 
