@@ -1,4 +1,31 @@
-<div id={@id} class="card">
+<div id={@id}>
+<div class="card">
     <h1 class="heading prose prose-xl">Agents</h1>
-    [Agents]
+    <ol>
+        <%= for agent <- @agents do %>
+            <li phx-click="show:agent"
+                phx-value-agent={agent.identifier}
+                phx-target={@myself}
+                title={agent.details && agent.details.body || ""}
+            >
+            <span><%= agent.slug %></span> - <span
+                phx-click="show:agent"
+                phx-value-agent={agent.identifier}
+                phx-target={@myself}
+            ><%= agent.details && agent.details.title %></span></li>
+        <% end %>
+    </ol>
+</div>
+
+
+
+    <.modal show={true} title="Agent Details" class="fixed" id={"#{@id}-show-agent-modal"}>
+        <%= if @selected do %>
+            <h1 class="prose prose-xl">@<%= @selected.slug %> - <%= @selected.details && @selected.details.body %></h1>
+            <div class="card">
+                <h2>Prompt</h2>
+                <pre class="overflow-scroll"><%= @selected.prompt && @selected.prompt.body %></pre>
+            </div>
+        <% end %>
+    </.modal>
 </div>

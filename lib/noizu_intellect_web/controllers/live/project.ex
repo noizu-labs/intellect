@@ -7,6 +7,23 @@ defmodule Noizu.IntellectWeb.Project do
   def render(assigns) do
     ~H"""
 
+    <.side_bar show={true} id="right-aside">
+        <.live_component module={Noizu.IntellectWeb.Account.Menu}, id="project-menu" />
+        <.live_component module={Noizu.IntellectWeb.Account.Channel.Members}, class="" id="project-channel-members" />
+        <.live_component
+          module={Noizu.IntellectWeb.Account.Channel.Agents},
+          class=""
+          id="project-channel-agents"
+          project={@active_project_ref}
+          channel={@active_channel_ref}
+          context={@context}
+        />
+        <.live_component module={Noizu.IntellectWeb.Account.Channels}, class="" id="project-channels" />
+        <%= live_render(@socket, Noizu.IntellectWeb.Issues, id: "project-issues", session: %{"some_key" => "some_value"}) %>
+    </.side_bar>
+
+
+
 
 
     <div class="flex flex-row w-full min-h-[90vh] items-end content-center justify-self-center justify-center justify-items-center z-10">
@@ -27,18 +44,6 @@ defmodule Noizu.IntellectWeb.Project do
     </div>
 
 
-    <.side_bar id="right-aside">
-        <.live_component module={Noizu.IntellectWeb.Account.Menu}, id="project-menu" />
-        <.live_component module={Noizu.IntellectWeb.Account.Channel.Members}, class="" id="project-channel-members" />
-        <.live_component module={Noizu.IntellectWeb.Account.Channel.Agents}, class="" id="project-channel-agents" />
-      <.live_component module={Noizu.IntellectWeb.Account.Channels}, class="" id="project-channels" />
-        <%= live_render(@socket, Noizu.IntellectWeb.Issues, id: "project-issues", session: %{"some_key" => "some_value"}) %>
-    </.side_bar>
-
-
-
-
-
 
 
     """
@@ -57,12 +62,36 @@ defmodule Noizu.IntellectWeb.Project do
   end
 
   def mount(_, session, socket) do
-    socket = socket
-             |> assign(active_project: session["active_project"])
-             |> assign(active_user: session["active_user"])
-             |> assign(active_channel: session["active_channel"])
-             |> assign(active_member: session["active_member"])
-             |> assign(context: session["context"])
-    {:ok, socket}
+    context = session["context"]
+    (with {:ok, active_project_ref} <- Noizu.EntityReference.Protocol.ref(session["active_project"]),
+          {:ok, active_channel_ref} <- Noizu.EntityReference.Protocol.ref(session["active_channel"]),
+          {:ok, active_member_ref} <- Noizu.EntityReference.Protocol.ref(session["active_member"])
+       do
+       socket = socket
+                |> assign(active_project_ref: active_project_ref)
+                |> assign(active_channel_ref: active_channel_ref)
+                |> assign(active_member_ref: active_member_ref)
+                |> assign(mood: session["mood"])
+                |> assign(active_user: session["active_user"])
+                |> assign(active_project: session["active_project"])
+                |> assign(active_channel: session["active_channel"])
+                |> assign(active_member: session["active_member"])
+                |> assign(context: session["context"])
+                |> assign(error: nil)
+       {:ok, socket}
+     else
+       error ->
+         error = %Noizu.IntellectWeb.LiveViewError{
+           title: Noizu.IntellectWeb.Gettext.gettext("Ref Failure"),
+           body: Noizu.IntellectWeb.Gettext.gettext("Required Account Details Not Found."),
+           error: error,
+           trace: nil,
+           time_stamp: DateTime.utc_now(),
+           context: context
+         }
+         socket = socket
+                  |> assign(error: error)
+         {:ok, socket}
+     end)
   end
 end

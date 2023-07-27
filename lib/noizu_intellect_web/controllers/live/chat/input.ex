@@ -39,9 +39,9 @@ defmodule Noizu.IntellectWeb.Chat.Input do
       event: nil,
       contents: form["comment"],
       time_stamp: Noizu.Entity.TimeStamp.now()
-    }  |> IO.inspect() |> Noizu.Intellect.Entity.Repo.create(socket.assigns[:context]) |> IO.inspect
+    }  |> Noizu.Intellect.Entity.Repo.create(socket.assigns[:context])
 
-    with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(socket.assigns[:channel]) |> IO.inspect(label: "sref") do
+    with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(socket.assigns[:channel]) do
       Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
     end
 

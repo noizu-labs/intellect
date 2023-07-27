@@ -36,12 +36,9 @@
         @apply transition duration-1000 ease-in-out;
     }
 
-
     .side-bar[aria-expanded="true"] .aside-contents {
         @apply -translate-x-96;
     }
-
-
 
     .side-bar[aria-expanded="false"] .aside-overlay {
         @apply -z-10;

@@ -111,7 +111,6 @@ defmodule Noizu.IntellectWeb.Chat do
        messages = messages
                   |> Noizu.Intellect.LiveView.Encoder.encode!(context)
                   |> Enum.reverse()
-                  |> IO.inspect(label: "Prepped")
 
 #       error = try do
 #         raise ArgumentError, "Example Error Raise"

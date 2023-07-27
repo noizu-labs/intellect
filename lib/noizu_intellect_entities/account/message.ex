@@ -35,14 +35,40 @@ defmodule Noizu.Intellect.Account.Message do
     alias Noizu.Intellect.User.Credential.LoginPass
     alias Noizu.Intellect.Entity.Repo, as: EntityRepo
     alias Noizu.EntityReference.Protocol, as: ERP
+    import Ecto.Query
+
     def_repo()
+
+
+    def recent(channel, context, options \\ nil) do
+      {:ok, id} = Noizu.EntityReference.Protocol.id(channel)
+      limit = options[:limit] || 100
+      q = from m in Noizu.Intellect.Schema.Account.Message,
+               where: m.channel == ^id,
+               order_by: [desc: m.created_on],
+               limit: ^limit,
+               select: m
+      messages = Enum.map(
+                   Noizu.Intellect.Repo.all(q) ,
+                   fn(msg) ->
+                     # Temp - load from ecto needed.
+                     Noizu.Intellect.Account.Message.entity(msg.identifier, context)
+                   end
+                 ) |> Enum.map(
+                        fn
+                          ({:ok, v}) -> v
+                          (_) -> nil
+                        end)
+                 |> Enum.filter(&(&1))
+      {:ok, messages}
+    end
+
   end
 end
 
 
 defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message] do
   def encode!(message, context, options \\ nil) do
-    IO.inspect message.sender
     {:ok, user_ref} = Noizu.EntityReference.Protocol.ref(message.sender)
     %Noizu.IntellectWeb.Message{
       identifier: message.identifier,

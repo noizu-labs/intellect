@@ -38,7 +38,7 @@ defmodule Noizu.IntellectWeb.Issues do
 
     </div>
 
-    <.modal show={false} title="hello" id="show-issue">
+    <.modal show={false} title="Issue Details" id="show-issue">
       <%= if @selected do %>
       <h1 class="prose prose-xl">#<%= @selected.number %> <%= @selected.title %></h1>
       <div class="card">

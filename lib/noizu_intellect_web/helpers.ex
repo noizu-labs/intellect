@@ -266,7 +266,6 @@ defmodule Noizu.IntellectWeb.Helpers do
     def parse_llm_response(html, allowed \\ []) do
       with {:ok, document} <- Floki.parse_document(html) do
         document
-        #IO.inspect(document, label: "DOCUMENT")
         #|> Enum.reverse(document)
         |> CodeUtils.escape_llm_response(allowed)
         #|> Enum.reverse()
@@ -277,7 +276,6 @@ defmodule Noizu.IntellectWeb.Helpers do
 
     def strip_llm_response(document, allowed \\ []) do
         document
-         #IO.inspect(document, label: "DOCUMENT")
         #|> Enum.reverse(document)
         |> CodeUtils.do_strip_llm_response(allowed)
         #|> Enum.reverse()
@@ -321,16 +319,14 @@ defmodule Noizu.IntellectWeb.Helpers do
 
 
     def escape_llm_response(document, allowed) do
-      #IO.inspect(document, label: "escape_llm_response -->")
       case document do
         [v] when is_bitstring(v) ->
         cond do
           String.contains?(v, "`") ->
             with {:ok, d} <- Earmark.as_html!(v, escape: false, inner_html: true) |> Floki.parse_document() do
-              [d] #|> IO.inspect(label: "MARKDOWN")
+              [d]
             else
               error ->
-                IO.inspect(error, label: :FORMAT_ERROR)
                 [v]
             end
             :else ->  [v]
@@ -372,7 +368,6 @@ defmodule Noizu.IntellectWeb.Helpers do
         v ->
           v
       end)
-      #|> IO.inspect(label: "<-- escape_llm_response ")
     end
 
 
@@ -384,10 +379,9 @@ defmodule Noizu.IntellectWeb.Helpers do
             String.contains?(v, "`") ->
               with {:ok, d} <- Earmark.as_html!(v, escape: false, inner_html: true)
                                |> Floki.parse_document() do
-                [d] #|> IO.inspect(label: "MARKDOWN")
+                [d]
               else
                 error ->
-                  IO.inspect(error, label: :FORMAT_ERROR)
                   [v]
               end
             :else ->  [v]
@@ -395,7 +389,6 @@ defmodule Noizu.IntellectWeb.Helpers do
         v -> v
       end
      #  document
-    #|> IO.inspect(label: "--> do_strip ")
     |>  Floki.traverse_and_update(fn
         {"nlp-reply", attributes, contents} ->
           do_strip_llm_response(contents, allowed)
@@ -462,7 +455,6 @@ defmodule Noizu.IntellectWeb.Helpers do
         v ->
           v
       end)
-      #|> IO.inspect(label: "<-- do_strip ")
     end
 
 
