@@ -1,6 +1,10 @@
-<div id="chat-input" class="">
-    <div class="absolute bottom-36 left-0 w-screen pl-0 flex flex-col items-center pl-20">
-        <div class="w-10/12 p-2">
+<div id="chat-input" class="relative">
+<!--
+    <div class="absolute -bottom-36 w-full h-36
+        bg-gradient-to-b from-transparent via-20 to-slate-900">hey</div>
+-->
+    <div class="chat-input-contents">
+        <div class="w-9/12  p-4 self-center">
             <.message_input
                 id="chat-input"
                 target={@myself}

@@ -7,7 +7,7 @@ defmodule Noizu.IntellectWeb.Project do
   def render(assigns) do
     ~H"""
 
-    <.side_bar show={true} id="right-aside">
+    <.sidebar show={false} id="right-aside">
         <.live_component module={Noizu.IntellectWeb.Account.Menu}, id="project-menu" />
         <.live_component module={Noizu.IntellectWeb.Account.Channel.Members}, class="" id="project-channel-members" />
         <.live_component
@@ -20,7 +20,7 @@ defmodule Noizu.IntellectWeb.Project do
         />
         <.live_component module={Noizu.IntellectWeb.Account.Channels}, class="" id="project-channels" />
         <%= live_render(@socket, Noizu.IntellectWeb.Issues, id: "project-issues", session: %{"some_key" => "some_value"}) %>
-    </.side_bar>
+    </.sidebar>
 
 
 

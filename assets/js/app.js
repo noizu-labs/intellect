@@ -23,7 +23,7 @@ import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
-import {ExpandingTextArea_Hook, UpdateElapsedTime_Hook, JS_FORWARD_Hook} from "./hooks";
+import {Hover_Hook, ExpandingTextArea_Hook, UpdateElapsedTime_Hook, JS_FORWARD_Hook} from "./hooks";
 import {SubmitChatInput_Hook} from "./hooks";
 import {NoizuEventHandlers} from "./utilities";
 
@@ -41,6 +41,7 @@ Hooks.JS_FORWARD = JS_FORWARD_Hook;
 Hooks.ExpandingTextArea = ExpandingTextArea_Hook;
 Hooks.SubmitChatInput = SubmitChatInput_Hook;
 Hooks.UpdateElapsedTime = UpdateElapsedTime_Hook;
+Hooks.Hover = Hover_Hook;
 
 //----------------------------------
 // Init LiveSocket

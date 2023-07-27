@@ -33,7 +33,7 @@ defmodule Noizu.IntellectWeb.Chat do
     <div class="chat-spacer">
     </div>
 
-    <div class="fixed bottom-0 left-0 h-[20vh] w-full">
+    <div class="fixed bottom-0 left-0 h-36 w-full">
      <.live_component
         module={Noizu.IntellectWeb.Chat.Input},
         id="project-chat-input"

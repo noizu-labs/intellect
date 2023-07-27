@@ -1,11 +1,9 @@
 <div id={@id}>
-<div class="card">
-    <h1 class="heading prose prose-xl">Agents</h1>
+<div class="card bg-slate-100">
+    <h1 class="heading prose prose-xl bg-black">Agents</h1>
     <ol>
         <%= for agent <- @agents do %>
-            <li phx-click="show:agent"
-                phx-value-agent={agent.identifier}
-                phx-target={@myself}
+            <li
                 title={agent.details && agent.details.body || ""}
             >
             <span><%= agent.slug %></span> - <span
@@ -15,11 +13,12 @@
             ><%= agent.details && agent.details.title %></span></li>
         <% end %>
     </ol>
+    <footer class="footer bg-black">Footer</footer>
 </div>
 
 
 
-    <.modal show={true} title="Agent Details" class="fixed" id={"#{@id}-show-agent-modal"}>
+    <.modal show={false} title="Agent Details" class="fixed" id={"#{@id}-show-agent-modal"}>
         <%= if @selected do %>
             <h1 class="prose prose-xl">@<%= @selected.slug %> - <%= @selected.details && @selected.details.body %></h1>
             <div class="card">
