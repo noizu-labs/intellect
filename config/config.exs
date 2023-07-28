@@ -26,11 +26,11 @@ config :noizu_labs_entities,
        uid_provider: Noizu.Intellect.UIDProviderModule,
        umbrella: true
 
-
-
 config :noizu_intellect,
-  ecto_repos: [Noizu.Intellect.Repo]
-
+  ecto_repos: [Noizu.Intellect.Repo],
+  redis: [
+       uri: "redis://127.0.0.1:7000"
+       ]
 
 config :noizu_intellect, Noizu.IntellectWeb.Guardian,
        issuer: "noizu_intellect",

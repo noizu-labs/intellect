@@ -5,9 +5,10 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
 
   @vsn 1.0
   @sref "worker-agent"
-  @persistence redis_store(Noizu.Intellect.Service.Agent.Worker, Noizu.Intellect.Repo)
+  @persistence redis_store(Noizu.Intellect.Service.Agent.Worker, Noizu.Intellect.Redis)
   def_entity do
     identifier :integer
+    field :account, nil, Noizu.Entity.Reference
     field :book_keeping, %{}
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
@@ -27,13 +28,30 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
   #-------------------
   def load(state, context), do: load(state, context, nil)
   def load(state, context, options) do
-    _current_time = options[:_current_time] || DateTime.utc_now()
-    worker = %__MODULE__{
-      identifier: state.identifier
-    }
-    state = %{state| status: :loaded, worker: worker}
-            |> queue_heart_beat(context, options)
-    {:ok, state}
+    with {:ok, worker} <- entity(state.identifier, context) do
+      {:ok, worker}
+      |> IO.inspect(label: "LOADED")
+    else
+      _ ->
+        # TODO we need to handle ref identifiers so we can use the actual ref as our id.
+        with {:ok, identifier} <- id(state.identifier),
+             {:ok, agent} <- Noizu.Intellect.Account.Agent.entity(identifier, context),
+             {:ok, account} <- ERP.ref(agent.account) do
+          worker = %__MODULE__{
+            identifier: identifier,
+            account: account
+          } |> shallow_persist(context, options)
+          {:ok, worker}
+        end
+        |> IO.inspect(label: "LOAD")
+    end
+    |> case do
+         {:ok, worker} ->
+           state = %{state| status: :loaded, worker: worker}
+                   |> queue_heart_beat(context, options)
+           {:ok, state}
+         _ -> {:error, state}
+       end
   end
 
 
@@ -55,6 +73,12 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
 #    timer = Process.send_after(self(), msg, fuse)
 #    put_in(state, [Access.key(:worker), Access.key(:book_keeping, %{}), :heart_beat], timer)
     state
+  end
+
+  defimpl Noizu.Entity.Protocol do
+    def layer_identifier(entity, _layer) do
+      {:ok, entity.identifier}
+    end
   end
 
   defmodule Repo do

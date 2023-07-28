@@ -5,7 +5,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
   @vsn 1.0
   @sref "worker-agent"
-  @persistence redis_store(Noizu.Intellect.Service.Agent.Ingestion.Worker, Noizu.Intellect.Repo)
+  @persistence redis_store(Noizu.Intellect.Service.Agent.Ingestion.Worker, Noizu.Intellect.Redis)
   def_entity do
     identifier :integer
     field :book_keeping, %{}
@@ -55,6 +55,12 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 #    timer = Process.send_after(self(), msg, fuse)
 #    put_in(state, [Access.key(:worker), Access.key(:book_keeping, %{}), :heart_beat], timer)
     state
+  end
+
+  defimpl Noizu.Entity.Protocol do
+    def layer_identifier(entity, _layer) do
+      {:ok, entity.identifier}
+    end
   end
 
   defmodule Repo do

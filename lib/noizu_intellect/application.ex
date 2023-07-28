@@ -12,6 +12,8 @@ defmodule Noizu.Intellect.Application do
       Noizu.IntellectWeb.Telemetry,
       # Start the Ecto repository
       Noizu.Intellect.Repo,
+      # Start Redis
+      Noizu.Intellect.Redis,
       # Start the PubSub system
       Supervisor.child_spec({Phoenix.PubSub, name: Noizu.Intellect.PubSub}, id: :pubsub_standard),
       Supervisor.child_spec({Phoenix.PubSub, name: Noizu.Intellect.LiveViewEvent}, id: :pubsub_live_event),
