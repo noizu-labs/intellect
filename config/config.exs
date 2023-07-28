@@ -10,6 +10,9 @@ import Config
 
 Code.require_file("elixir-framework/archives/config_helper/helper_lib/config_helper.ex")
 
+config :noizu_labs_services,
+       configuration: Noizu.Intellect.Services.ConfigurationProvider
+
 Application.put_env(:noizu_labs_config_helper, :env_prefix_map, [
   prod: "PROD_INTELLECT",
   stage: "STAGE_INTELLECT",
@@ -19,8 +22,11 @@ Application.put_env(:noizu_labs_config_helper, :env_prefix_map, [
 
 
 config :noizu_labs_entities,
+       entity_repo: Noizu.Intellect.Entity.Repo,
        uid_provider: Noizu.Intellect.UIDProviderModule,
        umbrella: true
+
+
 
 config :noizu_intellect,
   ecto_repos: [Noizu.Intellect.Repo]

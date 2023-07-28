@@ -17,6 +17,9 @@ defmodule Noizu.Intellect.Application do
       Supervisor.child_spec({Phoenix.PubSub, name: Noizu.Intellect.LiveViewEvent}, id: :pubsub_live_event),
       # Start Finch
       {Finch, name: Noizu.Intellect.Finch},
+      # Start Services
+      Noizu.Intellect.Services.Supervisor,
+
       # Start the Endpoint (http/https)
       Noizu.IntellectWeb.Endpoint
       # Start a worker by calling: Noizu.Intellect.Worker.start_link(arg)
@@ -26,7 +29,9 @@ defmodule Noizu.Intellect.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Noizu.Intellect.Supervisor]
-    Supervisor.start_link(children, opts)
+    s = Supervisor.start_link(children, opts)
+    Noizu.Intellect.Services.Supervisor.bring_online(Noizu.Context.dummy())
+    s
   end
 
   # Tell Phoenix to update the endpoint configuration

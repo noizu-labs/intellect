@@ -83,7 +83,7 @@
         @apply rotate-180;
     }
     .sidebar-aside {
-        @apply w-96 pr-0 h-full m-0 py-6 z-20 pointer-events-auto  flex  flex-col overflow-y-auto bg-white shadow-xl;
+        @apply w-96 pr-0 h-full m-0 py-6 z-20 pointer-events-auto  flex  flex-col overflow-y-auto bg-slate-500 shadow-xl;
     }
     .sidebar[aria-expanded="false"] {
         /*@apply hidden;*/
