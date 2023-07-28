@@ -7,7 +7,10 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   @sref "worker-agent"
   @persistence redis_store(Noizu.Intellect.Service.Agent.Ingestion.Worker, Noizu.Intellect.Redis)
   def_entity do
-    identifier :integer
+    identifier :dual_ref
+    field :agent, nil, Noizu.Entity.Reference
+    field :account, nil, Noizu.Entity.Reference
+    field :channel, nil, Noizu.Entity.Reference
     field :book_keeping, %{}
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
@@ -18,24 +21,49 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #-------------------
   def init(R.ref(module: __MODULE__, identifier: identifier), _args, _context) do
     %__MODULE__{
-      identifier: identifier
+      identifier: identifier,
     }
   end
 
   #-------------------
   #
   #-------------------
+
+  #-------------------
+  #
+  #-------------------
+
+  #-------------------
+  #
+  #-------------------
   def load(state, context), do: load(state, context, nil)
   def load(state, context, options) do
-    _current_time = options[:_current_time] || DateTime.utc_now()
-    worker = %__MODULE__{
-      identifier: state.identifier
-    }
-    state = %{state| status: :loaded, worker: worker}
-            |> queue_heart_beat(context, options)
-    {:ok, state}
+    with {:ok, worker} <- entity(state.identifier, context) do
+      {:ok, worker}
+    else
+      _ ->
+        # TODO we need to handle ref identifiers so we can use the actual ref as our id.
+        with {:ok, {agent, channel}} <- id(state.identifier),
+             {:ok, agent_entity} <- Noizu.Intellect.Account.Agent.entity(agent, context),
+             {:ok, channel_entity} <- Noizu.Intellect.Account.Agent.entity(agent, context),
+             {:ok, account} <- ERP.ref(agent.account) do
+          worker = %__MODULE__{
+                     identifier: state.identifier,
+                     agent: agent_entity,
+                     channel: channel_entity,
+                     account: account
+                   } |> shallow_persist(context, options)
+          {:ok, worker}
+        end
+    end
+    |> case do
+         {:ok, worker} ->
+           state = %{state| status: :loaded, worker: worker}
+                   |> queue_heart_beat(context, options)
+           {:ok, state}
+         _ -> {:error, state}
+       end
   end
-
 
   #---------------------
   #

@@ -7,8 +7,9 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
   @sref "worker-agent"
   @persistence redis_store(Noizu.Intellect.Service.Agent.Worker, Noizu.Intellect.Redis)
   def_entity do
-    identifier :integer
+    identifier :ref
     field :account, nil, Noizu.Entity.Reference
+    field :agent, nil, Noizu.Entity.Reference
     field :book_keeping, %{}
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
@@ -19,7 +20,7 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
   #-------------------
   def init(R.ref(module: __MODULE__, identifier: identifier), _args, _context) do
     %__MODULE__{
-      identifier: identifier
+      identifier: identifier,
     }
   end
 
@@ -30,20 +31,19 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
   def load(state, context, options) do
     with {:ok, worker} <- entity(state.identifier, context) do
       {:ok, worker}
-      |> IO.inspect(label: "LOADED")
     else
       _ ->
         # TODO we need to handle ref identifiers so we can use the actual ref as our id.
-        with {:ok, identifier} <- id(state.identifier),
-             {:ok, agent} <- Noizu.Intellect.Account.Agent.entity(identifier, context),
-             {:ok, account} <- ERP.ref(agent.account) do
+        with {:ok, agent} <- id(state.identifier),
+             {:ok, agent_entity} <- Noizu.Intellect.Account.Agent.entity(agent, context),
+             {:ok, account} <- ERP.ref(agent_entity.account) do
           worker = %__MODULE__{
-            identifier: identifier,
+            identifier: agent,
+            agent: agent_entity,
             account: account
           } |> shallow_persist(context, options)
           {:ok, worker}
         end
-        |> IO.inspect(label: "LOAD")
     end
     |> case do
          {:ok, worker} ->
@@ -77,7 +77,7 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
 
   defimpl Noizu.Entity.Protocol do
     def layer_identifier(entity, _layer) do
-      {:ok, entity.identifier}
+      Noizu.Intellect.Service.Agent.Worker.sref(entity.identifier)
     end
   end
 
