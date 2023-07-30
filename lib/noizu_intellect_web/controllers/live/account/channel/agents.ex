@@ -12,9 +12,9 @@ defmodule Noizu.IntellectWeb.Account.Channel.Agents do
   #=========================
   def show_agent(agent, socket) do
     with agents <- socket.assigns[:agents],
-         {:ok, agent} <- Enum.find_value(agents, &(&1.identifier == agent && {:ok, &1})) |> IO.inspect(label: "Agents")
+         {:ok, agent} <- Enum.find_value(agents, &(&1.identifier == agent && {:ok, &1}))
       do
-      js = show_modal("#{socket.assigns[:id]}-show-agent-modal" |> IO.inspect)
+      js = show_modal("#{socket.assigns[:id]}-show-agent-modal")
       socket = socket
                |> assign(selected: agent)
                |> push_event("js_push", %{js: js.ops})

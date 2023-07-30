@@ -16,6 +16,7 @@ defmodule Noizu.Intellect.Account.Message do
     identifier :integer
     field :sender, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
+    field :read_on
     field :depth
     field :user_mood #, nil, Noizu.Intellect.Emoji
     field :event #, nil, Noizu.Intellect.Message.Event
@@ -39,6 +40,36 @@ defmodule Noizu.Intellect.Account.Message do
 
     def_repo()
 
+    def recent_with_status(recipient, channel, context, options \\ nil) do
+      with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
+           {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
+
+        limit = options[:limit] || 100
+        q = from m in Noizu.Intellect.Schema.Account.Message,
+                 left_join: s in Noizu.Intellect.Schema.Account.Message.Read,
+                 on: s.message == m.identifier,
+                 on: s.recipient == ^recipient_id,
+                 where: m.channel == ^channel_id,
+                 order_by: [desc: m.created_on],
+                 limit: ^limit,
+                 select: {m, s}
+        messages = Enum.map(
+                     Noizu.Intellect.Repo.all(q),
+                     fn({msg, status}) ->
+                       # Temp - load from ecto needed.
+                       with {:ok, message} <- Noizu.Intellect.Account.Message.entity(msg.identifier, context) do
+                         {:ok, %{message| read_on: status && status.read_on || nil}}
+                       end
+                     end
+                   ) |> Enum.map(
+                          fn
+                            ({:ok, v}) -> v
+                            (_) -> nil
+                          end)
+                   |> Enum.filter(&(&1))
+        {:ok, messages}
+      end
+    end
 
     def recent(channel, context, options \\ nil) do
       {:ok, id} = Noizu.EntityReference.Protocol.id(channel)

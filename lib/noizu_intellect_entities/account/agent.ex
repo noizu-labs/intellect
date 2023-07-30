@@ -62,7 +62,7 @@ defmodule Noizu.Intellect.Account.Agent do
                (_) -> nil
              end)
         |> Enum.filter(&(&1))
-        |> then(&({:ok, &1})) |> IO.inspect(label: "AGENT CHANNELS")
+        |> then(&({:ok, &1}))
       end
     end
 

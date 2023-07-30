@@ -7,7 +7,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion do
 
 
   def bring_workers_online(context) do
-    Logger.error("WAKING")
+    Logger.error("WAKING - 2")
     (from a in Noizu.Intellect.Schema.Account.Channel.Agent,
           order_by: [desc: a.agent],
           select: {a.agent, a.channel}
