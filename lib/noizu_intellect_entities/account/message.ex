@@ -98,16 +98,48 @@ defmodule Noizu.Intellect.Account.Message do
 end
 
 
+defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message] do
+  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+    sender = case subject.sender do
+      %Noizu.Intellect.User{name: name} -> "human: #{name}"
+      %Noizu.Intellect.Account.Agent{slug: name} -> "virtual-persona: #{name}"
+      _ -> "other"
+    end
+
+    prompt = """
+    ## 📩
+    id: #{subject.identifier}
+    read: #{subject.read_on && "true" || "false"}
+    from: #{sender}
+    time: #{subject.time_stamp.modified_on}
+    body:
+    #{subject.contents.body}
+    """
+    {:ok, prompt}
+  end
+  def minder(subject, prompt_context, context, options) do
+    prompt = nil
+    {:ok, prompt}
+  end
+end
+
+
 defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message] do
   def encode!(message, context, options \\ nil) do
     {:ok, user_ref} = Noizu.EntityReference.Protocol.ref(message.sender)
+    sender = case message.sender do
+      %Noizu.Intellect.User{name: name} -> name
+      %Noizu.Intellect.Account.Agent{slug: name} -> name
+      _ -> "other"
+    end
+
     %Noizu.IntellectWeb.Message{
       identifier: message.identifier,
       type: :message, # Pending
       glyph: nil, # Pending
       typing: false,
       timestamp: message.time_stamp.created_on,
-      user_name: message.sender.name,
+      user_name: sender,
       user: user_ref,
       profile_image: nil,
       mood: nil,

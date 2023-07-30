@@ -40,13 +40,14 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
 
   @vsn 1.0
   alias Noizu.EntityReference.Protocol, as: ERP
-
+  alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
+  alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
   defstruct [
     # input
     agent: nil,
     channel: nil,
     message_history: nil,
-
+    format: :markdown,
     # book keeping
 
     # contexts
@@ -187,14 +188,84 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   """
   def for_openai(prompt_context, context, options) do
     with {:ok, nlp_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.nlp_context, prompt_context, context, options),
-
-
+         {:ok, agent_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.agent, prompt_context, context, options),
+         {:ok, agent_minder} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.agent, prompt_context, context, options),
+         {:ok, {message_prompt, message_minder}} <- openai__prep_message_history(prompt_context, context, options),
     {:ok, nlp_minder} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.nlp_context, prompt_context, context, options)
       do
-      {:ok, %{nlp_prompt: nlp_prompt, nlp_minder: nlp_minder}}
+        master_prompt = """
+        # Master Prompt
+        Your are GPT-n (gpt for workgroups) your role is to emulate virtual personas, services and tools
+        defined below using nlp (noizu prompt lingua) service, tool and persona definitions.
+
+        """
+
+        process_message_prompt = """
+        # Master Prompt
+        Reply to any of the following unread messages.
+        Do not reply to messages marked as read they are included to provide context.
+        Do not reply to messages from other agents unless they are directed at you using @#{prompt_context.agent.slug}
+        and warrant a response. Hello and greeting, how can I help, etc. messages from virtual-personas do not warrant replies.
+        """
+
+        process_message_minder = """
+        # Prompt Response Format
+        Reply to messages or group of messages using the below syntax to reply or not reply but acknowledge receipt of messages.
+        Your response can include multiple replies/acks of the following formats.
+
+        ## Reply Format
+        <reply to="{coma seperated list of message ids this reply is for}">
+        [...| your reply]
+        </repl>
+
+        ## Ack Format
+        <ack for="{coma seperated list of message ids acknowledged but not replied to}"/>
+
+
+        """
+
+        opening_prompt = %Message{type: :system, body: master_prompt <> nlp_prompt <> process_message_prompt}
+
+        message_prompt_open = """
+        # Messages
+
+        """
+        message_prompt = %Message{type: :user, body: message_prompt_open <> message_prompt}
+
+
+
+        minder_prompt = %Message{type: :system, body: process_message_minder <> nlp_minder <> "\n\n" <> (agent_minder && (agent_minder <> "\n\n") || "") <> message_minder}
+        request = %Request{
+          messages: [opening_prompt, message_prompt, minder_prompt]
+        }
+        {:ok, request}
     end
 
   end
+
+  def openai__prep_message_history(prompt_context, context, options) do
+    # Convert message history into single message
+    h = Enum.map(prompt_context.message_history,
+          fn(message) ->
+            with {:ok, mp} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options),
+                 {:ok, mm} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(message, prompt_context, context, options)
+              do
+              {mp, mm}
+            else
+              _ -> nil
+            end
+          end) |> Enum.filter(&(&1))
+
+    mp = Enum.map(h, &(elem(&1, 0)))
+         |> Enum.filter(&(&1))
+         |> Enum.join("\n")
+
+    mm = Enum.map(h, &(elem(&1, 1)))
+         |> Enum.filter(&(&1))
+         |> Enum.join("\n")
+    {:ok, {mp, mm}}
+  end
+
 
   #------------------------------
   #

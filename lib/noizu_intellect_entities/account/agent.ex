@@ -92,3 +92,19 @@ defmodule Noizu.Intellect.Account.Agent do
     end
   end
 end
+
+defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
+  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+    prompt = """
+    ⚟persona:#{subject.slug}@1.0:nlp@0.5
+    #{subject.prompt.title}
+    ====
+    #{subject.prompt.body}
+    ⚞
+    """
+    {:ok, prompt}
+  end
+  def minder(subject, prompt_context, context, options) do
+    {:ok, nil}
+  end
+end

@@ -36,7 +36,7 @@ defmodule Noizu.IntellectWeb.Chat.Input do
       channel: socket.assigns[:channel],
       depth: 0,
       user_mood: nil,
-      event: nil,
+      event: :message,
       contents: form["comment"],
       time_stamp: Noizu.Entity.TimeStamp.now()
     }  |> Noizu.Intellect.Entity.Repo.create(socket.assigns[:context])

@@ -39,6 +39,13 @@
         </customChange>
     </changeSet>
 
+    <changeSet author="you" id="MESSAGE_EVENT_TYPE enum">
+        <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
+            <param name="enum" value="MESSAGE_EVENT_TYPE"/>
+            <param name="values" value="online,offline,message,function_call,function_response"/>
+        </customChange>
+    </changeSet>
+
     <changeSet author="kebrings" id="NOIZU_ASSERT function">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
 CREATE OR REPLACE FUNCTION NOIZU_ASSERT(assert_check BOOL, assert_message TEXT DEFAULT 'Assertion Failed')

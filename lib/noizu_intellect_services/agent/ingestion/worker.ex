@@ -91,21 +91,61 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
   def message_history(state,context,options) do
     # We'll actually pull agent digest messages, etc. here.
-    messages = Noizu.Intellect.Account.Message.Repo.recent_with_status(state.worker.agent, state.worker.channel, context, options)
-    {:ok, messages}
+    Noizu.Intellect.Account.Message.Repo.recent_with_status(state.worker.agent, state.worker.channel, context, options)
+
   end
 
   #---------------------
   # process_message_queue
   #---------------------
   def process_message_queue(state, context, options) do
-    IO.puts "PROCESS MESSAGE QUEUE"
     with true <- unread_messages?(state, context, options),
          {:ok, messages} <- message_history(state, context, options),
-         {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_prompt_context(state.worker.agent, state.worker.channel, messages, context, options)
+         true <- (length(messages) > 0) || {:error, :no_messages},
+         {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_prompt_context(state.worker.agent, state.worker.channel, messages, context, options),
+         {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
+         {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
+         {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options)
       do
-      Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options) |> IO.inspect(label: "Dynamic Context")
-      {:ok, state}
+        IO.inspect(%{messages: request_messages, settings: request_settings}, label: "OPEN AI REQUEST")
+        with {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
+            # response could be a function call or a response or a mix, need to handle all.
+            with %{choices: [%{message: %{content: reply}}|_]} <- response do
+              IO.inspect(reply, label: "OPEN AI RESPONSE")
+
+
+
+              message = %Noizu.Intellect.Account.Message{
+                sender: state.worker.agent,
+                channel: state.worker.channel,
+                depth: 0,
+                user_mood: nil,
+                event: :message,
+                contents: reply,
+                time_stamp: Noizu.Entity.TimeStamp.now()
+              }  |> Noizu.Intellect.Entity.Repo.create(context)
+
+              with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel),
+                   {:ok, message} <- message do
+                message = %Noizu.IntellectWeb.Message{
+                  type: :message,
+                  timestamp: message.time_stamp.created_on,
+                  user_name: state.worker.agent.slug,
+                  profile_image: state.worker.agent.profile_image,
+                  mood: :nothing,
+                  body: message.contents.body
+                }
+                Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
+              end
+
+
+              {:ok, state}
+              else
+              _ -> {:ok, state}
+            end
+          else
+          _ -> {:ok, state}
+        end
     else
       _ -> {:ok, state}
     end

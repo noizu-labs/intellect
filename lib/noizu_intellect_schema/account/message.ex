@@ -8,7 +8,7 @@ defmodule Noizu.Intellect.Schema.Account.Message do
     field :channel, Noizu.Entity.Reference
     field :depth, :integer
     field :user_mood, :integer # atom
-    field :event, :integer # atom
+    field :event, Ecto.Enum, values: [:online,:offline,:message,:function_call,:function_response]
     field :contents, Noizu.Entity.Reference
     field :created_on, :utc_datetime_usec
     field :modified_on, :utc_datetime_usec
