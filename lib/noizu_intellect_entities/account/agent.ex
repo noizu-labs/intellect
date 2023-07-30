@@ -15,6 +15,8 @@ defmodule Noizu.Intellect.Account.Agent do
   def_entity do
     identifier :integer
     field :slug
+    field :nlp
+    field :model
     field :account, nil, Noizu.Entity.Reference
     field :details, nil, Noizu.Entity.VersionedString
     field :prompt, nil, Noizu.Entity.VersionedString

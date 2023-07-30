@@ -5,6 +5,8 @@ defmodule Noizu.Intellect.Schema.Account.Agent do
   @primary_key {:identifier, :integer, autogenerate: false}
   schema "account_agent" do
     field :slug, :string
+    field :model, Ecto.Enum, values: [:gpt4,:gpt4_32,:gpt35_turbo,:gpt35_turbo_16]
+    field :nlp, Ecto.Enum, values: [:nlp_v0p5]
     field :account, Noizu.Entity.Reference
     field :details, Noizu.Entity.Reference
     field :prompt, Noizu.Entity.Reference
@@ -17,7 +19,7 @@ defmodule Noizu.Intellect.Schema.Account.Agent do
   @doc false
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:slug, :account, :details, :prompt, :profile_image, :created_on, :modified_on, :deleted_on])
-    |> validate_required([:slug, :account, :details, :prompt, :profile_image, :created_on, :modified_on])
+    |> cast(attrs, [:slug, :model, :nlp, :account, :details, :prompt, :profile_image, :created_on, :modified_on, :deleted_on])
+    |> validate_required([:slug, :model, :nlp, :account, :details, :prompt, :profile_image, :created_on, :modified_on])
   end
 end

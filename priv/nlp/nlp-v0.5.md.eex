@@ -1,0 +1,8 @@
+<%= cond do %>
+<% @section == :minder -> %>
+[Minder]
+<% @section == :prompt -> %>
+[Prompt]
+<% :else -> %>
+[Other]
+<% end %>

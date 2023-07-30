@@ -24,6 +24,21 @@
         </customChange>
     </changeSet>
 
+
+    <changeSet author="you" id="LLM_MODEL_TYPE enum">
+        <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
+            <param name="enum" value="LLM_MODEL_TYPE"/>
+            <param name="values" value="gpt4,gpt4_32,gpt35_turbo,gpt35_turbo_16"/>
+        </customChange>
+    </changeSet>
+
+    <changeSet author="you" id="NLP_VERSION_TYPE enum">
+        <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
+            <param name="enum" value="NLP_VERSION_TYPE"/>
+            <param name="values" value="nlp_v0p5"/>
+        </customChange>
+    </changeSet>
+
     <changeSet author="kebrings" id="NOIZU_ASSERT function">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
 CREATE OR REPLACE FUNCTION NOIZU_ASSERT(assert_check BOOL, assert_message TEXT DEFAULT 'Assertion Failed')

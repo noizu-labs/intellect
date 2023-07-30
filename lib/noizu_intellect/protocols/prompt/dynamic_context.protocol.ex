@@ -1,4 +1,4 @@
-defprotocol Noizu.Intellect.Prompt.DynamicContextProtocol do
+defprotocol Noizu.Intellect.Prompt.DynamicContext.Protocol do
   def prompt(subject, prompt_context, context, options)
   def minder(subject, prompt_context, context, options)
 #  def flags(subject, prompt_context, context, options)

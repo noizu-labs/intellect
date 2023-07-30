@@ -11,6 +11,17 @@
             </column>
             <column name="slug" type="CITEXT"/>
             <column name="account" type="BIGINT"/>
+
+            <column name="model" type="LLM_MODEL_TYPE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nlp" type="NLP_VERSION_TYPE">
+                <constraints nullable="false"/>
+            </column>
+
+
+
+
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -180,10 +191,12 @@
             LIMIT 1;
 
             -- agent : Grace
-            insert into public.account_agent (identifier, slug, account, details, prompt, created_on, modified_on)
+            insert into public.account_agent (identifier, slug, model, nlp, account, details, prompt, created_on, modified_on)
             values (
                 generate_uid('Account.Agent'),
                 'grace',
+                'gpt35_turbo_16',
+                'nlp_v0p5',
                 account_identifier,
                 create_versioned_string('Grace.', 'Agent Back Story'),
                 create_versioned_string('Grace.', 'Agent Back Story'),
@@ -191,10 +204,12 @@
             );
 
             -- agent : Mindy
-            insert into public.account_agent (identifier, slug, account, details, prompt, created_on, modified_on)
+            insert into public.account_agent (identifier, slug, model, nlp, account, details, prompt, created_on, modified_on)
             values (
                    generate_uid('Account.Agent'),
                    'mindy',
+                   'gpt35_turbo_16',
+                   'nlp_v0p5',
                    account_identifier,
                    create_versioned_string('Mindy.', 'Agent Back Story'),
                    create_versioned_string('Mindy.', 'Agent Back Story'),

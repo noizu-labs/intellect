@@ -42,7 +42,7 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_function"/>
             </column>
-            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="prompt_file" type="VARCHAR(256)"/>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -73,7 +73,7 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_intuition_pump"/>
             </column>
-            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="prompt_file" type="VARCHAR(256)"/>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -104,7 +104,7 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_prompt_lingua"/>
             </column>
-            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="prompt_file" type="VARCHAR(256)"/>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -135,7 +135,7 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_service"/>
             </column>
-            <column name="prompt_file" type="VARCHAR(50)"/>
+            <column name="prompt_file" type="VARCHAR(256)"/>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>

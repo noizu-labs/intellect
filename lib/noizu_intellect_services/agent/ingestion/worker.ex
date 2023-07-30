@@ -74,7 +74,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #---------------------
   #
   #---------------------
-  def queue_heart_beat(state, context, options \\ nil, fuse \\ 15_000) do
+  def queue_heart_beat(state, context, options \\ nil, fuse \\ 5_000) do
     # Start HeartBeat
     identifier = {self(), :os.system_time(:millisecond)}
     settings = apply(__pool__(), :__cast_settings__, [])
@@ -91,16 +91,20 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
   def message_history(state,context,options) do
     # We'll actually pull agent digest messages, etc. here.
-    Noizu.Intellect.Account.Message.Repo.recent_with_status(state.worker.agent, state.worker.channel, context, options)
+    messages = Noizu.Intellect.Account.Message.Repo.recent_with_status(state.worker.agent, state.worker.channel, context, options)
+    {:ok, messages}
   end
 
   #---------------------
   # process_message_queue
   #---------------------
   def process_message_queue(state, context, options) do
+    IO.puts "PROCESS MESSAGE QUEUE"
     with true <- unread_messages?(state, context, options),
-         {:ok, messages} <- message_history(state, context, options)
+         {:ok, messages} <- message_history(state, context, options),
+         {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_prompt_context(state.worker.agent, state.worker.channel, messages, context, options)
       do
+      Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options) |> IO.inspect(label: "Dynamic Context")
       {:ok, state}
     else
       _ -> {:ok, state}
@@ -111,6 +115,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #
   #---------------------
   def heart_beat(state, context, options) do
+    IO.puts "HEART BEAT"
     state = queue_heart_beat(state, context, options)
     with {:ok, state} <- process_message_queue(state, context, options) do
       {:noreply, state}
