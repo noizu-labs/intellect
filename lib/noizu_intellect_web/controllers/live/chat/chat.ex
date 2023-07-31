@@ -40,7 +40,7 @@ defmodule Noizu.IntellectWeb.Chat do
         user={@active_user}
         channel={@active_channel_ref}
         project={@active_project_ref}
-        member={@active_member_ref}
+        member={@active_member}
 
       />
     </div>
@@ -105,7 +105,7 @@ defmodule Noizu.IntellectWeb.Chat do
           {:ok, active_project_ref} <- Noizu.EntityReference.Protocol.ref(session["active_project"]),
           {:ok, active_channel_ref} <- Noizu.EntityReference.Protocol.ref(session["active_channel"]),
           {:ok, active_member_ref} <- Noizu.EntityReference.Protocol.ref(session["active_member"]),
-          {:ok, messages} <- Noizu.IntellectApi.Messages.recent(active_channel_ref, context, limit: 20)
+          {:ok, messages} <- Noizu.IntellectApi.Messages.recent(active_channel_ref, context, limit: 250)
        do
        Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: sref, event: "sent"))
        messages = messages

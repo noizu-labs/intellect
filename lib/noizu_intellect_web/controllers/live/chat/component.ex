@@ -36,7 +36,7 @@ defmodule Noizu.IntellectWeb.Chat.Component do
           <div class="w-px bg-gray-200"></div>
       </div>
       <img src={image_service(:profile, @message.profile_image)}  alt="" class="relative mt-3 h-6 w-6 flex-none rounded-full bg-gray-50"/>
-      <div class="flex-auto rounded-md p-3 ring-1 ring-inset ring-gray-200">
+      <div class="flex-auto rounded-md p-3 ring-1 ring-inset ring-gray-200 max-w-full overflow-x-auto">
           <div class="flex justify-between gap-x-4">
               <div class="py-0.5 text-xs leading-5 text-gray-500">
 
@@ -53,7 +53,8 @@ defmodule Noizu.IntellectWeb.Chat.Component do
               </span> commented</div>
               <.elapsedTime since={@message.timestamp}/>
           </div>
-          <div class="markdown-body"><%= raw(Earmark.as_html!(@message.body) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %></div>
+            <!-- <%# <div class="markdown-body"><%= raw(Earmark.as_html!(@message.body) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %></div> %> -->
+          <div class="markdown-body"><%=  raw(Earmark.as_html!(@message.body, smartypants: false) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %></div>
       </div>
     """
   end

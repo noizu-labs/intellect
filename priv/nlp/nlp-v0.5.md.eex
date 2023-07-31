@@ -1,18 +1,10 @@
 <%= cond do %>
-<% @section == :minder_disabled -> %>
+<% @section == :minder -> %>
 # NLP Minder Prompt
-Reply using the following format
-````syntax
-```nlp-intent
-[...|nlp-intent block]
-```
-[...|response]
-```nlp-reflect
-[...|nlp-reflect block]
-```
-````
-<% @section == :prompt -> %>
+Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.<% @section == :prompt -> %>
 # NLP 0.5 Definition
+
+````````nlp-definition
 ⚟NLP@0.5
 # NLP 0.5 - Noizu PromptLingua v0.5
 
@@ -91,5 +83,6 @@ reflections:
 </nlp-reflect>
 ````
 ⚞
-<% :else -> %><%= "" %>
-<% end %>
+````````
+<% :else -> %><%= ""
+%><% end %>

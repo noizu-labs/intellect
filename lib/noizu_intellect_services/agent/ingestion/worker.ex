@@ -86,108 +86,134 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   end
 
   def unread_messages?(state,context,options) do
-    Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
+    # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
+    with {:ok, o} <- Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options) do
+      Enum.find_value(o, &(is_nil(&1.read_on) && true || nil))
+    else
+      _ -> false
+    end
   end
 
   def message_history(state,context,options) do
     # We'll actually pull agent digest messages, etc. here.
-    Noizu.Intellect.Account.Message.Repo.recent_with_status(state.worker.agent, state.worker.channel, context, options)
+    o = Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options)
+    with {:ok, x} <- o do
+      Enum.map(x, &(IO.puts "#{state.worker.agent.slug} - #{&1.identifier} - #{&1.read_on} - #{&1.time_stamp.created_on}"))
+    end
+    o
   end
 
   #---------------------
   # process_message_queue
   #---------------------
+  def clear_response_acks(response, messages, state, context, options) do
+    if ack = response[:ack] do
+      Enum.map(ack,
+        fn({:ack, [ids: ids]}) ->
+          Enum.map(ids, fn(id) ->
+            message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
+            IO.inspect(message && {message.identifier, message.read_on}, label: "ACK")
+            message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+          end)
+        end
+      )
+    end
+  end
+
+  def process_response_replies(response, messages, state, context, options) do
+    # record responses
+    if reply = response[:reply] do
+      Enum.map(reply,
+        fn({:reply, attr}) ->
+          # Has valid response block
+
+          if response = attr[:response] do
+            Logger.error("[RESPONSE:#{state.worker.agent.slug}] #{ response} \n----------------- #{inspect reply}")
+            message = %Noizu.Intellect.Account.Message{
+              sender: state.worker.agent,
+              channel: state.worker.channel,
+              depth: 0,
+              user_mood: nil,
+              event: :message,
+              contents: %{body: response},
+              time_stamp: Noizu.Entity.TimeStamp.now()
+            }
+            {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
+            # Block so we don't reload and resend.
+            Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+
+            Enum.map(attr[:ids] || [], fn(id) ->
+              message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
+              IO.inspect(message && {message.identifier, message.read_on}, label: "ACK")
+              message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+            end)
+
+            with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
+              # need a from message method.
+              push = %Noizu.IntellectWeb.Message{
+                type: :message,
+                timestamp: message.time_stamp.created_on,
+                user_name: state.worker.agent.slug,
+                profile_image: state.worker.agent.profile_image,
+                mood: :nothing,
+                body: message.contents.body
+              }
+              Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+            end
+
+
+            Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
+          else
+            # clear ids regardless to avoid continuous loop.
+            if ids = attr[:ids] do
+              Enum.map(ids, fn(id) ->
+                message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
+                message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+              end)
+            end
+          end
+        end
+      )
+    end
+  end
+
   def process_message_queue(state, context, options) do
     with true <- unread_messages?(state, context, options),
          {:ok, messages} <- message_history(state, context, options),
+         messages <- messages |> Enum.reverse(),
          true <- (length(messages) > 0) || {:error, :no_messages},
          {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_prompt_context(state.worker.agent, state.worker.channel, messages, context, options),
          {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
          {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
          {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options)
       do
-        #IO.inspect(%{messages: request_messages, settings: request_settings}, label: "OPEN AI REQUEST")
+
+      try do
+        #Logger.warn("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
+        #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
+        Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
+
         with {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
-            # response could be a function call or a response or a mix, need to handle all.
-            with %{choices: [%{message: %{content: reply}}|_]} <- response,
-                 {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
-                 valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
-             do
-               unless valid? == :ok do
-                 IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")
-               end
+          with %{choices: [%{message: %{content: reply}}|_]} <- response,
+               {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
+               valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
+            do
+            # Valid Response?
+            unless valid? == :ok, do: IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")
 
-               response = Enum.group_by(response, &(elem(&1, 0)))
-               IO.inspect(response, label: "[#{state.worker.agent.slug}] OPEN AI RESPONSE")
-
-               # clear ack'd
-               if ack = response[:ack] do
-                  Enum.map(ack,
-                    fn({:ack, [ids: ids]}) ->
-                      Enum.map(ids, fn(id) ->
-                        message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
-                        IO.inspect(message && {message.identifier, message.read_on}, label: "ACK")
-                        message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-                      end)
-                    end
-                  )
-               end
-
-               # record responses
-               if reply = response[:reply] do
-                 Enum.map(reply,
-                   fn({:reply, attr}) ->
-
-                     if response = attr[:response] do
-
-
-
-                       message = %Noizu.Intellect.Account.Message{
-                                   sender: state.worker.agent,
-                                   channel: state.worker.channel,
-                                   depth: 0,
-                                   user_mood: nil,
-                                   event: :message,
-                                   contents: response,
-                                   time_stamp: Noizu.Entity.TimeStamp.now()
-                                 }  |> Noizu.Intellect.Entity.Repo.create(context)
-
-                       with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel),
-                            {:ok, message} <- message do
-                         Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-                         message = %Noizu.IntellectWeb.Message{
-                           type: :message,
-                           timestamp: message.time_stamp.created_on,
-                           user_name: state.worker.agent.slug,
-                           profile_image: state.worker.agent.profile_image,
-                           mood: :nothing,
-                           body: message.contents.body
-                         }
-                         Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
-                       end
-
-
-
-                     end
-
-                     if ids = attr[:ids] do
-                       Enum.map(ids, fn(id) ->
-                         message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
-                         message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-                       end)
-                     end
-                   end
-                 )
-               end
-
-
-              {:ok, state}
-              else
-              _ -> {:ok, state}
-            end
-          else
-          _ -> {:ok, state}
+            # Process Response
+            response = Enum.group_by(response, &(elem(&1, 0)))
+                       |> IO.inspect(label: "[#{state.worker.agent.slug}] OPEN AI RESPONSE")
+            # clear ack'd
+            clear_response_acks(response, messages, state, context, options)
+            # process replies.
+            process_response_replies(response, messages, state, context, options)
+          end
         end
+      rescue _ -> :nop
+      catch _ -> :nop
+      end
+      {:ok, state}
     else
       _ -> {:ok, state}
     end
@@ -197,7 +223,6 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #
   #---------------------
   def heart_beat(state, context, options) do
-    IO.puts "HEART BEAT"
     state = queue_heart_beat(state, context, options)
     with {:ok, state} <- process_message_queue(state, context, options) do
       {:noreply, state}

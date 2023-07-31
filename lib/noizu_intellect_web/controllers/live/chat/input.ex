@@ -20,7 +20,7 @@ defmodule Noizu.IntellectWeb.Chat.Input do
   #
   #--------------------
   def user_input(form, socket) do
-    message = %Noizu.IntellectWeb.Message{
+    push = %Noizu.IntellectWeb.Message{
       type: :message,
       timestamp: DateTime.utc_now(),
       user_name: socket.assigns[:user].name,
@@ -29,20 +29,23 @@ defmodule Noizu.IntellectWeb.Chat.Input do
       body: form["comment"]
     }
 
-
-
-    %Noizu.Intellect.Account.Message{
-      sender: socket.assigns[:user],
+    message = %Noizu.Intellect.Account.Message{
+      sender: socket.assigns[:member],
       channel: socket.assigns[:channel],
       depth: 0,
       user_mood: nil,
       event: :message,
-      contents: form["comment"],
+      contents: %{body: form["comment"]},
       time_stamp: Noizu.Entity.TimeStamp.now()
-    }  |> Noizu.Intellect.Entity.Repo.create(socket.assigns[:context])
+    }
+    {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, socket.assigns[:context])
 
     with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(socket.assigns[:channel]) do
-      Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
+      Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+    end
+
+    spawn fn ->
+      Noizu.Intellect.Account.Channel.deliver(socket.assigns[:channel], message, socket.assigns[:context])
     end
 
     js = JS.dispatch("value:clear", to: "#chat-input-comment")

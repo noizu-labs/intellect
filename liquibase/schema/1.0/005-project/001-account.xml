@@ -239,7 +239,7 @@ BEGIN
     -- account_member
     amid := generate_uid('Account.Member');
     insert into public.account_member (identifier, account, "user", details, created_on, modified_on)
-    values (amid, aid, identifiers.user_identifier, create_versioned_string('CEO', 'Master of the House'), current_ts, current_ts);
+    values (amid, aid, identifiers.user_identifier, create_versioned_string('CEO', 'Principle Engineer and owner of Project.'), current_ts, current_ts);
 
     -- ...................
     -- account_role

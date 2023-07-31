@@ -252,6 +252,7 @@ defmodule Noizu.IntellectWeb.CoreComponents do
             <div class="w-full h-fit">
                 <div
                     class="overflow-hidden
+                        nz-massage-input-box
                         bg-slate-200 rounded-lg min-h-24 text-black
                         absolute bottom-0 w-full
                         opacity-90
@@ -305,7 +306,7 @@ defmodule Noizu.IntellectWeb.CoreComponents do
 
 
             <input type="hidden" name="current-mood" value={@mood_selector.selected}/>
-            <div class="absolute inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
+            <div class="absolute nz-massage-input-box inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
                 <div class="flex items-center space-x-5">
                     <div class="flex items-center">
                         <button type="button" class="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-gray-700 hover:text-gray-800">

@@ -23,7 +23,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Pr
     with {:ok, file} <- Noizu.Intellect.Prompt.Lingua.prompt_file(subject),
          {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
        assigns = put_in(assigns, [:section], :prompt)
-       prompt = EEx.eval_file(file, [assigns: assigns])
+       prompt = EEx.eval_file(file, [assigns: assigns], trim: true)
        {:ok, prompt}
     end
   end
@@ -31,7 +31,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Pr
     with {:ok, file} <- Noizu.Intellect.Prompt.Lingua.minder_file(subject),
          {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
       assigns = put_in(assigns, [:section], :minder)
-      minder = EEx.eval_file(file, [assigns: assigns])
+      minder = EEx.eval_file(file, [assigns: assigns], trim: true)
       {:ok, minder}
     end
   end

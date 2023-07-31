@@ -198,8 +198,8 @@
                 'gpt35_turbo_16',
                 'nlp_v0p5',
                 account_identifier,
-                create_versioned_string('Grace.', 'Agent Back Story'),
-                create_versioned_string('Grace.', 'Agent Back Story'),
+                create_versioned_string('Grace', 'Grace is an INTP Personality Type Elixir/Phoenix/LiveView Principle Engineer'),
+                create_versioned_string('Grace', 'Grace is an INTP Personality Type Elixir/Phoenix/LiveView Principle Engineer'),
                 current_ts, current_ts
             );
 
@@ -211,8 +211,8 @@
                    'gpt35_turbo_16',
                    'nlp_v0p5',
                    account_identifier,
-                   create_versioned_string('Mindy.', 'Agent Back Story'),
-                   create_versioned_string('Mindy.', 'Agent Back Story'),
+                   create_versioned_string('Mindy', 'Mindy is an ENTP Personality Type Project Manager'),
+                   create_versioned_string('Mindy', 'Mindy is an ENTP Personality Type Project Manager'),
                    current_ts, current_ts
                );
 

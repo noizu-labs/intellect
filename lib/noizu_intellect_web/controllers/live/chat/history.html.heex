@@ -2,17 +2,21 @@
 <ul id={"project-chat-history-#{@unique}"}
     phx-hook="UpdateElapsedTime"
     role="list"
-    class="space-y-4 mt-auto mb-0 p-0">
+    class="space-y-4 mt-auto mb-0 p-0 min-w-full max-w-full">
     <%= for msg <- @messages do %>
         <%= cond do %>
             <% msg.type == :event -> %>
-                <li class="relative flex gap-x-4">
+                <li class="relative flex gap-x-4  w-full ">
                     <Noizu.IntellectWeb.Chat.Component.event message={msg} />
                 </li>
             <% msg.type == :message -> %>
-                <li class="relative flex gap-x-4">
+                <li class="relative flex gap-x-4  w-full ">
                     <Noizu.IntellectWeb.Chat.Component.message message={msg} />
                 </li>
+            <% msg.type == :system_message -> %>
+            <li class="relative flex gap-x-4 bg-red-200 w-full max-w- overflow-x-hidden">
+                <Noizu.IntellectWeb.Chat.Component.message message={msg} />
+            </li>
             <% :default -> %>
         <% end %>
     <% end %>

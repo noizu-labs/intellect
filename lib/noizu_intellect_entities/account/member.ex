@@ -35,3 +35,27 @@ defmodule Noizu.Intellect.Account.Member do
     def_repo()
   end
 end
+
+
+
+defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Member] do
+  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+    prompt = """
+    ````````nlp-definition
+    ⚟human:@#{subject.user.slug}@1.0:nlp@0.5
+    # Human #{subject.user.name}
+    🙋 @#{subject.user.slug}
+    ----
+    Identifier: #{subject.identifier}
+    Slug: @#{subject.user.slug}
+    ## Background
+    #{subject.details && subject.details.body}
+    ⚞
+    ````````
+    """
+    {:ok, prompt}
+  end
+  def minder(subject, prompt_context, context, options) do
+    {:ok, nil}
+  end
+end

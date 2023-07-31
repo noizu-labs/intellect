@@ -10,6 +10,8 @@ defmodule Noizu.Intellect.Schema.Account.Message do
     field :user_mood, :integer # atom
     field :event, Ecto.Enum, values: [:online,:offline,:message,:function_call,:function_response]
     field :contents, Noizu.Entity.Reference
+    field :brief, Noizu.Entity.Reference
+    field :meta, Noizu.Entity.Reference
     field :created_on, :utc_datetime_usec
     field :modified_on, :utc_datetime_usec
     field :deleted_on, :utc_datetime_usec

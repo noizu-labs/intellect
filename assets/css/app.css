@@ -15,10 +15,17 @@
     .chat-input-contents{
         @apply fixed left-0 bottom-0 h-48  w-screen flex flex-col items-end justify-end content-end;
         @apply lg:pl-16;
+        pointer-events: none;
     }
+
 
     .chat-spacer {
         @apply h-36;
+        pointer-events: none;
+    }
+
+    .chat-input-contents .nz-massage-input-box {
+        pointer-events: auto;
     }
 
     .alert.glyph {
@@ -89,6 +96,13 @@
         /*@apply hidden;*/
     }
 
+
+
+
+    .markdown-body {
+        @apply overflow-x-auto border-2 border-black  w-fit h-fit max-w-[100%] ;
+        pointer-events: auto !important;
+    }
 
     .markdown-body ul {
         @apply list-disc list-inside;

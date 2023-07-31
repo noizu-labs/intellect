@@ -18,9 +18,12 @@ defmodule Noizu.Intellect.Account.Message do
     field :channel, nil, Noizu.Entity.Reference
     field :read_on
     field :depth
+    field :relevancy_map, []
     field :user_mood #, nil, Noizu.Intellect.Emoji
     field :event #, nil, Noizu.Intellect.Message.Event
     field :contents, nil, Noizu.Entity.VersionedString
+    field :brief, nil, Noizu.Entity.VersionedString
+    field :meta, nil, Noizu.Entity.VersionedString
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
 
@@ -51,24 +54,61 @@ defmodule Noizu.Intellect.Account.Message do
 
     def_repo()
 
+    def __after_get__(entity, _, _) do
+      if entity do
+          q = from r in Noizu.Intellect.Schema.Account.Message.Relevancy,
+              where: r.message == ^entity.identifier,
+              select: r
+          rm = Noizu.Intellect.Repo.all(q)
+               |> Enum.map(
+                    fn(rel) ->
+                      with {:ok, id} <- Noizu.EntityReference.Protocol.id(rel.recipient) do
+                        responding_to = case Noizu.Intellect.Account.Message.id(rel.responding_to) do
+                          {:ok, id} -> id
+                          _ -> nil
+                        end
+
+                        {id, %{responding_to: responding_to, comment: rel.comment, relevancy: rel.relevance / 100.00 }}
+                      end
+                    end
+                  )
+          {:ok, %{entity| relevancy_map: rm}}
+      else
+        {:ok, entity}
+      end
+    end
+
+
+
     def has_unread?(recipient, channel, context, options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
 
         q = from m in Noizu.Intellect.Schema.Account.Message,
+                 join: r in Noizu.Intellect.Schema.Account.Message.Relevancy,
+                 on: r.message == m.identifier,
+                 on: r.recipient == ^recipient_id,
                  left_join: s in Noizu.Intellect.Schema.Account.Message.Read,
-                 on: s.message == m.identifier,
-                 on: s.recipient == ^recipient_id,
+                 on: s.message == r.message,
+                 on: s.recipient == r.recipient,
                  where: m.channel == ^channel_id,
                  where: is_nil(s),
+                 where: not is_nil(r),
+                 where: r.relevance >= 50,
                  limit: 1,
-                 select: true
+                 select: r.message
         case Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "has_unread? #{recipient.slug}@#{channel_id}") do
-          [true] -> true
+          [] -> false
+          [nil] -> false
+          [v] ->
+            IO.inspect(v, label: "#{inspect recipient} has UNREAD")
+            true
           _ -> false
         end
       end
     end
+
+
 
     def recent_with_status(recipient, channel, context, options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
@@ -129,16 +169,62 @@ end
 
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message] do
+  require Logger
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
-    {sender_type, sender} = case subject.sender do
-      %Noizu.Intellect.User{name: name} -> {"human", name}
-      %Noizu.Intellect.Account.Agent{slug: name} -> {"virtual-agent", name}
+    {sender_type, sender_slug, sender_name} = case subject.sender do
+      %Noizu.Intellect.Account.Member{user: user} -> {"human", user.slug, user.name}
+      %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
       _ -> {"other", "other"}
     end
 
+    r = Enum.map(subject.relevancy_map || [],
+          fn({id,rel}) ->
+            """
+             - for-user: #{id}
+               for-message: #{rel.responding_to}
+               value: #{rel.relevancy}
+               comment: |-1
+                #{String.split(rel.comment || "", "\n") |> Enum.join("\n    ")}
+            """
+          end)
+        |> Enum.join("\n")
+    relevancy = case r do
+      nil -> ""
+      "" -> ""
+      "\n" -> ""
+      r ->
+        """
+        relevance:
+         #{r}
+        """
+    end
+
+    priority = if prompt_context.agent do
+      with {:ok, agent_id} <- Noizu.EntityReference.Protocol.id(prompt_context.agent) do
+        with {_, rel} <- Enum.find_value(subject.relevancy_map || {}, fn(x = {id, _}) -> id == agent_id && x || nil end) do
+          rel.relevancy
+        end
+      end
+    end || 0.0
+
     prompt = """
-    <message id="#{subject.identifier}" processed="#{subject.read_on && "true" || "false"}" sender_type="#{sender_type}" sender="#{sender}" sent_on="#{subject.time_stamp.modified_on}">#{subject.contents.body}</message>
+    ````````````msg
+    msg:
+      id: #{subject.identifier || "[NEW]"}
+      processed: #{subject.read_on && "true" || "false"}
+      priority: #{priority}
+      sender:
+        id: #{subject.sender.identifier}
+        type: #{sender_type}
+        slug: #{sender_slug}
+        name: #{sender_name}
+      sent-on: "#{subject.time_stamp.modified_on}"
+      contents: |-1
+       #{String.split(subject.contents.body || "", "\n") |> Enum.join("\n   ")}
+    ````````````
     """
+
+    if (is_nil(subject.read_on) && prompt_context.agent), do: Logger.error("#{prompt_context.agent.slug}:" <> prompt)
     {:ok, prompt}
   end
   def minder(subject, prompt_context, context, options) do

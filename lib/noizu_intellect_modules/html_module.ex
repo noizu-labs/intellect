@@ -37,6 +37,44 @@ defmodule Noizu.Intellect.HtmlModule do
     has_response && {:ok, repair} || {:error, {:repair_attempt, repair}}
   end
 
+  def extract_relevancy_response(response) do
+    {_, html_tree} = Floki.parse_document(response)
+    sections = Enum.map(html_tree,
+                 fn
+                   (x = {"nlp-intent", attrs, contents}) -> {:intent, Floki.raw_html(contents, pretty: false, encode: false)}
+                   (x = {"relevance", attrs, contents}) ->
+                     Enum.map(contents,
+                       fn
+                         (x = {"relevancy", attr, contents}) ->
+                           member = Enum.find_value(attr,
+                             fn
+                               ({"for-user", x}) -> String.to_integer(x)
+                               (_) -> nil
+                             end)
+                           message = Enum.find_value(attr,
+                             fn
+                               ({"for-message", ""}) -> nil
+                               ({"for-message", x}) -> String.to_integer(x)
+                               (_) -> nil
+                             end)
+                           weight = Enum.find_value(attr,
+                             fn
+                               ({"value", x}) -> String.to_float(x)
+                               (_) -> nil
+                             end)
+                           contents = case contents |> IO.inspect() do
+                            v when is_bitstring(v) -> v
+                            v -> Floki.raw_html(v, pretty: false, encode: false)
+                           end
+                           {:relevancy, [member: member, weight: weight, message: message, contents: contents]}
+                       end)
+                   (_) -> nil
+                 end)
+               |> List.flatten()
+               |> Enum.filter(&(&1))
+    {:ok, sections}
+  end
+
   def extract_response_sections(response) do
     {_, html_tree} = Floki.parse_document(response)
     sections = Enum.map(html_tree, fn
@@ -70,7 +108,7 @@ defmodule Noizu.Intellect.HtmlModule do
         else
           {:error, {:malformed_section, x}}
         end
-      (x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.raw_html(contents) |> String.trim()]}
+      (x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
       (other = {_,_,_}) -> {:other, other}
       (other) when is_bitstring(other) ->
         case String.trim(other) do
@@ -85,9 +123,9 @@ defmodule Noizu.Intellect.HtmlModule do
 
   def extract_reply_meta(reply) do
     sections = Enum.map(reply, fn
-      ({"nlp-intent", _, contents}) -> {:intent, Floki.raw_html(contents) |> String.trim()}
-      ({"response", _, contents}) -> {:response, Floki.raw_html(contents) |> String.trim()}
-      ({"nlp-reflect", _, contents}) -> {:reflect, Floki.raw_html(contents) |> String.trim()}
+      ({"nlp-intent", _, contents}) -> {:intent, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
+      ({"response", _, contents}) -> {:response, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
+      ({"nlp-reflect", _, contents}) -> {:reflect, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
       (_) -> nil
     end)
     |> Enum.filter(&(&1))
@@ -104,12 +142,12 @@ defmodule Noizu.Intellect.HtmlModule do
       replaced_html_tree = Enum.map(html_tree, & replace_script_tags_in_tree(&1))
 
       # Convert the modified HTML tree back into a string
-      Floki.raw_html(replaced_html_tree)
+      Floki.raw_html(replaced_html_tree, pretty: false, encode: false)
     end
 
     defp replace_script_tags_in_tree({tag, attrs, children} = node) when tag == "script" do
       # Extract the script content and escape it
-      script_content = Floki.raw_html(children)
+      script_content = Floki.raw_html(children, pretty: false, encode: false)
       escaped_script_content = escape_script_content(script_content)
       {:ok, back} = Floki.parse_document(escaped_script_content)
       # Replace the script tag with a code block

@@ -218,7 +218,7 @@ defmodule Noizu.IntellectWeb.Helpers do
 
     def inner_html(message, tag) do
       case Floki.find(message, tag) do
-        [{tag, _, inner}] -> {:ok, Floki.raw_html(inner)}
+        [{tag, _, inner}] -> {:ok, Floki.raw_html(inner, pretty: false, encode: false)}
       end
     end
 
@@ -239,7 +239,7 @@ defmodule Noizu.IntellectWeb.Helpers do
     def extract_tag(html, tag) do
       tag = Floki.find(html, tag)
       count = length(tag)
-      content = if (count > 0), do: Enum.map(tag, &(Floki.raw_html([&1]))), else: nil
+      content = if (count > 0), do: Enum.map(tag, &(Floki.raw_html([&1], pretty: false, encode: false))), else: nil
       %{tag: tag, count: count, content: content}
     end
 
@@ -249,7 +249,7 @@ defmodule Noizu.IntellectWeb.Helpers do
       content = if (count > 0) do
         Enum.map(tag, fn({tag, args, body}) ->
           function = Enum.find_value(args, fn({k,v}) -> k == "function" && v end)
-          args = Floki.raw_html(body)
+          args = Floki.raw_html(body, pretty: false, encode: false)
           %{
           name: function,
           arguments: args
@@ -279,7 +279,7 @@ defmodule Noizu.IntellectWeb.Helpers do
         #|> Enum.reverse(document)
         |> CodeUtils.do_strip_llm_response(allowed)
         #|> Enum.reverse()
-        |> Floki.raw_html()
+        |> Floki.raw_html(pretty: false, encode: false)
     end
 
 
@@ -287,7 +287,7 @@ defmodule Noizu.IntellectWeb.Helpers do
       with {:ok, document} <- Floki.parse_document(html) do
         CodeUtils.replace_html_with_text(document)
         |> CodeUtils.replace_code_blocks()
-        |> Floki.raw_html()
+        |> Floki.raw_html(pretty: false, encode: false)
       else
         _ -> "[PARSE ERROR]"
       end
