@@ -85,14 +85,13 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     put_in(state, [Access.key(:worker), Access.key(:book_keeping, %{}), :heart_beat], timer)
   end
 
-  def unread_messages?(_,_,_) do
-    true
+  def unread_messages?(state,context,options) do
+    Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
   end
 
   def message_history(state,context,options) do
     # We'll actually pull agent digest messages, etc. here.
     Noizu.Intellect.Account.Message.Repo.recent_with_status(state.worker.agent, state.worker.channel, context, options)
-
   end
 
   #---------------------
@@ -107,36 +106,79 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
          {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
          {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options)
       do
-        IO.inspect(%{messages: request_messages, settings: request_settings}, label: "OPEN AI REQUEST")
+        #IO.inspect(%{messages: request_messages, settings: request_settings}, label: "OPEN AI REQUEST")
         with {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
             # response could be a function call or a response or a mix, need to handle all.
-            with %{choices: [%{message: %{content: reply}}|_]} <- response do
-              IO.inspect(reply, label: "OPEN AI RESPONSE")
+            with %{choices: [%{message: %{content: reply}}|_]} <- response,
+                 {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
+                 valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
+             do
+               unless valid? == :ok do
+                 IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")
+               end
+
+               response = Enum.group_by(response, &(elem(&1, 0)))
+               IO.inspect(response, label: "[#{state.worker.agent.slug}] OPEN AI RESPONSE")
+
+               # clear ack'd
+               if ack = response[:ack] do
+                  Enum.map(ack,
+                    fn({:ack, [ids: ids]}) ->
+                      Enum.map(ids, fn(id) ->
+                        message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
+                        IO.inspect(message && {message.identifier, message.read_on}, label: "ACK")
+                        message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+                      end)
+                    end
+                  )
+               end
+
+               # record responses
+               if reply = response[:reply] do
+                 Enum.map(reply,
+                   fn({:reply, attr}) ->
+
+                     if response = attr[:response] do
 
 
 
-              message = %Noizu.Intellect.Account.Message{
-                sender: state.worker.agent,
-                channel: state.worker.channel,
-                depth: 0,
-                user_mood: nil,
-                event: :message,
-                contents: reply,
-                time_stamp: Noizu.Entity.TimeStamp.now()
-              }  |> Noizu.Intellect.Entity.Repo.create(context)
+                       message = %Noizu.Intellect.Account.Message{
+                                   sender: state.worker.agent,
+                                   channel: state.worker.channel,
+                                   depth: 0,
+                                   user_mood: nil,
+                                   event: :message,
+                                   contents: response,
+                                   time_stamp: Noizu.Entity.TimeStamp.now()
+                                 }  |> Noizu.Intellect.Entity.Repo.create(context)
 
-              with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel),
-                   {:ok, message} <- message do
-                message = %Noizu.IntellectWeb.Message{
-                  type: :message,
-                  timestamp: message.time_stamp.created_on,
-                  user_name: state.worker.agent.slug,
-                  profile_image: state.worker.agent.profile_image,
-                  mood: :nothing,
-                  body: message.contents.body
-                }
-                Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
-              end
+                       with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel),
+                            {:ok, message} <- message do
+                         Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+                         message = %Noizu.IntellectWeb.Message{
+                           type: :message,
+                           timestamp: message.time_stamp.created_on,
+                           user_name: state.worker.agent.slug,
+                           profile_image: state.worker.agent.profile_image,
+                           mood: :nothing,
+                           body: message.contents.body
+                         }
+                         Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: message, options: [scroll: true]))
+                       end
+
+
+
+                     end
+
+                     if ids = attr[:ids] do
+                       Enum.map(ids, fn(id) ->
+                         message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
+                         message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+                       end)
+                     end
+                   end
+                 )
+               end
 
 
               {:ok, state}

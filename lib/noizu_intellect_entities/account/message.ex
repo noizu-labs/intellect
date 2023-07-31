@@ -30,6 +30,17 @@ defmodule Noizu.Intellect.Account.Message do
     end
   end
 
+  def mark_read(this, recipient, context, options) do
+    with {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
+      IO.puts "MARK READ #{this.identifier}@#{recipient_id}"
+      %Noizu.Intellect.Schema.Account.Message.Read{
+        message: this.identifier,
+        recipient: recipient_id,
+        read_on: DateTime.utc_now()
+      } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
+    end
+  end
+
   defmodule Repo do
     use Noizu.Repo
     alias Noizu.Intellect.User.Credential
@@ -39,6 +50,25 @@ defmodule Noizu.Intellect.Account.Message do
     import Ecto.Query
 
     def_repo()
+
+    def has_unread?(recipient, channel, context, options \\ nil) do
+      with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
+           {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
+
+        q = from m in Noizu.Intellect.Schema.Account.Message,
+                 left_join: s in Noizu.Intellect.Schema.Account.Message.Read,
+                 on: s.message == m.identifier,
+                 on: s.recipient == ^recipient_id,
+                 where: m.channel == ^channel_id,
+                 where: is_nil(s),
+                 limit: 1,
+                 select: true
+        case Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "has_unread? #{recipient.slug}@#{channel_id}") do
+          [true] -> true
+          _ -> false
+        end
+      end
+    end
 
     def recent_with_status(recipient, channel, context, options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
@@ -100,20 +130,14 @@ end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
-    sender = case subject.sender do
-      %Noizu.Intellect.User{name: name} -> "human: #{name}"
-      %Noizu.Intellect.Account.Agent{slug: name} -> "virtual-persona: #{name}"
-      _ -> "other"
+    {sender_type, sender} = case subject.sender do
+      %Noizu.Intellect.User{name: name} -> {"human", name}
+      %Noizu.Intellect.Account.Agent{slug: name} -> {"virtual-agent", name}
+      _ -> {"other", "other"}
     end
 
     prompt = """
-    ## 📩
-    id: #{subject.identifier}
-    read: #{subject.read_on && "true" || "false"}
-    from: #{sender}
-    time: #{subject.time_stamp.modified_on}
-    body:
-    #{subject.contents.body}
+    <message id="#{subject.identifier}" processed="#{subject.read_on && "true" || "false"}" sender_type="#{sender_type}" sender="#{sender}" sent_on="#{subject.time_stamp.modified_on}">#{subject.contents.body}</message>
     """
     {:ok, prompt}
   end

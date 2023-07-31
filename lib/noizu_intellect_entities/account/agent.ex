@@ -96,12 +96,15 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
     prompt = """
-    ⚟persona:#{subject.slug}@1.0:nlp@0.5
-    #{subject.prompt.title}
-    ====
-    #{subject.prompt.body}
+    # Agent Definition
+    @GPT-N you are to simulate this virtual agent.
+
+    ⚟agent:#{subject.slug}@1.0:nlp@0.5
+    @#{subject.slug}
+    ----
+    You are #{subject.slug} a brilliant INTP backend engineer.
     ⚞
-    """
+    """ |> IO.inspect(label: "AGENT PROMPT")
     {:ok, prompt}
   end
   def minder(subject, prompt_context, context, options) do

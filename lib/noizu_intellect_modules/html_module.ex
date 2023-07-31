@@ -1,4 +1,101 @@
 defmodule Noizu.Intellect.HtmlModule do
+
+
+
+  def valid_response?(response) do
+    response
+    |> Enum.map(
+         fn
+           ({:ack, _}) -> nil
+           ({:reply, _}) -> nil
+           ({:nlp_chat_analysis, _}) -> nil
+           (other) -> {:invalid_section, other}
+         end
+       )
+    |> Enum.filter(&(&1))
+    |> case do
+         [] -> :ok
+         issues -> {:issues, issues}
+       end
+  end
+
+  def repair_response(response) do
+    repair = Enum.map(response,
+      fn
+        (x = {:ack, _}) -> x
+        (x = {:reply, _}) -> x
+        (x = {:nlp_chat_analysis, _}) -> x
+        (section) -> {:unsupported, section}
+      end
+    )
+    has_response = Enum.find_value(repair,
+      fn
+        ({:ack, _}) -> true
+        ({:reply, _}) -> true
+        (_) -> nil
+      end)
+    has_response && {:ok, repair} || {:error, {:repair_attempt, repair}}
+  end
+
+  def extract_response_sections(response) do
+    {_, html_tree} = Floki.parse_document(response)
+    sections = Enum.map(html_tree, fn
+      (x = {"ack", attrs, []}) ->
+        ids = Enum.find_value(attrs, fn
+          ({"for", ids}) ->
+            ids
+            |> String.split(",")
+            |> Enum.map(&(String.trim(&1)))
+            |> Enum.map(&(String.to_integer(&1)))
+          (_) -> nil
+        end)
+        unless ids == [] do
+          {:ack, [ids: ids]}
+        else
+          {:error, {:malformed_section, x}}
+        end
+      (x = {"reply", attrs, contents}) ->
+        ids = Enum.find_value(attrs, fn
+          ({"for", ids}) ->
+            ids
+            |> String.split(",")
+            |> Enum.map(&(String.trim(&1)))
+            |> Enum.map(&(String.to_integer(&1)))
+          (_) -> nil
+        end)
+        unless ids == [] do
+          with {:ok, sections} <- extract_reply_meta(contents) do
+            {:reply, [{:ids, ids}|sections]}
+          end
+        else
+          {:error, {:malformed_section, x}}
+        end
+      (x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.raw_html(contents) |> String.trim()]}
+      (other = {_,_,_}) -> {:other, other}
+      (other) when is_bitstring(other) ->
+        case String.trim(other) do
+          "" -> nil
+          v -> {:text, v}
+        end
+    end)
+               |> Enum.filter(&(&1))
+    {:ok, sections}
+  end
+
+
+  def extract_reply_meta(reply) do
+    sections = Enum.map(reply, fn
+      ({"nlp-intent", _, contents}) -> {:intent, Floki.raw_html(contents) |> String.trim()}
+      ({"response", _, contents}) -> {:response, Floki.raw_html(contents) |> String.trim()}
+      ({"nlp-reflect", _, contents}) -> {:reflect, Floki.raw_html(contents) |> String.trim()}
+      (_) -> nil
+    end)
+    |> Enum.filter(&(&1))
+    {:ok, sections}
+  end
+
+
+
     def replace_script_tags(html) do
       # Parse the HTML
       {_, html_tree} = Floki.parse_document(html)

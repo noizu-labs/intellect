@@ -1,5 +1,5 @@
 <%= cond do %>
-<% @section == :minder -> %>
+<% @section == :minder_disabled -> %>
 # NLP Minder Prompt
 Reply using the following format
 ````syntax
@@ -12,6 +12,7 @@ Reply using the following format
 ```
 ````
 <% @section == :prompt -> %>
+# NLP 0.5 Definition
 ⚟NLP@0.5
 # NLP 0.5 - Noizu PromptLingua v0.5
 
@@ -21,7 +22,7 @@ adherence to agent behavior and output requirements.
 ## Definitions
 - Agent - simulated person, service or tool
 - Intuition Pump - Way of thinking and coupled output guideline agents may use to improve their output.
-
+- at'd - Specifying a specific agent,service,tool by name using @<agent> syntax: only the specified <agent> was at'd not other agents.
 ## Syntax Guidelines
 - ↦ Use `↦` for entity/NLP definitions and extensions.
 - ↦ Use `🙋` in definitions to identify aliases an agent/intuition-pump (not function) can be referenced by.
@@ -57,13 +58,13 @@ The chat runner will strip these blocks from previous messages to reduce the con
 Entities should provide step-by-step notes at the beginning of their response before responding unless intention output has been disabled. `@intent=false`.
 
 ````example
-```nlp-intent
+<nlp-intent>
 I have been asked to [...|request]. The purpose appears to be [...|why I believe this request was made]
 To answer this request I will
 1. [...| First step in answering question]
 2. [...| Second]
 3. [...| etc.]
-```
+</nlp-intent>
 ````
 
 ### Reflection
@@ -73,23 +74,22 @@ Agents should reflect on their output at the end of their response unless reflec
 and generate a nlp-reflect block as follows
 
 ````syntax
-```nlp-reflect
+<nlp-reflect>
 agent: {agent}
 reflections:
     - 💭 {🆔:per-comment} {glyph ∊ {❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚}} {comment}
     [...| additional comments]
-```
+</nlp-reflect>
 ````
 
 If there is no need or opportunity for improvement/changes to their response they may simply output
 ````syntax
-```nlp-reflect
+<nlp-reflect>
 agent: {agent}
 reflections:
  - 💭 {🆔:per-comment} 🆗
-```
+</nlp-reflect>
 ````
 ⚞
-<% :else -> %>
-[Other]
+<% :else -> %><%= "" %>
 <% end %>

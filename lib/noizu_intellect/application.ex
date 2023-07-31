@@ -32,7 +32,9 @@ defmodule Noizu.Intellect.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Noizu.Intellect.Supervisor]
     s = Supervisor.start_link(children, opts)
-    Noizu.Intellect.Services.Supervisor.bring_online(Noizu.Context.dummy())
+    if Mix.env != :test do
+      Noizu.Intellect.Services.Supervisor.bring_online(Noizu.Context.dummy())
+    end
     s
   end
 

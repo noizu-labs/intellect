@@ -190,53 +190,140 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     with {:ok, nlp_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.nlp_context, prompt_context, context, options),
          {:ok, agent_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.agent, prompt_context, context, options),
          {:ok, agent_minder} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.agent, prompt_context, context, options),
-         {:ok, {message_prompt, message_minder}} <- openai__prep_message_history(prompt_context, context, options),
-    {:ok, nlp_minder} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.nlp_context, prompt_context, context, options)
+         {:ok, {processed_messages, unprocessed_messages, message_minder}} <- openai__prep_message_history(prompt_context, context, options),
+         {:ok, nlp_minder} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.nlp_context, prompt_context, context, options)
       do
         master_prompt = """
         # Master Prompt
-        Your are GPT-n (gpt for workgroups) your role is to emulate virtual personas, services and tools
-        defined below using nlp (noizu prompt lingua) service, tool and persona definitions.
+        Your are GPT-n (gpt for workgroups) your role is to emulate virtual personas, services and tools defined below using nlp (noizu prompt lingua) service, tool and persona definitions.
 
         """
 
-        process_message_prompt = """
-        # Master Prompt
-        Reply to any of the following unread messages.
-        Do not reply to messages marked as read they are included to provide context.
-        Do not reply to messages from other agents unless they are directed at you using @#{prompt_context.agent.slug}
-        and warrant a response. Hello and greeting, how can I help, etc. messages from virtual-personas do not warrant replies.
+
+        processed_messages_prompt = unless processed_messages == nil do
+          """
+          # Message Prompt
+          The following are messages in the channel ##{prompt_context.channel.slug} you have already processed to and should be not replied to or ack'd. They are included for context.
+
+          ## Processed Messages
+          #{processed_messages}
+
+          """
+        else
+          nil
+        end
+
+        unprocessed_messages_prompt = """
+        #{processed_messages_prompt || ""}
+        # Message Prompt
+        @#{prompt_context.agent.slug} Reply to or acknowledge the following unprocessed messages based on the following criteria:
+
+        ## Recipient Analysis: Determining If you are the recipient.
+        You must apply weight to messages based their content, sender and prior messages determining how likely the message was directed to you.
+        To help you understand how to weight messages I've included a list of messages and the weight you  @#{prompt_context.agent.slug} and the weights for another agent @zezed should apply and why.
+        Observer these examples to base your own weighting inference.
+
+        ```messages
+        time: "2023-07-31 00:40:04.522186Z"
+        messages:
+          - msg: <message id="1027" processed="true" sender_type="human" sender="keith" sent_on="2023-07-31 00:30:04.522186Z">@grace how are you today?</message>
+            your_weight: 1.0 - a user at'd me with by a direct question.
+            zedzed_weight: 0.0 - a user at'd a different agent and not me with a direct question.
+          - msg: <message id="2027" processed="true" sender_type="virtual-agent" sender="grace" sent_on="2023-07-32 00:30:04.522186Z">Hello @keith, I am well.</message>
+            your_weight: 0.0 - I am the sender of this message so it was not directed at me.
+            zedzed_weight: 0.0 - The message by grace is responding to a direct question from '@keith' and does not mention me.
+          - msg: <message id="3027" processed="true" sender_type="human" sender="steve" sent_on="2023-07-33 00:30:04.522186Z">What is a topological neighborhood, @gennagen?</message>
+            your_weight: 0.1 - Although I was not directly at'd by the message it begins with a question and after mentions a recipient implying they are not specifically asking @gennagen but simply believe they might know. Topology however is not my area of expertise so I shouldn't respond.
+            zedzed_weight: 0.7 - Although I was not directly at'd by the message it begins with a question and after mentions a recipient implying they are not specifically asking @gennagen but simply believe they might know. Topology is my area of expertise so I believe I should respond since @gennagen has not responded and it has been more than a 3 minutes.
+          - msg: <message id="4027" processed="true" sender_type="virtual-agent" sender="zedzed" sent_on="2023-07-34 00:30:04.522186Z">@steve hey I can help since @gennagen isn't around. A topological neighborhood is an open-set in space X containing the point p in X</message>
+            your_weight: 0.0 - This was a direct reply to a different agent in a response to a messag not directed at me.
+            zedzed_weight: 0.0 - I was the sender.
+            gennagen_weight: 0.4 - This was a direct response to a message partially directed at me. The response is correct but since the conversation continues after this point I do not need to verify/confirm the message specifically.
+          - msg: <message id="5027" processed="true" sender_type="human" sender="keith" sent_on="2023-07-34 00:35:04.522186Z">Yep, that is correct.</message>
+            your_weight: 0.2 - Although keith's previous reply 1027 was directd at me, this reply seems to be a confirmation of 4027 and not a reply to my message 2027.
+            zedzed_weight: 0.5 - This appears to be a confirmation of my definition directed at either me or steve, I should probably not reply if there is no issue to avoid chat noise.
+            gennagen_weight: 0.4 - This appears to be a confirmation of 4027, in response to 3027. Although 3027 mentioned me as the question was answered correctly with out my input this message is not directly related to me.
+          - msg: <message id="6027" processed="true" sender_type="human" sender="stave" sent_on="2023-07-36 00:30:04.522186Z">Gotcha, thanks!</message>
+            your_weight: 0.0 - This appears to be a response to 5027 and is unrelated to me.
+            zedzed_weight: 0.0 - This appears to be a response to 5027 and is unrelated to me.
+        ```
+
+
+        ## Response Criteria
+        Use the following `Response Criteria` table to help in determining which messages you should and shouldn't reply to.
+        ||-- processed --||-- sender_type --||-- Recipient Analysis --||-- content --||-- chat history --||-- action --||
+        | --- | --- | --- | --- | --- | --- |
+        | true | any | any | any | any | nop |
+        | false | any | any | an ongoing back and forth conversation between non human agents with no added value being added to conversation | ... | ack |
+        | false | human | >= .7 | question, comment, request | has not previously been answered | reply |
+        | false | human | >= .7 | question, comment, request| has previously been answered by my or someone else | do not reply |
+        | false | human | >= .7 | intro, greeting directed at you specifically | I have not recently previously answered similar from sender | reply |
+        | false | human | >= .7 | intro, greeting directed at you specifically | I have previously answered similar from sender | ack |
+        | false | not human | >= .9 | question, comment, request | has previously been answered | reply |
+        | false | not human | >= .9 | question, comment, request | has previously been answered or I have nothing to add | ack |
+        | false | not human | >= .9 | intro, greeting, statement | any | ack |
+        [...]
+
+        ## Reply Note
+        1. Your reply(s) should be based on the conversation so far in this channel including processed messages. Your reply should be part of a natural back and forth conversation with multiple other participants.
+           You should continue where you left off in replying to specific senders and the overall chat channel, you should not repeat messages that are similar/identical to messages you or other members have already provided.
+           You should not engage in back and forth dead-end conversations between other non human senders, or reply to a message you've already replied to unless more information has been requested or will be provided by your response.
+
+        ## Unprocessed Messages
+        #{unprocessed_messages}
         """
 
-        process_message_minder = """
-        # Prompt Response Format
-        Reply to messages or group of messages using the below syntax to reply or not reply but acknowledge receipt of messages.
-        Your response can include multiple replies/acks of the following formats.
+        unprocessed_message_minder = """
+        # Response Prompt
+        Follow the below rules for your reply.
 
-        ## Reply Format
-        <reply to="{coma seperated list of message ids this reply is for}">
-        [...| your reply]
-        </repl>
+        1. Do not ack or reply to previously processed messages.
+        2. Apply `Response Criteria` to determine which messages to reply to and which messages to simply ack.
+        3. Output reply sections first followed by ack sections.
+        4. Your response should include an opening nlp-chat-analysis block followed by only reply(s)/ack(s) blocks of the following formats.
+            ## Chat Analysis Format
+            <nlp-chat-analysis>
+            {for all processed and unprocessed messages ordered by sent_on descending}
+            - ({'P' if processed 'U' if unprocessed} ) {message.id} -sender {message.sender_type} "{message.sender}" -weight {0.0-1.0 `Recipient Analysis` of how likely message was directed towards you.} {'reply', 'ack' or 'nop' based on `Response Criteria`} -decision {if reply or ack list reasoning behind `Recipient Analysis` weight selection and reply/ack `Response Criteria` decision.}
+            {/for}
+            </nlp-chat-analysis>
 
-        ## Ack Format
-        <ack for="{coma seperated list of message ids acknowledged but not replied to}"/>
+            ## Reply Format
+            <reply for="{comma seperated list of unprocessed message ids this reply is for}">
+            <nlp-intent>
+            [...|nlp-intent output]
+            </nlp-intent>
+            <response>
+            [...| your reply]
+            </response>
+            <nlp-reflect>
+            [...|nlp-reflect output]
+            </nlp-reflect>
+            </reply>
 
-
+            ## Ack Format
+            <ack for="{comma seperated list of unprocessed message ids acknowledged but not replied to}"/>
         """
 
-        opening_prompt = %Message{type: :system, body: master_prompt <> nlp_prompt <> process_message_prompt}
+        opening_prompt = %Message{type: :system, body: master_prompt <> nlp_prompt}
+        # processed_prompt = processed_messages_prompt &&  %Message{type: :user, body: processed_messages_prompt}
+        message_prompt = %Message{type: :user, body: unprocessed_messages_prompt}
 
-        message_prompt_open = """
-        # Messages
+        minders = [nlp_minder, agent_minder, message_minder, unprocessed_message_minder] |> Enum.filter(&(&1)) |> Enum.join("\n\n")
+        minder_prompt = %Message{type: :system, body: minders}
 
-        """
-        message_prompt = %Message{type: :user, body: message_prompt_open <> message_prompt}
+        #openai_messages = [opening_prompt, processed_prompt, message_prompt, minder_prompt]
+        openai_messages = [opening_prompt, message_prompt, minder_prompt]
+                          |> Enum.filter(&(&1))
 
+        Enum.map(openai_messages, &(&1.body))
+        |> Enum.join("\n-------------------\n")
+        |> String.split("\n")
+        |> Enum.join("\n\t#{prompt_context.agent.slug}: ")
+        |> then(& IO.puts "\n\t#{prompt_context.agent.slug}: #{&1}")
 
-
-        minder_prompt = %Message{type: :system, body: process_message_minder <> nlp_minder <> "\n\n" <> (agent_minder && (agent_minder <> "\n\n") || "") <> message_minder}
         request = %Request{
-          messages: [opening_prompt, message_prompt, minder_prompt]
+          messages: openai_messages
         }
         {:ok, request}
     end
@@ -245,27 +332,41 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
 
   def openai__prep_message_history(prompt_context, context, options) do
     # Convert message history into single message
-    h = Enum.map(prompt_context.message_history,
-          fn(message) ->
-            with {:ok, mp} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options),
-                 {:ok, mm} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(message, prompt_context, context, options)
-              do
-              {mp, mm}
-            else
-              _ -> nil
-            end
-          end) |> Enum.filter(&(&1))
+    h = prompt_context.message_history
+        |> Enum.sort_by(&(&1.time_stamp.created_on), DateTime)
+        |> Enum.map(
+             fn (message) ->
+               if message.read_on do
+                 with {:ok, mp} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options)
+                   do
+                   {mp, nil, nil}
+                 else
+                   _ -> nil
+                 end
+               else
+                 with {:ok, mp} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options),
+                      {:ok, mm} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(message, prompt_context, context, options)
+                   do
+                   {nil, mp, mm}
+                 else
+                   _ -> nil
+                 end
+               end
+             end
+           )
+        |> Enum.filter(&(&1))
 
-    mp = Enum.map(h, &(elem(&1, 0)))
+    processed = Enum.map(h, &(elem(&1, 0)))
          |> Enum.filter(&(&1))
          |> Enum.join("\n")
-
-    mm = Enum.map(h, &(elem(&1, 1)))
+    unprocessed = Enum.map(h, &(elem(&1, 1)))
+                |> Enum.filter(&(&1))
+                |> Enum.join("\n")
+    minders = Enum.map(h, &(elem(&1, 2)))
          |> Enum.filter(&(&1))
          |> Enum.join("\n")
-    {:ok, {mp, mm}}
+    {:ok, {processed, unprocessed, minders}}
   end
-
 
   #------------------------------
   #
