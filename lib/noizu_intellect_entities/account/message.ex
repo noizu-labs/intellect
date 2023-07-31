@@ -17,6 +17,7 @@ defmodule Noizu.Intellect.Account.Message do
     field :sender, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
     field :read_on
+    field :priority
     field :depth
     field :relevancy_map, []
     field :user_mood #, nil, Noizu.Intellect.Emoji
@@ -208,20 +209,17 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     end || 0.0
 
     prompt = """
-    ````````````msg
-    msg:
-      id: #{subject.identifier || "[NEW]"}
-      processed: #{subject.read_on && "true" || "false"}
-      priority: #{priority}
-      sender:
-        id: #{subject.sender.identifier}
-        type: #{sender_type}
-        slug: #{sender_slug}
-        name: #{sender_name}
-      sent-on: "#{subject.time_stamp.modified_on}"
-      contents: |-1
-       #{String.split(subject.contents.body || "", "\n") |> Enum.join("\n   ")}
-    ````````````
+      - id: #{subject.identifier || "[NEW]"}
+        processed: #{subject.read_on && "true" || "false"}
+        priority: #{priority}
+        sender:
+          id: #{subject.sender.identifier}
+          type: #{sender_type}
+          slug: #{sender_slug}
+          name: #{sender_name}
+        sent-on: "#{subject.time_stamp.modified_on}"
+        contents: |-1
+         #{String.split(subject.contents.body || "", "\n") |> Enum.join("\n     ")}
     """
 
     if (is_nil(subject.read_on) && prompt_context.agent), do: Logger.error("#{prompt_context.agent.slug}:" <> prompt)

@@ -88,7 +88,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   def unread_messages?(state,context,options) do
     # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
     with {:ok, o} <- Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options) do
-      Enum.find_value(o, &(is_nil(&1.read_on) && true || nil))
+      Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority > 0.5 && true || nil))
     else
       _ -> false
     end

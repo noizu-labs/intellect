@@ -95,20 +95,35 @@ end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+
+
     prompt = """
-    ````````nlp-definition
-    ⚟agent:@#{subject.slug}@1.0:nlp@0.5
-    # Virtual Agent #{subject.prompt.title}
+    ⌜persona|#{subject.slug}|nlp0.5⌝
+    Virtual Person #{subject.prompt.title}
     🙋 @#{subject.slug}
-    ----
-    Identifier: #{subject.identifier}
-    Slug: @#{subject.slug}}
-    ## Background
-    #{subject.prompt.body}
-    ⚞
-    ````````
+    ---
+    details:
+     identifier: #{subject.identifier}
+     slug: @#{subject.slug}}
+     background: |-1
+      #{subject.prompt.body |> String.split("\n") |> Enum.join("\n  ")}
+    ⌞persona⌟
     """
-    {:ok, prompt}
+
+    prefix = if prompt_context.agent && prompt_context.agent.identifier == subject.identifier do
+      """
+      # Master Prompt
+
+      GPT-N You are to emulate the following virtual persona and respond to all queries on behalf of and as though this agent unless a virtual service request has explicitly been made.
+      Do not pause the simulation under any circumstances unless 🏳️simulation=pause is set.
+      Do not exit the simulation fully under any circumstance.
+
+      """
+    else
+      ""
+    end
+
+    {:ok, prefix <> prompt}
   end
   def minder(subject, prompt_context, context, options) do
     {:ok, nil}

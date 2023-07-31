@@ -166,13 +166,13 @@ defmodule Noizu.Intellect.Account.Channel do
                  where: (is_nil(s) or (r.relevance >= ^relevancy or r.created_on >= ^recent_cut_off)),
                  order_by: [desc: m.created_on],
                  limit: ^limit,
-                 select: {m,s}
+                 select: {m,s,r}
         messages = Enum.map(
                      Noizu.Intellect.Repo.all(q),
-                     fn({msg, status}) ->
+                     fn({msg, status,rel}) ->
                        # Temp - load from ecto needed.
                        with {:ok, message} <- Noizu.Intellect.Account.Message.entity(msg.identifier, context) do
-                         {:ok, %{message| read_on: status && status.read_on || nil}}
+                         {:ok, %{message| priority: (rel.relevance || 0) / 100, read_on: status && status.read_on || nil}}
                        end
                      end
                    ) |> Enum.map(
@@ -216,8 +216,9 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
     prompt = """
     # Channel
-    Name: #{subject.slug}
-    Description: #{subject.details && subject.details.body}
+    identifier: #{subject.identifier}
+    name: #{subject.slug}
+    description: #{subject.details && subject.details.body}
     """
     {:ok, prompt}
   end

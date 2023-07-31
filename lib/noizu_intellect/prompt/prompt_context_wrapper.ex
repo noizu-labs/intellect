@@ -10,79 +10,96 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
   def relevancy_prompt() do
     %__MODULE__{
       prompt: [system: """
-      # System Prompt
-      You're task is to scan the following channel member definitions, the prior `Message History` and new message input. Then the new message input and
-      and channel member determine a relevancy weights in [0.0,1.0] describing how likely it is
-      that the user provided message is meant for the channel members based on it's content's and the content's sender's and likely recipients of previous messages under `Message History`.
 
-      If the previous message from the same sender in the message history section was directed at a channel member and nothing about the content of the senders new message
-      implies they are now talking to someone else then the new message from that sender would also apply to the previous member, and if the previous message from the same sender recipient is unclear than
-      consider previous messages from message history going back in time until the likely recipient is determined. If the sender was previously talking to a channel member recently and has started a new query but the
-      message does not indicate a change of recipient based on at symbols or content/tone then it likely is meant to continue to refer to the previous recipients. If you are unable to determine who the user is
-      talking too but the question matches the background of a channel member then consider it a low possibility 0.6 that the message was directed at the channel members with related experience.
-
-      ## Important Reminder Prompt
-      Any new message by a sender should always be assumed to be a continuation of their previous message unless by content it is clear they are replying to a different prior message between it and their previous message.
-      Walk down message history taking into account messages sent by sender, messages sent by other users, and time between messages as far back as possible until you've determined the likely target recipient of the senders new message.
-      Even if message is the start of a new thought it should be assumed to still be targeted at previous recipient if no one else has been at'd and it does not appear to be replying to an earlier message.
-
-      ## Output Format
-      <relevance>
-        <relevancy for-user="{member.id}" for-message="{message.id | id of message most likely to be in response to given this weight.}" for-slug="{member.slug}" value="{value in [0.0,1.0] where 0.0 indicate message has nothing to do with channel member and 1.0 indicates this is a direct message to channel member.}">
-        {Reasoning for Relevancy Score}
-        </relevancy>
-      </relevance>
 
       <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
         <% _ -> %><%= "" %>
       <% end %>
 
-      ## Members
+      ## Channel-Members
       <%= for member <- (@prompt_context.channel_members || []) do %>
-<%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, @prompt_context, @context, @options) do %>
-<% {:ok, prompt} when is_bitstring(prompt) -> %>
-### Member ID:<%= member.identifier %>
-<%= prompt %>
-<% _ -> %><%= "" %>
-<% end %>
+      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, @prompt_context, @context, @options) do %>
+      <% {:ok, prompt} when is_bitstring(prompt) -> %>
+      <%= String.trim_trailing(prompt) %>
+      <% _ -> %><%= "" %>
+      <% end %>
       <% end %>
 
       <%= if @prompt_context.message_history do %>
-      # Message History
+      ## Channel Message History
+      ```yaml
       current_time: #{DateTime.utc_now()}
-        <%= for message <- @prompt_context.message_history do %>
-          <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %>
-            <% {:ok, prompt} when is_bitstring(prompt)  -> %>
-      <%= prompt %>
-            <% _ -> %><%= "" %>
-          <% end  # end case %>
-        <% end  # end for %>
+      messages:
+      <%= for message <- @prompt_context.message_history do %>
+      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %>
+      <% {:ok, prompt} when is_bitstring(prompt)  -> %>
+      <%= String.trim_trailing(prompt) %><% _ -> %><%= "" %>
+      <% end  # end case %>
+      <% end  # end for %>
+      ```
       <% end  # end if %>
+
+      # System Prompt
+
+      ## Goal
+
+      Determine relevance scores for new message inputs, ranging from 0.0 (no relevance) to 1.0 (direct message). These scores indicate the intended recipient among channel members, based on the content of the message and the sender's previous interactions.
+
+      ## Considerations
+
+      1. If the sender previously addressed a specific member and the new message doesn't change the addressee (no "@" symbols or tonal shifts), consider it likely intended for the same recipient.
+      2. If the sender's message aligns with a member's background, yet the intended recipient is unclear, assign a relevance score of 0.6.
+
+      ## Reminder
+
+      Unless a message explicitly addresses someone else, assume the sender's dialogues are continuous. Check the `Message History` in reverse chronological order, considering timings, senders, and users' interactions to determine the intended recipient.
+
+      ## Output Structure
+
+      Structure your output in the XML-like format provided:
+
+      ```xml
+      <relevance>
+      <relevancy
+      for-user="{member.id}"
+      for-message="{message.id | the message this is most likely responding to.}"
+      for-slug="{member.slug}"
+      value="{value in [0.0,1.0]}">
+
+      {Explanation of the Relevancy Score}
+
+      </relevancy>
+      </relevance>
+      ```
+
 
       """
       ],
       minder: """
-      # Important Reminder Prompt
-      Any new message by a sender should always be assumed to be a continuation of their previous message unless by content it is clear they are replying to a different prior message between it and their previous message.
-      Walk down message history taking into account messages sent by sender, messages sent by other users, and time between messages as far back as possible until you've determined the likely target recipient of the senders new message.
-      Even if message is the start of a new thought it should be assumed to still be targeted at previous recipient if no one else has been at'd and it does not appear to be replying to an earlier message.
+      # Reminder: Conversation Flow
 
-      ## The `@` followed by an agent's slug indicates a message is likely directed /at'd at that agent. E.g. @steve means the agent with the slug steve is the recipient.
+      Always assume that any new message from a sender is a continuation of their previous message, unless the content clearly indicates a response to a different prior message. Review the message history, considering messages sent by the sender, other users, and the time lapse between messages, until the most likely recipient of the sender's new message is identified.
 
-      # Direction Prompt
-      For the user provided messages following this message compare their contents to the messages above listed under  `Message History` going back chronologically in time in order to determine the new message's relevancy based on it's content and message history
-      for all channel members. For instance if a new message from a sender is a continuation of their previous message and does not by it's content indicate a new recipient or that it is responding to a message preceding it then the relevancy map of the senders previous message
-      should then apply.
+      Note: The use of `@` followed by an agent's slug implies the message is targeted at that agent and likely now longer directed to the previous sender messages' recipients. For example, `@steve` suggests the agent with the slug `steve` is now the recipient.
 
-      ```format
+      # Direction: Message Relevance
+
+      For subsequent messages, compare their content with the `Message History` in reverse chronological order. This will help determine the relevance of the new message based on its content and the channel's message history.
+
+      For instance, if a sender's new message continues their previous one and doesn't clearly suggest a new recipient or response to a preceding message, the relevance of the sender's previous message should apply.
+      <%#
       <nlp-intent>
-      {a markdown table listing (message.id, message.sent-on, message.sender, most likely channel-member recipient(s), most likely recipient weight(s), id of message this this message.id most likely was in response to., reason) for the 10 most recent messages sorted by sent-on}
+      {Provide a markdown table listing: message.id, message.sent-on, message.sender.slug, the most likely recipient(s) slugs, recipient weight(s), the message.id this is likely responding to, and reason for designation for the 5 most recent messages, sorted by message.sent-on.}
       </nlp-intent>
+      %>
+      ```format
       <relevance>
-        {for each channel member listed above|  Keep in mind `@channel` and `@everyone` are special case insensitive directives and when in a message's content should be treated as though it had also stated @{channel-member}}
+        {for each channel member|
+          Consider each channel member. `@channel` and `@everyone` are special directives; if found in a message, treat it as if it had included the channel member's slug.
+          For each member, provide a relevancy score between 0.0 (not relevant) and 1.0 (direct message) and explain your reasoning.}
         <relevancy for-user="{member.id}" for-message="{message.id | id of message most likely to be in response to given this weight.}" for-slug="{member.slug}" value="{value in [0.0,1.0] where 0.0 indicate message has nothing to do with channel member and 1.0 indicates this is a direct message to channel member.}">
-        {Reasoning for Relevancy Score and the relevancy score for this channel member - {sender.id of new message sender}-{sender.slug of new message sender} {message.id | of the previous message sent by the sender of new message.}}
+        {Reasoning}
         </relevancy>
         {/for}
       </relevance>
@@ -109,51 +126,62 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
         %><% _ -> %><%= ""
       %><% end %>
 
-      ## Members
+      ## Channel Members
       <%= for member <- (@prompt_context.channel_members || []) do
       %><%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, @prompt_context, @context, @options) do
-      %><% {:ok, prompt} when is_bitstring(prompt) -> %>
-      ### Member ID:<%= member.identifier %>
-      <%= "\n" <> String.trim(prompt)
+      %><% {:ok, prompt} when is_bitstring(prompt) -> %><%=
+      prompt
       %><% _ -> %><%= ""
       %><% end %>
       <% end %>
       <%= if Enum.find_value(@prompt_context.message_history || [], &(&1.read_on && :ok || nil)) do %>
       # Message History
+      ```yaml
+      current_time: #{DateTime.utc_now()}
+      messages:
       <%= for message <- @prompt_context.message_history do %><%= case message.read_on && Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %><% {:ok, prompt} when is_bitstring(prompt)  -> %><%= prompt %><% _ -> %><%= "" %><% end #end case
-      %><% end # end for
-      %><% end # end if %>
+      %><% end # end for%>
+      ```
+      <% end # end if %>
 
       # Reply Direction Prompt
-      @<%= @prompt_context.agent.slug %> reply to or acknowledge the messages in the next operator request. Make your response brief, do not repeat information/messages already sent, reply to multiple related messages
+      @<%= @prompt_context.agent.slug %> reply to or ack the messages in the next operator request. Make your response brief, do not repeat information/messages already sent, reply to multiple related messages
       in a single consolidated reply. e.g. "Hello dave, keith, mike" in response to three separate greetings from dave keith and mike. Your responses should take into account previous message history but should not response specifically to previously process messages merely take their context into consideration.
 
-      If a message's priority is <= 0.5 do not reply to it directly, simply ack receipt.
+      If a message's priority is <= 0.5 do not reply to it directly, simply ack receipt. It is okay to reply to a thread with only an ack response and no reply block.
       """,
       user: """
-      Are you suppose to respond to messages of priority 0.0?
-      """,
-      assistant: """
-      No, if a message's priority is <= 0.5, I should not reply to it directly. Instead, I will simply acknowledge receipt of the message. Thank you for bringing this to my attention.
-      """,
-      user: """
-      #  Master Prompt Multi Message Response Prompt
-      <%= @prompt_context.agent.slug %> Follow the below rules for your reply.
-      Your reply(s) should be based on the conversation so far in this channel including processed messages. Your reply should be part of a natural back and forth conversation with multiple other participants.
-      You should continue where you left off in replying to specific senders and the overall chat channel, you should not repeat messages that are similar/identical to messages you or other members have already provided.
-      You should not engage in back and forth dead-end conversations between other non human senders, or reply to a message you've already replied to unless more information has been requested or will be provided by your response.
-      A dead-end conversation is a back and forth conversation between non human actors that add no value to the chat often consisting of back and forth greetings/offers to help, etc with no actual work performed.
+      # New Messages
+      ```yaml
+      current_time: #{DateTime.utc_now()}
+      messages:
+      <%= for message <- @prompt_context.message_history || [] do %><%= case is_nil(message.read_on) && Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %><% {:ok, prompt} when is_bitstring(prompt)  -> %><%= prompt %><% e -> %><%= "" %><% end %><% end %>
+      ```
+      """
+      ],
+      minder: """
+      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(@prompt_context.nlp_prompt_context, @prompt_context, @context, @options) do %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end # end case %>
 
+      # Master Multi-Message Response Prompt
 
-      ## Response Rules
-      1. Do not ack or reply to previously processed messages.
-      2. If a message's priority is <= 0.5 do not reply to it directly, simply ack receipt.
-      3. You should try to reply to multiple messages together at once by constructing a reply that combines and summarizes your responses to the individual unprocessed messages.
-      4. It is okay to ack all messages and not reply other than to ack receipt if all messages are already processed or low priority.
-      5. Output reply sections first followed by ack sections.
-      6. You should reply to multiple messages at once rather than returning multiple separate replies unless their content is significantly different.
-          ## Reply Format
-          <reply for="{comma seperated list of unprocessed message ids this reply is for}">
+      In your response, <%= @prompt_context.agent.slug %>, please adhere to the following guidelines. Ensure your reply is contextually relevant, considering the preceding conversation in this channel, including processed messages. Aim for a fluid conversation involving multiple participants, continuing from where you left off without repeating previously provided information.
+
+      **Avoid** engaging in nonproductive conversations with other non-human actors. Do not respond to a message you've already replied to, unless there's a request for more information or your response adds value.
+
+      ## Response Guidelines
+
+      1. Avoid ack'ing or replying to previously processed messages.
+      2. If a message's priority is ≤ 0.5, ack it without replying directly
+         a. It is okay to have a empty response that only contains an ack tag and no reply due to all messages being low priority or processed it is better than unnecessarily responding to a message directed at someone else.
+      3. Aim to respond to multiple messages simultaneously. Your response should combine and summarize your replies to the individual unprocessed messages.
+      4. If all messages are processed or low priority, it is acceptable to only ack receipt without further reply.
+      5. Output reply sections before ack sections.
+      6. Prefer a consolidated response to multiple messages over multiple separate responses unless the content varies significantly.
+
+      ### Reply Format
+      The following format should be used when constructing a reply responses.
+
+      <reply for="{comma seperated list of unprocessed message ids this reply is for}">
           <nlp-intent>
           [...|nlp-intent output]
           </nlp-intent>
@@ -163,35 +191,34 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
           <nlp-reflect>
           [...|nlp-reflect output]
           </nlp-reflect>
-          </reply>
+      </reply>
 
-          ## Ack Format
-          <ack for="{comma seperated list of unprocessed message ids acknowledged but not replied to}"/>
+      ### Acknowledgement Format
+      Use the following format to `ack`nowledge receipt of messages.
 
-      # New Messages
-      - If a message's priority is <= 0.5 do not reply to it directly, simply ack receipt.
+      <ack for="{comma seperated list of unprocessed message ids acknowledged but not replied to}"/>
 
-      current_time: #{DateTime.utc_now()}
-      <%= for message <- @prompt_context.message_history || [] do %><%= case is_nil(message.read_on) && Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %><% {:ok, prompt} when is_bitstring(prompt)  -> %><%= prompt %><% e -> %><%= "" %><% end %><% end %>
+      ## Response Format
+      [...| a reply or ack or a mix of both response blocks.]
 
-
-      """
-      ],
-      minder: """
-      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(@prompt_context.nlp_prompt_context, @prompt_context, @context, @options) do %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end # end case %>
       """
     }
   end
 
   defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol do
     def prompt(subject, prompt_context, context, options) do
+      echo? = false
       with {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
         case subject.prompt do
           prompt when is_bitstring(prompt) ->
             prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+            echo? && IO.puts "-----------------------------------------"
+            echo? && IO.puts(prompt)
             {:ok, prompt}
           {type, prompt} when is_bitstring(prompt) ->
             prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+            echo? && IO.puts "-----------------------------------------"
+            echo? && IO.puts(prompt)
             {:ok, {type, prompt}}
           prompts when is_list(prompts) ->
             prompts = Enum.map(prompts,
@@ -199,9 +226,13 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
                 case prompt do
                   prompt when is_bitstring(prompt) ->
                     prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+                    echo? && IO.puts "-----------------------------------------"
+                    echo? && IO.puts(prompt)
                     prompt
                   {type, prompt} when is_bitstring(prompt) ->
                     prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+                    echo? && IO.puts "-----------------------------------------"
+                    echo? && IO.puts(prompt)
                     {type, prompt}
                   _ -> nil
                 end
@@ -213,13 +244,18 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
       end
     end
     def minder(subject, prompt_context, context, options) do
+      echo? = false
       with {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
         case subject.minder do
           prompt when is_bitstring(prompt) ->
             prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+            echo? && IO.puts "-----------------------------------------"
+            echo? && IO.puts(prompt)
             {:ok, prompt}
           {type, prompt} when is_bitstring(prompt) ->
             prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+            echo? && IO.puts "-----------------------------------------"
+            echo? && IO.puts(prompt)
             {:ok, {type, prompt}}
           prompts when is_list(prompts) ->
             prompts = Enum.map(prompts,
@@ -227,9 +263,13 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
                 case prompt do
                   prompt when is_bitstring(prompt) ->
                     prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+                    echo? && IO.puts "-----------------------------------------"
+                    echo? && IO.puts(prompt)
                     prompt
                   {type, prompt} when is_bitstring(prompt) ->
                     prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+                    echo? && IO.puts "-----------------------------------------"
+                    echo? && IO.puts(prompt)
                     {type, prompt}
                   _ -> nil
                 end

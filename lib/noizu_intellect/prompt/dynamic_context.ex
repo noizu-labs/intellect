@@ -321,7 +321,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
           #{processed_messages}
 
           # Message Prompt
-          @#{prompt_context.agent.slug} Reply to or acknowledge the unprocessed messages in the following user request based on the following criteria:
+          @#{prompt_context.agent.slug} Reply to or ack the unprocessed messages in the following user request based on the following criteria:
 
           ## Response Criteria
           Use the following `Response Criteria` table to help in determining which messages you should and shouldn't reply to.
@@ -386,7 +386,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
             </reply>
 
             ## Ack Format
-            <ack for="{comma seperated list of unprocessed message ids acknowledged but not replied to}"/>
+            <ack for="{comma seperated list of unprocessed message ids `ack`nowledged but not replied to}"/>
         """
 
         opening_prompt = %Message{type: :system, body: master_prompt <> nlp_prompt}

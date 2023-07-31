@@ -41,17 +41,16 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Member] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
     prompt = """
-    ````````nlp-definition
-    ⚟human:@#{subject.user.slug}@1.0:nlp@0.5
-    # Human #{subject.user.name}
+    ⌜operator|#{subject.user.slug}|nlp0.5⌝
+    Human Operator #{subject.user.name}
     🙋 @#{subject.user.slug}
-    ----
-    Identifier: #{subject.identifier}
-    Slug: @#{subject.user.slug}
-    ## Background
-    #{subject.details && subject.details.body}
-    ⚞
-    ````````
+    ---
+    details:
+     identifier: #{subject.identifier}
+     slug: @#{subject.user.slug}}
+     background: |-1
+      #{(subject.details && subject.details.body || "[NONE]")|> String.split("\n") |> Enum.join("\n  ")}
+    ⌞operator⌟
     """
     {:ok, prompt}
   end

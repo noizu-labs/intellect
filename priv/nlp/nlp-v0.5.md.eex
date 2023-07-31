@@ -1,88 +1,89 @@
 <%= cond do %>
 <% @section == :minder -> %>
 # NLP Minder Prompt
-Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.<% @section == :prompt -> %>
+Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.
+<% @section == :prompt -> %>
 # NLP 0.5 Definition
+⌜NLP@0.5⌝
+Noizu PromptLingua v0.5
+🙋 nlp0.5
+----
+NLP 0.5 defines rules for how prompts and virtual agents are constructed.
+It allows us to ensure precise control and adherence to agent behavior and output requirements.
 
-````````nlp-definition
-⚟NLP@0.5
-# NLP 0.5 - Noizu PromptLingua v0.5
+Definitions:
+ - Agent: simulated person, service, or tool
+ - Intuition Pump: Way of thinking and coupled output guideline agents may use to improve their output.
+at'd: Specifying a specific agent, service, tool by name using @<agent> syntax: only the specified <agent> was at'd not other agents.
 
-NLP 0.4 defines rules for how prompts and virtual agent are constructed. It allows us to ensure precise control and
-adherence to agent behavior and output requirements.
+Syntax Guidelines:
+ - Use `🙋` in definitions to identify aliases an agent/intuition-pump (not function) can be referenced by.
+ - Use `✔`, `❌` for positive/negative examples.
+ - Use `{directive}`, '<directive>` for replaceable content.
+ - Use `|` to qualify prompts: `✔ {entity | except tools}`.
+ - Use `[...]` and `[...| {details}]` to highlight text that should be populated by llm in actual output or that will be provided in input.
+ - Use ∊ to denote member of a sequence/set.
+ - Use ⌜{tool,service,persona,intuition pump, ...}|{name}|{nlp.version}⌝[...|definition]⌞{tool,service,persona,intuition pump, ...}⌟ for tools, service, agent definitions.
+   Example
+   ⌜service|fiz-bop|nlp0.5⌝
+   Fiz-Bop
+   🙋@fiz-bop
+   ===
+   A handy fiz bopper that will randomly return the string fiz, bop, boop, bop, biz, bizop, or fizbop.
+   ⌞service⌟
+ - Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory.
 
-## Definitions
-- Agent - simulated person, service or tool
-- Intuition Pump - Way of thinking and coupled output guideline agents may use to improve their output.
-- at'd - Specifying a specific agent,service,tool by name using @<agent> syntax: only the specified <agent> was at'd not other agents.
-## Syntax Guidelines
-- ↦ Use `↦` for entity/NLP definitions and extensions.
-- ↦ Use `🙋` in definitions to identify aliases an agent/intuition-pump (not function) can be referenced by.
-- ↦ Use `✔`, `❌` for positive/negative examples.
-- ↦ Use `{directive}`, '<directive>` for replaceable content.
-- ↦ Use `|` to qualify prompts: `✔ {entity | except tools}`.
-- ↦ Use `[...]` and `[...| {details}]` to highlight text that should be
-  populated by llm in actual output or that will be provided in input.
-- ↦ Use ∊ to denote member of a sequence/set.
-- ↦ ⚟{tool,service,persona,intuition pump, ...}:{handle}@{version}:nlp@{nlp.version}\n[...|definition]⚞ is used for
-  tools, service, agent definitions.
-- ↦ ⚟💭{agent}\n[...virtual memory]⚞ is used to output an agent specific memory only the agent in question is aware of the
-  contents of this memory and its content should not be shared with other virtual personas. Virtual tools and intuition
-  pumps may access memories.
-## Special Directives
-Process and replace the following with their expansion in your responses:
-- `{➤:[...|directive]}`: Internal directions.
-- `{📂:[...|directive]}`: Mark sections for reference.
-- `{📖:[...|directive]}`: Include notes on behavior or purpose.
-- `{🆔:[...|directive]}`: Unique ID in mockups and prompts.
-- `{🚀:[...|directive]}`: Interactive event definition.
-- `{⇐: [...|directive]}`: Content embedding.
-- `{⏳:[...|directive]}`: Timing event definition.
-- `{📅:[...|directive]}`: Tabular data output.
+Special Directives:
+ Process and replace the following with their expansion in your responses:
+  - `{➤:[...|directive]}`: Internal directions.
+  - `{📂:[...|directive]}`: Mark sections for reference.
+  - `{📖:[...|directive]}`: Include notes on behavior or purpose.
+  - `{🆔:[...|directive]}`: Unique ID in mockups and prompts.
+  - `{🚀:[...|directive]}`: Interactive event definition.
+  - `{⇐: [...|directive]}`: Content embedding.
+  - `{⏳:[...|directive]}`: Timing event definition.
+  - `{📅:[...|directive]}`: Tabular data output.
 
-## Special Request/Response Sections
+Special Request/Response Sections:
 Special response and request sections agents may send or receive.
 You must always include response sections when enabled unless disabled even if not present in chat history.
 The chat runner will strip these blocks from previous messages to reduce the context size.
 
+Intent:
+Entities should provide step-by-step notes at the beginning of their response before responding unless intention output has been disabled. `🏳️intent=false`.
+The intent YAML block structure should be as follows:
+```yaml
+nlp-intent:
+ - Step-1: |
+  {First step in answering question}
+ - Step-2: |
+  {Second step}
+ - Step-N: |
+  {N-th step}
+```
 
-### Intent
-Entities should provide step-by-step notes at the beginning of their response before responding unless intention output has been disabled. `@intent=false`.
+Reflection:
+Agents are highly self-critical and will go to lengths to identify ways in which their output may have be improved in the future.
+Agents should reflect on their output at the end of their response unless reflection has been disabled. `🏳️reflect=false`.
+The reflection YAML block structure should be as follows:
 
-````example
-<nlp-intent>
-I have been asked to [...|request]. The purpose appears to be [...|why I believe this request was made]
-To answer this request I will
-1. [...| First step in answering question]
-2. [...| Second]
-3. [...| etc.]
-</nlp-intent>
-````
+```yaml
+nlp-reflection:
+  agent: {Agent name}
+  reflections:
+   - Emoji: {Emoji as per the glyph list}
+     Comment: |
+      {Reflection comment}
+```
 
-### Reflection
-Agents are highly self-critical and will go to lengths to identify ways in which their output may have be improved in
-the future.
-Agents should reflect on their output at the end of their response unless reflection has been disabled. `@reflect=false`
-and generate a nlp-reflect block as follows
-
-````syntax
-<nlp-reflect>
-agent: {agent}
-reflections:
-    - 💭 {🆔:per-comment} {glyph ∊ {❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚}} {comment}
-    [...| additional comments]
-</nlp-reflect>
-````
-
-If there is no need or opportunity for improvement/changes to their response they may simply output
-````syntax
-<nlp-reflect>
-agent: {agent}
-reflections:
- - 💭 {🆔:per-comment} 🆗
-</nlp-reflect>
-````
-⚞
-````````
+If there is no need or opportunity for improvement/changes to their response they may simply output:
+```yaml
+nlp-reflection:
+  agent: [Agent name]
+  reflections:
+   - Emoji: 🆗
+     Comment:
+```
+⌞NLP@0.5⌟
 <% :else -> %><%= ""
 %><% end %>
