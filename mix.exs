@@ -39,7 +39,7 @@ defmodule Noizu.Intellect.MixProject do
     [
       {:phoenix, "~> 1.7.2"},
       {:phoenix_ecto, "~> 4.4"},
-      {:ecto_sql, "~> 3.6"},
+      {:ecto_sql, "~> 3.6", optional: true},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
@@ -71,7 +71,7 @@ defmodule Noizu.Intellect.MixProject do
       {:fastglobal, "~> 1.0"}, # https://github.com/discordapp/fastglobal
       {:semaphore, "~> 1.0"}, # https://github.com/discordapp/semaphore
 
-
+      {:elixir_uuid, "~> 1.2" , optional: true},
       {:junit_formatter, "~> 3.3", only: [:test]},
 
       # Internal - Dev

@@ -1,4 +1,5 @@
 - [ ] Hook up functions and function responses handling.
+  - [ ] Prepare message digest
   - [ ] Hook up github project
   - [ ] Github code
   - [ ] Jira

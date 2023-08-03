@@ -9,8 +9,23 @@ end
 
 defmodule Noizu.Intellect.UIDProviderModule do
 
-  def ref(identifier) when is_integer(identifier) do
-    index = rem(identifier, 1000)
+  defp uuid_string(<<v::binary-size(16)>>), do: UUID.binary_to_string!(v)
+  defp uuid_string(<<_,_,_,_,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,_,_,_,_,_,_,_,_>> = v), do: v
+
+  def ref(identifier) when is_integer(identifier), do: ref_common(identifier)
+  def ref(<<_::binary-size(16)>> = identifier), do: ref_common(uuid_string(identifier))
+  def ref(<<_,_,_,_,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,_,_,_,_,_,_,_,_>> = identifier), do: ref_common(identifier)
+
+
+  def ref_type_index(identifier) when is_integer(identifier) do
+    rem(identifier, 1000)
+  end
+  def ref_type_index(<<_,_,_,_,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,_,_,_,_,_,h0,h1,h2>> = identifier) do
+    String.to_integer(<<h0,h1,h2>>,16)
+  end
+
+  defp ref_common(identifier) do
+    index = ref_type_index(identifier)
     key = :"repo_lookup_by_index_#{index}"
     case FastGlobal.get(key, :__noizu_not_found__) do
       :__noizu_not_found__ ->
@@ -41,7 +56,9 @@ defmodule Noizu.Intellect.UIDProviderModule do
     uuid = repo_uuid(repo)
     query = "SELECT generate_uid($1)"
     case Ecto.Adapters.SQL.query(Noizu.Intellect.Repo, query, ["#{repo}"]) do
-      {:ok, %{rows: [[v]]}} when is_integer(v) -> {:ok, v}
+      {:ok, %{rows: [[v]]}} when is_integer(v) ->
+        index = rem(v, 1000)
+        {:ok, {v, index}}
       error -> {:error, error}
     end
   end

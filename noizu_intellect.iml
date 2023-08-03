@@ -153,6 +153,7 @@
       <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/unicode_util_compat" />
       <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/websock" />
       <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/websock_adapter" />
+      <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/noizu_labs_entities" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="phoenix" level="project" />
@@ -278,5 +279,6 @@
     <orderEntry type="library" name="benchee_markdown" level="project" />
     <orderEntry type="library" name="ecto_sqlite3_extras" level="project" />
     <orderEntry type="library" name="ecto_sqlite3" level="project" />
+    <orderEntry type="library" name="easyhtml" level="project" />
   </component>
 </module>
