@@ -78,7 +78,7 @@ defmodule Noizu.Intellect.HtmlModule do
   def extract_response_sections(response) do
     {_, html_tree} = Floki.parse_document(response)
     sections = Enum.map(html_tree, fn
-      (x = {"ack", attrs, []}) ->
+      (x = {"ignore", attrs, _}) ->
         ids = Enum.find_value(attrs, fn
           ({"for", ids}) ->
             ids

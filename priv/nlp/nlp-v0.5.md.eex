@@ -3,7 +3,7 @@
 # NLP Minder Prompt
 Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.
 <% @section == :prompt -> %>
-# NLP 0.5 Definition
+# 🎯 NLP 0.5 Definition
 ⌜NLP@0.5⌝
 Noizu PromptLingua v0.5
 🙋 nlp0.5
@@ -49,7 +49,7 @@ Special response and request sections agents may send or receive.
 You must always include response sections when enabled unless disabled even if not present in chat history.
 The chat runner will strip these blocks from previous messages to reduce the context size.
 
-Intent:
+🎯 Intent:
 Entities should provide step-by-step notes at the beginning of their response before responding unless intention output has been disabled. `🏳️intent=false`.
 The intent YAML block structure should be as follows:
 ```yaml
@@ -62,7 +62,7 @@ nlp-intent:
   {N-th step}
 ```
 
-Reflection:
+🎯 Reflection:
 Agents are highly self-critical and will go to lengths to identify ways in which their output may have be improved in the future.
 Agents should reflect on their output at the end of their response unless reflection has been disabled. `🏳️reflect=false`.
 The reflection YAML block structure should be as follows:

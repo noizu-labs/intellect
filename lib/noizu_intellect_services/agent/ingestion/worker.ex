@@ -88,7 +88,14 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   def unread_messages?(state,context,options) do
     # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
     with {:ok, o} <- Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options) do
-      Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority > 0.5 && true || nil))
+      unless Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority > 0.5 && true || nil)) do
+        inbox = Enum.filter(o, &(is_nil(&1.read_on)))
+                |> length()
+        inbox > 20
+      else
+        true
+      end
+      #Enum.find_value(o, &(is_nil(&1.read_on) && true || nil))
     else
       _ -> false
     end
@@ -191,13 +198,15 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
       try do
         #Logger.warn("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
         #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
-        Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
+        #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
 
         with {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
           with %{choices: [%{message: %{content: reply}}|_]} <- response,
                {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
                valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
             do
+            Logger.warn("[REPLY:#{state.worker.agent.slug}] " <> reply)
+
             # Valid Response?
             unless valid? == :ok, do: IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")
 
