@@ -15,6 +15,7 @@ defmodule Noizu.Intellect.User do
     field :slug
     field :name
     field :profile_image, nil, Noizu.Entity.VersionedURI
+    field :response_preferences, nil, Noizu.Entity.VersionedString
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
 

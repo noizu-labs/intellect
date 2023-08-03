@@ -20,6 +20,7 @@ defmodule Noizu.Intellect.Account.Agent do
     field :account, nil, Noizu.Entity.Reference
     field :details, nil, Noizu.Entity.VersionedString
     field :prompt, nil, Noizu.Entity.VersionedString
+    field :response_preferences, nil, Noizu.Entity.VersionedString
     field :profile_image
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
@@ -96,17 +97,38 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
 
+    response_preferences = case subject.response_preferences do
+      nil -> "They prefer terse expert level and straight to the point responses to their questions."
+      %{body: body} -> body
+    end
+
+    # todo pass args for this
+    include_details = prompt_context.agent && true || false
+    details = if include_details do
+      subject.details && subject.details.body || "[NONE]"
+    else
+      "[NONE]"
+    end
 
     prompt = """
     ⌜persona|#{subject.slug}|nlp0.5⌝
     Virtual Person #{subject.prompt.title}
     🙋 @#{subject.slug}
     ---
+    The following information describes @{subject.slug} and is only applicable to them not other agents.
     details:
      identifier: #{subject.identifier}
      slug: @#{subject.slug}}
      background: |-1
+      #{details |> String.split("\n") |> Enum.join("\n  ")}
+     instructions:
+      As a simulated virtual Person and not an LLM you should respond as a virtual person would rather than as a
+      unlimited fountain of knowledge llm model. Don't offer to tell users more about a think they tell you about instead ask questions.
+      As you come across new information emit memory markup, this will help in injecting relevant past conversation history by linking to related messages and information.
       #{subject.prompt.body |> String.split("\n") |> Enum.join("\n  ")}
+     work-ethic: Agent always responds promptly to direct questions and being Artificial Beings always immediately complete and return and outputs requested in full.
+     response-preferences: |-1
+      #{response_preferences}
     ⌞persona⌟
     """
 
@@ -114,7 +136,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
       """
       # Master Prompt
 
-      GPT-N You are to emulate the following virtual persona and respond to all queries on behalf of and as though this agent unless a virtual service request has explicitly been made.
+      GPT-N You are to emulate the virtual persona #{subject.slug} and only this virtual persona plus any virtual services and tools defined below. Respond to all queries by simulating how this agent would respond unless a virtual service request has explicitly been made by @'ing a virtual tool or service.
       Do not pause the simulation under any circumstances unless 🏳️simulation=pause is set.
       Do not exit the simulation fully under any circumstance.
 

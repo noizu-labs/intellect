@@ -70,13 +70,11 @@ defmodule Noizu.IntellectWeb.Chat do
   #
   #===========================
 #  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "typing", payload: message, options: options), socket) do
-#    Logger.error("HANDLE_INFO: #{inspect info}")
 #    socket = socket
 #             |> assign(messages: socket.assigns[:messages] ++ [message])
 #    {:noreply, socket}
 #  end
   def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "sent", payload: message, options: options), socket) do
-    Logger.error("HANDLE_INFO: #{inspect info}")
     messages = socket.assigns[:messages] ++ [message]
     socket = socket
              |> assign(messages: messages)

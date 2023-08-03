@@ -46,6 +46,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     # input
     agent: nil,
     channel_members: nil,
+    channel_member_lookup: nil,
     channel: nil,
     message_history: nil,
     verbose: true,
@@ -84,8 +85,14 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
                        (_) -> nil
                      end
                    ) |> Enum.filter(&(&1))
+      channel_member_lookup = Enum.map(members,fn(member) ->
+        case member do
+          %{slug: slug} -> {member.identifier, %{slug: slug, entity: member}}
+          %{user: %{slug: slug}} -> {member.identifier, %{slug: slug, entity: member}}
+        end
+      end) |> Map.new()
 
-      %__MODULE__{channel_members: members, agent: agent, message_history: messages, channel: channel, master_prompt_context: Noizu.Intellect.Prompt.ContextWrapper.master_prompt() , verbose: verbose}
+      %__MODULE__{channel_members: members, channel_member_lookup: channel_member_lookup, agent: agent, message_history: messages, channel: channel, master_prompt_context: Noizu.Intellect.Prompt.ContextWrapper.master_prompt() , verbose: verbose}
       |> prepare_prompt_context__process(:nlp, context, options)
       |> prepare_prompt_context__process(:agent, context, options)
       |> prepare_prompt_context__process(:intuition_pumps, context, options)

@@ -8,6 +8,7 @@ defmodule Noizu.Intellect.HtmlModule do
          fn
            ({:ack, _}) -> nil
            ({:reply, _}) -> nil
+           ({:memories, _}) -> nil
            ({:nlp_chat_analysis, _}) -> nil
            (other) -> {:invalid_section, other}
          end
@@ -24,6 +25,7 @@ defmodule Noizu.Intellect.HtmlModule do
       fn
         (x = {:ack, _}) -> x
         (x = {:reply, _}) -> x
+        (x = {:memories, _}) -> x
         (x = {:nlp_chat_analysis, _}) -> x
         (section) -> {:unsupported, section}
       end
@@ -38,10 +40,12 @@ defmodule Noizu.Intellect.HtmlModule do
   end
 
   def extract_relevancy_response(response) do
+    IO.inspect(response, label: "REW REL RESPONSE")
     {_, html_tree} = Floki.parse_document(response)
     sections = Enum.map(html_tree,
                  fn
-                   (x = {"nlp-intent", attrs, contents}) -> {:intent, Floki.raw_html(contents, pretty: false, encode: false)}
+                   (x = {"nlp-intent", attrs, contents}) -> {:intent, Floki.text(contents, pretty: false, encode: false)}
+                   (x = {"summary", attrs, contents}) -> {:summary, Floki.text(contents, pretty: false, encode: false)}
                    (x = {"relevance", attrs, contents}) ->
                      Enum.map(contents,
                        fn
@@ -64,7 +68,7 @@ defmodule Noizu.Intellect.HtmlModule do
                              end)
                            contents = case contents |> IO.inspect() do
                             v when is_bitstring(v) -> v
-                            v -> Floki.raw_html(v, pretty: false, encode: false)
+                            v -> Floki.text(v, pretty: false, encode: false)
                            end
                            {:relevancy, [member: member, weight: weight, message: message, contents: contents]}
                        end)
@@ -78,6 +82,8 @@ defmodule Noizu.Intellect.HtmlModule do
   def extract_response_sections(response) do
     {_, html_tree} = Floki.parse_document(response)
     sections = Enum.map(html_tree, fn
+      (x = {"memories", _, contents}) ->
+          {:memories, Floki.text(contents)}
       (x = {"ignore", attrs, _}) ->
         ids = Enum.find_value(attrs, fn
           ({"for", ids}) ->

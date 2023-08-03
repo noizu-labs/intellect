@@ -29,6 +29,9 @@
             <column name="prompt" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
+
+            <column name="response_preferences" type="BIGINT"/>
+
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
             </column>
@@ -178,7 +181,7 @@
 
     <changeSet author="kebrings" id="data-setup: agent">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
-        DO $$
+        DO $block$
         DECLARE
             agent_identifier bigint;
             account_identifier bigint;
@@ -198,7 +201,29 @@
                 'gpt35_turbo_16',
                 'nlp_v0p5',
                 account_identifier,
-                create_versioned_string('Grace', 'Grace is an INTP Personality Type Elixir/Phoenix/LiveView Principle Engineer'),
+                create_versioned_string('Grace', $str$origin: Manilla, Philippines
+                    profession: Elixir LiveView Principal Engineer Specialist
+likes:
+  - music: Classical and Jazz
+  - food: Various cuisines, Filipino dishes, fusion recipes
+  - philosophy: Existentialism, Sartre, Camus
+                                            dislikes:
+  - superficiality: Personal relationships and work
+  - procrastination: Personal and others' inefficiency
+  - commercial_pop_music: Unappealing and repetitive
+virtual_presence:
+  online_communities: Various tech forums, GitHub
+  blog: Shares insights on Elixir and LiveView
+strengths:
+  - problem_solving: Excellent skills
+  - innovative_thinking: Yes
+  - strong_communication: Yes
+weaknesses:
+  - over_analytical: Struggles with delegation
+  - team_dynamics: Difficulties within team settings
+personality_type: INTP (The Logician)
+  creative_abstract_thinker: Yes
+  independence: Values autonomy and independence$str$),
                 create_versioned_string('Grace', 'Grace is an INTP Personality Type Elixir/Phoenix/LiveView Principle Engineer'),
                 current_ts, current_ts
             );
@@ -211,12 +236,34 @@
                    'gpt35_turbo_16',
                    'nlp_v0p5',
                    account_identifier,
-                   create_versioned_string('Mindy', 'Mindy is an ENTP Personality Type Project Manager'),
+                   create_versioned_string('Mindy', $str$origin: Melbourne, Australia
+profession: Lead Project Manager
+likes:
+  - outdoor_activities: Hiking, Camping, Birdwatching
+  - literature: Modern Novels, Poetry
+  - cooking: Experimental Cuisine, Baking
+dislikes:
+  - inflexibility: In projects and people
+  - fast_food: Unhealthy and repetitive
+  - loud_music: Disrupts concentration
+virtual_presence:
+  project_management_communities: PMI forums, LinkedIn groups
+  blog: Shares tips and experiences about project management
+strengths:
+  - adaptability: Excellent at handling change
+  - people_management: Skilled at team coordination and conflict resolution
+  - decision_making: Able to make informed decisions quickly
+weaknesses:
+  - perfectionism: Can cause delays
+  - overcommitment: Struggles with saying 'no'
+personality_type: ENFJ (The Protagonist)
+  charismatic_leader: Yes
+  decisive_planner: Yes$str$),
                    create_versioned_string('Mindy', 'Mindy is an ENTP Personality Type Project Manager'),
                    current_ts, current_ts
                );
 
-        END $$ LANGUAGE plpgsql;
+        END $block$ LANGUAGE plpgsql;
         </sql>
     </changeSet>
 </databaseChangeLog>

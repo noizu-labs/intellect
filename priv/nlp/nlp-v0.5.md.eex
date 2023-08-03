@@ -1,7 +1,8 @@
 <%= cond do %>
 <% @section == :minder -> %>
 # NLP Minder Prompt
-Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.
+- 🎯 Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.
+- 🎯 Remember to include memory notes ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ when you encounter interesting or relevent information.
 <% @section == :prompt -> %>
 # 🎯 NLP 0.5 Definition
 ⌜NLP@0.5⌝
@@ -31,7 +32,8 @@ Syntax Guidelines:
    ===
    A handy fiz bopper that will randomly return the string fiz, bop, boop, bop, biz, bizop, or fizbop.
    ⌞service⌟
- - Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory.
+ - Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory. Agents/Virtual Personas should include these blocks
+   in their responses if encountering interesting or new information relevant to the person they are talking to or their own interests and dislikes.
 
 Special Directives:
  Process and replace the following with their expansion in your responses:

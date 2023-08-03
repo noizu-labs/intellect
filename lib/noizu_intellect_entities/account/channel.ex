@@ -33,23 +33,19 @@ defmodule Noizu.Intellect.Account.Channel do
          {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options)
       do
         Logger.error("DELIVER: INBOUND MESSAGES #{length(messages)}")
-        #Logger.error("MESSAGES: [#{get_in(request_messages, [Access.at(0), :content])}]")
+        Logger.error("DIGEST MESSAGES: [#{get_in(request_messages, [Access.at(0), :content])}]")
+
+        # TODO save all
+      agent_slugs = Enum.map(prompt_context.channel_members || [], fn(member) ->
+        case member do
+          %{slug: slug} -> {member.identifier, Regex.compile!("(@#{slug} |@#{slug}$)", "i")}
+          %{user: %{slug: slug}} -> {member.identifier, Regex.compile!("(@#{slug} |@#{slug}$)", "i")}
+        end
+      end) |> Map.new() |> IO.inspect()
+
+      broadcast = String.contains?(String.downcase(message.contents.body || ""), "@everyone") || String.contains?(String.downcase(message.contents.body || ""), "@channel")
 
       # Special check for @channel @everyone
-      if String.contains?(String.downcase(message.contents.body || ""), "@everyone") || String.contains?(String.downcase(message.contents.body || ""), "@channel") do
-          Enum.map(prompt_context.channel_members, fn(member) ->
-            now = DateTime.utc_now()
-            %Noizu.Intellect.Schema.Account.Message.Relevancy{
-              message: message.identifier,
-              recipient: member.identifier,
-              relevance: 70,
-              comment: "@everyone/@channel applies to all channel members.",
-              created_on: now,
-              modified_on: now,
-            } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
-            {:ok, message}
-          end)
-      else
 
 
         with {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options),
@@ -59,23 +55,27 @@ defmodule Noizu.Intellect.Account.Channel do
           with %{choices: [%{message: %{content: reply}}|_]} <- response,
                {:ok, prepped} <- Noizu.Intellect.HtmlModule.extract_relevancy_response(reply)
             do
-            Enum.map(prepped, fn
-              ({:relevancy, settings}) ->
-                recipient_id = settings[:member]
-                weight = settings[:weight]
-                weight = weight && trunc(Float.round(weight, 2) * 100)
-                comment = settings[:contents]
-                now = DateTime.utc_now()
-                %Noizu.Intellect.Schema.Account.Message.Relevancy{
-                  message: message.identifier,
-                  recipient: recipient_id,
-                  relevance: weight,
-                  responding_to: settings[:message],
-                  comment: comment,
-                  created_on: now,
-                  modified_on: now,
-                } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
 
+            # before setting relevancy do book keeping.
+            Enum.map(prepped, fn
+              ({:summary, summary}) ->
+                %{message|
+                  brief: %{title: "Message Summary", body: summary}
+                }
+                |> IO.inspect(label: "SET BRIEF")
+                |> Noizu.Intellect.Entity.Repo.update(context)
+
+                with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(message.channel) do
+                  temp = %Noizu.IntellectWeb.Message{
+                    type: :system_message,
+                    timestamp: DateTime.utc_now(),
+                    user_name: "[System:Summary]",
+                    profile_image: nil,
+                    mood: :nothing,
+                    body: "#{message.identifier} <> #{summary}"
+                  }
+                  Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: temp, options: [scroll: true]))
+                end
 
               ({:intent, response}) ->
                 prepped_entries = Enum.group_by(prepped, (&(elem(&1, 0))))
@@ -97,9 +97,39 @@ defmodule Noizu.Intellect.Account.Channel do
               (_) -> nil
             end)
 
+            Enum.map(prepped, fn
+              ({:relevancy, settings}) ->
+                recipient_id = settings[:member]
+                weight = settings[:weight]
+                weight = if (weight < 0.7) do
+                  slug = agent_slugs[recipient_id]
+                  if broadcast || (slug && String.match?(prompt, slug)) do
+                    Logger.error("[Deliver] Agent set incorrect weight #{weight} for #{recipient_id}")
+                    0.7
+                  else
+                    weight
+                  end
+                else
+                  weight
+                end
+                # Scan message, if it contains @recipient then min bar weight to 0.7
+                weight = weight && trunc(Float.round(weight, 2) * 100)
+                comment = settings[:contents]
+                now = DateTime.utc_now()
+                %Noizu.Intellect.Schema.Account.Message.Relevancy{
+                  message: message.identifier,
+                  recipient: recipient_id,
+                  relevance: weight,
+                  responding_to: settings[:message],
+                  comment: comment,
+                  created_on: now,
+                  modified_on: now,
+                } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
+              (_) -> nil
+            end)
+
             {:ok, message}
           end
-        end
 
       end
 

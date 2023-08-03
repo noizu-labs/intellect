@@ -18,6 +18,36 @@ defmodule Noizu.Entity.VersionedString do
   end
   use Noizu.Entity.Field.Behaviour
 
+
+  def type__before_update(%__MODULE__{} = this,_,context,options) do
+    cond do
+      this.identifier ->
+        # Detect content change
+        {:ok, this}
+      :else -> Noizu.Intellect.Entity.Repo.create(this,context,options)
+    end
+  end
+  def type__before_update(%{} = settings,_,context,options) do
+    entity = %__MODULE__{
+      version: 1,
+      title: settings[:title] || "",
+      body: settings[:body] || "",
+      time_stamp: Noizu.Entity.TimeStamp.now()
+    }
+    Noizu.Intellect.Entity.Repo.create(entity,context,options)
+  end
+  def type__before_update(body,_,context,options) when is_bitstring(body) do
+    entity = %__MODULE__{
+      version: 1,
+      title: "",
+      body: body,
+      time_stamp: Noizu.Entity.TimeStamp.now()
+    }
+    Noizu.Intellect.Entity.Repo.create(entity,context,options)
+  end
+  def type__before_update(_,_,_,_), do: nil
+
+
   def type__before_create(%__MODULE__{} = this,_,context,options) do
     cond do
       this.identifier -> {:ok, this}

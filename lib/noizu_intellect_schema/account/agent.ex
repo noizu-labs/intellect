@@ -10,6 +10,7 @@ defmodule Noizu.Intellect.Schema.Account.Agent do
     field :account, Noizu.Entity.Reference
     field :details, Noizu.Entity.Reference
     field :prompt, Noizu.Entity.Reference
+    field :response_preferences, Noizu.Entity.Reference
     field :profile_image, Ecto.UUID
     field :created_on, :utc_datetime_usec
     field :modified_on, :utc_datetime_usec
@@ -19,7 +20,7 @@ defmodule Noizu.Intellect.Schema.Account.Agent do
   @doc false
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:slug, :model, :nlp, :account, :details, :prompt, :profile_image, :created_on, :modified_on, :deleted_on])
-    |> validate_required([:slug, :model, :nlp, :account, :details, :prompt, :profile_image, :created_on, :modified_on])
+    |> cast(attrs, [:slug, :model, :nlp, :account, :details, :prompt, :response_preferences, :profile_image, :created_on, :modified_on, :deleted_on])
+    |> validate_required([:slug, :model, :nlp, :account, :created_on, :modified_on])
   end
 end

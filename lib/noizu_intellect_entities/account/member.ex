@@ -40,6 +40,13 @@ end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Member] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+
+    # There should be per agent response_preferences overrides
+    response_preferences = case subject.user.response_preferences do
+      nil -> "This operator prefers to be spoken to as a subject matter expert and expects full examples/code items/deliverables not stubs to be provided when requested."
+      %{body: body} -> body
+    end
+
     prompt = """
     ⌜operator|#{subject.user.slug}|nlp0.5⌝
     Human Operator #{subject.user.name}
@@ -50,6 +57,8 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
      slug: @#{subject.user.slug}}
      background: |-1
       #{(subject.details && subject.details.body || "[NONE]")|> String.split("\n") |> Enum.join("\n  ")}
+     response-preferences: |-1
+      #{response_preferences}
     ⌞operator⌟
     """
     {:ok, prompt}

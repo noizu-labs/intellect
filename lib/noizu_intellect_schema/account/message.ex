@@ -9,6 +9,7 @@ defmodule Noizu.Intellect.Schema.Account.Message do
     field :depth, :integer
     field :user_mood, :integer # atom
     field :event, Ecto.Enum, values: [:online,:offline,:message,:function_call,:function_response]
+    field :token_size, :integer
     field :contents, Noizu.Entity.Reference
     field :brief, Noizu.Entity.Reference
     field :meta, Noizu.Entity.Reference
@@ -20,7 +21,7 @@ defmodule Noizu.Intellect.Schema.Account.Message do
   @doc false
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:sender, :channel, :depth, :user_mood, :event, :contents, :created_on, :modified_on, :deleted_on])
-    |> validate_required([:sender, :channel, :depth, :user_mood, :event, :contents, :created_on, :modified_on])
+    |> cast(attrs, [:sender, :channel, :depth, :user_mood, :event, :contents, :brief, :meta, :token_size, :created_on, :modified_on, :deleted_on])
+    |> validate_required([:sender, :channel, :depth, :event, :contents, :created_on, :modified_on])
   end
 end

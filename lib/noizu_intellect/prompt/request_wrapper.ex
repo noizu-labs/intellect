@@ -23,6 +23,7 @@ defmodule Noizu.Intellect.Prompt.RequestWrapper do
   def settings(this, _context, _options) do
     settings = this.model_settings
                |> put_in([:model], this.model)
+               |> update_in([:retry], &(is_nil(&1) && true || &1))
                |> then(&(length(this.functions) > 0 && put_in(&1, [:functions], this.functions) || &1))
     {:ok, settings}
   end

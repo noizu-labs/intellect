@@ -127,6 +127,31 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     end
   end
 
+
+  def process_response_memories(response, messages, state, context, options) do
+    # record responses
+    if reply = response[:memories] do
+      Enum.map(reply,
+        fn({:memories, contents}) ->
+          # Has valid response block
+
+            with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
+              # need a from message method.
+              push = %Noizu.IntellectWeb.Message{
+                type: :system_message,
+                timestamp: DateTime.utc_now(),
+                user_name: state.worker.agent.slug,
+                profile_image: state.worker.agent.profile_image,
+                mood: :nothing,
+                body: "[AGENT MEMORIES] #{contents}"
+              }
+              Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+            end
+        end
+      )
+    end
+  end
+
   def process_response_replies(response, messages, state, context, options) do
     # record responses
     if reply = response[:reply] do
@@ -196,9 +221,9 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
       do
 
       try do
-        #Logger.warn("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
-        #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
-        #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
+        Logger.warn("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
+        Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
+        Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
 
         with {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
           with %{choices: [%{message: %{content: reply}}|_]} <- response,
@@ -213,6 +238,9 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
             # Process Response
             response = Enum.group_by(response, &(elem(&1, 0)))
                        |> IO.inspect(label: "[#{state.worker.agent.slug}] OPEN AI RESPONSE")
+
+            process_response_memories(response, messages, state, context, options)
+
             # clear ack'd
             clear_response_acks(response, messages, state, context, options)
             # process replies.
