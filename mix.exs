@@ -39,7 +39,7 @@ defmodule Noizu.Intellect.MixProject do
     [
       {:phoenix, "~> 1.7.2"},
       {:phoenix_ecto, "~> 4.4"},
-      {:ecto_sql, "~> 3.6", optional: true},
+      {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
@@ -59,7 +59,6 @@ defmodule Noizu.Intellect.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:quantum, "~> 3.0"},
       {:bcrypt_elixir, "~> 2.0"},
-      {:elixir_uuid, "~> 1.2" },
       {:ueberauth, "~> 0.10.5"},
       {:guardian, "~> 2.3.1"},
       {:poison, "~> 3.1.0"},
@@ -71,7 +70,7 @@ defmodule Noizu.Intellect.MixProject do
       {:fastglobal, "~> 1.0"}, # https://github.com/discordapp/fastglobal
       {:semaphore, "~> 1.0"}, # https://github.com/discordapp/semaphore
 
-      {:elixir_uuid, "~> 1.2" , optional: true},
+      {:elixir_uuid, "~> 1.2"},
       {:junit_formatter, "~> 3.3", only: [:test]},
 
       # Internal - Dev
@@ -80,6 +79,10 @@ defmodule Noizu.Intellect.MixProject do
       {:noizu_labs_open_ai, path: "elixir-framework/apps/noizu_labs_open_ai"},
       {:noizu_labs_entities_ecto, path: "elixir-framework/apps/entities/ecto_entities"},
       {:noizu_labs_services, path: "elixir-framework/apps/noizu_labs_services"},
+
+      # test
+      {:mimic, "~> 1.0.0", only: :test},
+
     ]
   end
 

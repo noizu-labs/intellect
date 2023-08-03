@@ -6,7 +6,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   def valid_response() do
     """
 
-    <ack for="1,2,3,4,5"/>
+    <ignore for="1,2,3,4,5"/>
     <reply for="6,7">
       <nlp-intent>
       I will do a thing
@@ -31,7 +31,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   def malformed_response() do
   """
   Ignore this
-  <ack for="1,2,3,4,5"/>
+  <ignore for="1,2,3,4,5"/>
   Ignore this as well
   <reply for="6,7">
     <nlp-intent>
