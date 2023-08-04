@@ -5,9 +5,44 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     alt_prompt: nil,
     minder: nil,
     alt_minder: nil,
+    settings: nil,
     vsn: @vsn
   ]
 
+
+  def summarize_message_prompt() do
+    %__MODULE__{
+    prompt: [system: """
+    # Instruction Prompt
+    For every user provided message output a summary of it's contents and only a summary of it's contents. Do not output any comments
+    before or after the summary of the message contents. The summary should be around 1/3rd of the original message size but can be longer if important details are lost.
+    Code snippets should be reduced by replacing method bodies, etc with ellipse ("Code Here ...") comments.
+
+    """,
+    user: """
+    <%= for message <- @prompt_context.message_history do %>
+    <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %>
+    <% {:ok, prompt} when is_bitstring(prompt)  -> %>
+    <%= String.trim_trailing(prompt) %><% _ -> %><%= "" %>
+    <% end  # end case %>
+    <% end  # end for %>
+    """
+    ],
+    settings: fn(request, prompt_context, context, options) ->
+      chars = Enum.map(request.messages, fn(message) ->
+        String.length(message.body)
+      end) |> Enum.sum()
+      approx_tokens = div(chars,3)
+
+      request = cond do
+        approx_tokens < 4096 -> put_in(request, [Access.key(:model)], "gpt-3.5-turbo")
+        :else -> put_in(request, [Access.key(:model)], "gpt-3.5-turbo-16k")
+      end
+      |> put_in([Access.key(:model_settings), :temperature], 0.2)
+      {:ok, request} |> IO.inspect(label: "MODIFIED REQUEST SETTINGS")
+    end
+    }
+  end
 
   def relevancy_prompt() do
     %__MODULE__{
@@ -498,6 +533,7 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
               end
             )
             {:ok, prompts}
+          nil -> {:ok, []}
           _ -> nil
         end
       end
@@ -535,6 +571,7 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
               end
             )
             {:ok, prompts}
+            nil -> {:ok, []}
           _ -> nil
         end
       end

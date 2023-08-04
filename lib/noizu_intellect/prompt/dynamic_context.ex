@@ -156,7 +156,11 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   def prepare_prompt_context__process(prompt_context, section, context, options)
   def prepare_prompt_context__process(prompt_context, :nlp, context, options) do
     with %{agent: %{nlp: nlp}} <- prompt_context do
-      %__MODULE__{prompt_context| nlp_prompt_context: %Noizu.Intellect.Prompt.Lingua{nlp: prompt_context.agent.nlp}}
+      unless options[:nlp] == :disabled do
+        %__MODULE__{prompt_context| nlp_prompt_context: %Noizu.Intellect.Prompt.Lingua{nlp: prompt_context.agent.nlp}}
+      else
+        prompt_context
+      end
     else
       _ -> prompt_context
     end
@@ -265,6 +269,17 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
       request = %Request{
         messages: messages ++ minders
       }
+      request = cond do
+        is_nil(prompt_context.master_prompt_context) -> request
+        is_nil(prompt_context.master_prompt_context.settings) -> request
+        is_function(prompt_context.master_prompt_context.settings, 4) ->
+          with {:ok, request} <- prompt_context.master_prompt_context.settings.(request, prompt_context, context, options) do
+            request
+            else
+            _ -> request
+          end
+        :else -> request
+      end
       {:ok, request}
     else
       _ -> {:error, :malformed}

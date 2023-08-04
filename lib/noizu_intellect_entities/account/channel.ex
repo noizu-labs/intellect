@@ -23,6 +23,22 @@ defmodule Noizu.Intellect.Account.Channel do
   end
 
 
+  def summarize_message(channel, message, prompt_context, context, options) do
+    with {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(channel, [message], Noizu.Intellect.Prompt.ContextWrapper.summarize_message_prompt(), context, put_in(options || [], [:nlp], :disabled)),
+         {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
+         {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
+         {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options),
+         {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) |> IO.inspect(label: "Summarize Response"),
+         %{choices: [%{message: %{content: reply}}|_]} <- response
+      do
+      Logger.warn("----------------------------\n\n\n[SUMMARY]\n #{reply}")
+      {:ok, put_in(message, [Access.key(:contents), Access.key(:body)], reply)}
+      else
+      error -> error
+    end
+
+  end
+
   def deliver(this, message, context, options \\ nil) do
     # Retrieve related message history for this message (this will eventually be based on who is sending and previous weightings for now we simply pull recent history)
     with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent(this, context, put_in(options || [], [:limit], 30)),
@@ -32,8 +48,8 @@ defmodule Noizu.Intellect.Account.Channel do
          {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
          {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options)
       do
-        Logger.error("DELIVER: INBOUND MESSAGES #{length(messages)}")
-        Logger.error("DIGEST MESSAGES: [#{get_in(request_messages, [Access.at(0), :content])}]")
+        #Logger.error("DELIVER: INBOUND MESSAGES #{length(messages)}")
+        #Logger.error("DIGEST MESSAGES: [#{get_in(request_messages, [Access.at(0), :content])}]")
 
         # TODO save all
       agent_slugs = Enum.map(prompt_context.channel_members || [], fn(member) ->
@@ -47,8 +63,16 @@ defmodule Noizu.Intellect.Account.Channel do
 
       # Special check for @channel @everyone
 
+      # Pre summarize message when large
+      Logger.error("[SUMMARIZE?] #{message.token_size}")
+        summarized_message = with true <- (message.token_size > 1024),
+                                  {:ok, sm} <- summarize_message(this, message, prompt_context, context, options) |> IO.inspect(label: "SUMMARIZATION")do
+          sm
+        else
+          _ -> message
+        end
 
-        with {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options),
+        with {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
              {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages ++ [%{role: :user, content: prompt}], request_settings) do
 
           # response could be a function call or a response or a mix, need to handle all.

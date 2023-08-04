@@ -43,7 +43,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 
     # There should be per agent response_preferences overrides
     response_preferences = case subject.user.response_preferences do
-      nil -> "This operator prefers to be spoken to as a subject matter expert and expects full examples/code items/deliverables not stubs to be provided when requested."
+      nil -> "This operator prefers to be spoken to as a subject matter expert and expects full examples/code items/deliverables not stubs to be provided when requested. They expert full, verbose and detailed responses appropriate for a fellow subject matter expert"
       %{body: body} -> body
     end
 

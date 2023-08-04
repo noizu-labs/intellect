@@ -213,15 +213,15 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
       is_nil(prompt_context.agent) ->
         cond do
           DateTime.compare(Timex.shift(current_time, minutes: -5), message.time_stamp.modified_on) == :lt ->
-            message.token_size > 1024
+            message.token_size > 4096
           DateTime.compare(Timex.shift(current_time, minutes: -15), message.time_stamp.modified_on) == :lt ->
-            message.token_size > 512
+            message.token_size > 3000
           DateTime.compare(Timex.shift(current_time, minutes: -30), message.time_stamp.modified_on) == :lt ->
-            message.token_size > 256
+            message.token_size > 2048
           DateTime.compare(Timex.shift(current_time, minutes: -60), message.time_stamp.modified_on) == :lt ->
-            message.token_size > 128
+            message.token_size > 1024
           :else ->
-            message.token_size > 64
+            message.token_size > 512
         end
       DateTime.compare(Timex.shift(current_time, minutes: -15), message.time_stamp.modified_on) == :lt ->
         cond do

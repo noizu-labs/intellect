@@ -221,9 +221,9 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
       do
 
       try do
-        Logger.warn("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
-        Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
-        Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
+        #Logger.warn("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
+        #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
+        #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
 
         with {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
           with %{choices: [%{message: %{content: reply}}|_]} <- response,
