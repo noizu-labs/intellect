@@ -243,39 +243,57 @@ defmodule Noizu.Intellect.Account.Channel do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
         limit = options[:limit] || 20
-        relevancy = case options[:relevancy] do
-          v when is_float(v) -> trunc(100 * v)
-          v when is_integer(v) -> v
-          _ -> 50
-        end
-
+        relevancy = options[:relevancy] || 50
         recent_cut_off = DateTime.utc_now() |> Timex.shift(minutes: -45)
-        q = from m in Noizu.Intellect.Schema.Account.Message,
-                 #join: r in Noizu.Intellect.Schema.Account.Message.Relevancy,
-                 #on: r.message == m.identifier,
-                 #on: r.recipient == ^recipient_id,
-                 left_join: s in Noizu.Intellect.Schema.Account.Message.Read,
-                 on: s.message == m.identifier and s.recipient == ^recipient_id,
-                 where: m.channel == ^channel_id,
-                 where: (is_nil(s)), # or (r.relevance >= ^relevancy or r.created_on >= ^recent_cut_off)),
-                 order_by: [desc: m.created_on],
+
+        responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
+                             group_by: p.message,
+                             select: {p.message, fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+        audience = from p in Noizu.Intellect.Schema.Account.Message.Audience,
+                        group_by: p.message,
+                        select: {p.message, fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
+
+
+        q = from msg in Noizu.Intellect.Schema.Account.Message,
+                 join: aud in Noizu.Intellect.Schema.Account.Message.Audience,
+                 on: aud.message == msg.identifier,
+                 left_join: contents in Noizu.Intellect.Schema.VersionedString,
+                 on: contents.identifier == msg.contents,
+                 left_join: brief in Noizu.Intellect.Schema.VersionedString,
+                 on: brief.identifier == msg.brief,
+                 left_join: meta in Noizu.Intellect.Schema.VersionedString,
+                 on: meta.identifier == msg.meta,
+                 left_join: read_status in Noizu.Intellect.Schema.Account.Message.Read,
+                 on: read_status.message == msg.identifier and read_status.recipient == aud.recipient,
+                 left_join: resp_list in subquery(responding_to),
+                 on: msg.identifier == resp_list.message,
+                 left_join: aud_list in subquery(audience),
+                 on: msg.identifier == aud_list.message,
+                 where: msg.channel == ^channel_id,
+                 where: aud.recipient == ^recipient_id,
+                 where: (is_nil(read_status) or (aud.confidence >= ^relevancy or aud.created_on >= ^recent_cut_off)),
+                 order_by: [desc: msg.created_on],
                  limit: ^limit,
-                 select: {m,s}
+                 select: %{msg|
+                   __loader__: %{
+                     contents: contents,
+                     brief: brief,
+                     meta: meta,
+                     audience_list: aud_list,
+                     responding_to_list: resp_list,
+                     audience: aud,
+                     read_status: read_status
+                   }
+                 }
         messages = Enum.map(
-                     Noizu.Intellect.Repo.all(q),
-                     fn({msg, status}) ->
-                       # Temp - load from ecto needed.
-                       with {:ok, message} <- Noizu.Intellect.Account.Message.entity(msg.identifier, context) do
-                         #{:ok, %{message| priority: (rel.relevance || 0) / 100, read_on: status && status.read_on || nil}}
-                         {:ok, %{message| priority: 0, read_on: status && status.read_on || nil}}
-                       end
-                     end
+                     Noizu.Intellect.Repo.all(q) |> IO.inspect("NEW MESSAGE LOADER"),
+                     & Noizu.Intellect.Account.Message.entity(&1, context)
                    ) |> Enum.map(
                           fn
                             ({:ok, v}) -> v
                             (_) -> nil
                           end)
-                   |> Enum.filter(&(&1))
+                   |> Enum.reject(&is_nil/1)
         {:ok, messages}
       end
     end

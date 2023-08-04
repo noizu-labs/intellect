@@ -17,10 +17,12 @@ defmodule Noizu.Intellect.Account.Message do
     identifier :integer
     field :sender, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
-    field :read_on
-    field :priority
+    field :read_on, nil, Noizu.Entity.DerivedField, [load: [:read_status, :read_on]]
+    field :priority, nil, Noizu.Entity.DerivedField, [load: [:audience, {:confidence, :__defualt__, :check}]]
+    field :audience, nil, Noizu.Entity.DerivedField, [load: [:audience_list]] # todo provide a method to unpack the tuple
+    field :responding_to, nil, Noizu.Entity.DerivedField, [load: [:responding_to_list]] # todo provide a method to unpack the tuple
+
     field :depth
-    field :relevancy_map, []
     field :user_mood #, nil, Noizu.Intellect.Emoji
     field :event #, nil, Noizu.Intellect.Message.Event
     field :token_size
@@ -32,7 +34,9 @@ defmodule Noizu.Intellect.Account.Message do
   import Ecto.Query
   require Noizu.Entity.Meta.Persistence
 
-
+  #---------------------------
+  #
+  #---------------------------
   @defimpl Noizu.Entity.Store.Ecto.EntityProtocol
   def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Schema.Account.Message, store: store), context, options) do
     with {:ok, identifier} <- Noizu.EntityReference.Protocol.id(entity) do
@@ -43,17 +47,24 @@ defmodule Noizu.Intellect.Account.Message do
                       group_by: p.message,
                       select: {p.message, fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
 
-      q = from m in Noizu.Intellect.Schema.Account.Message,
-               left_join: c in Noizu.Intellect.Schema.VersionedString,
-               on: c.identifier == m.contents,
-               left_join: b in Noizu.Intellect.Schema.VersionedString,
-               on: b.identifier == m.brief,
+      q = from msg in Noizu.Intellect.Schema.Account.Message,
+               join: aud in Noizu.Intellect.Schema.Account.Message.Audience,
+               on: aud.message == msg.identifier,
+               left_join: read_status in Noizu.Intellect.Schema.Account.Message.Read,
+               on: read_status.message == msg.identifier and read_status.recipient == aud.recipient,
+               left_join: content in Noizu.Intellect.Schema.VersionedString,
+               on: content.identifier == msg.contents,
+               left_join: brief in Noizu.Intellect.Schema.VersionedString,
+               on: brief.identifier == msg.brief,
                left_join: meta in Noizu.Intellect.Schema.VersionedString,
-               on: meta.identifier == m.meta,
-               left_join: resp in subquery(responding_to), on: m.identifier == resp.message,
-               left_join: aud in subquery(audience), on: m.identifier == aud.message,
+               on: meta.identifier == msg.meta,
+               left_join: resp in subquery(responding_to),
+               on: msg.identifier == resp.message,
+               left_join: aud_list in subquery(audience),
+               on: msg.identifier == aud_list.message,
+               where: msg.identifier == ^identifier,
                limit: 1,
-               select: %{m| loader: %{contents: c, brief: b, meta: meta, responding_to: resp, audience: aud}}
+               select: %{msg| __loader__: %{contents: content, brief: brief, meta: meta, responding_to_list: resp, audience_list: aud_list, audience: aud, read_status: read_status}}
 
       case apply(store, :one, [q]) |> IO.inspect("NEW MESSAGE LOADER") do
         record = %Noizu.Intellect.Schema.Account.Message{} -> from_record(record, settings, context, options)
@@ -125,34 +136,6 @@ defmodule Noizu.Intellect.Account.Message do
         {:ok, %{entity| token_size: token_size}}
       end
     end
-
-
-    def __after_get__(entity, _, _) do
-      if entity do
-#          q = from r in Noizu.Intellect.Schema.Account.Message.Relevancy,
-#              where: r.message == ^entity.identifier,
-#              select: r
-#          rm = Noizu.Intellect.Repo.all(q)
-#               |> Enum.map(
-#                    fn(rel) ->
-#                      with {:ok, id} <- Noizu.EntityReference.Protocol.id(rel.recipient) do
-#                        responding_to = case Noizu.Intellect.Account.Message.id(rel.responding_to) do
-#                          {:ok, id} -> id
-#                          _ -> nil
-#                        end
-#
-#                        {id, %{responding_to: responding_to, comment: rel.comment, relevancy: rel.relevance / 100.00 }}
-#                      end
-#                    end
-#                  )
-        rm = []
-          {:ok, %{entity| relevancy_map: rm}}
-      else
-        {:ok, entity}
-      end
-    end
-
-
 
     def has_unread?(recipient, channel, context, options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
@@ -247,12 +230,8 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 
   def message_priority(subject, prompt_context, context, options) do
     if prompt_context.agent do
-      with {:ok, agent_id} <- Noizu.EntityReference.Protocol.id(prompt_context.agent) do
-        with {_, rel} <- Enum.find_value(subject.relevancy_map || {}, fn(x = {id, _}) -> id == agent_id && x || nil end) do
-          rel.relevancy
-        end
-      end
-    end || 0.0
+      subject.priority
+    end
   end
 
   def summarize_message(message, priority, prompt_context, context, options) do
@@ -285,37 +264,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     end
   end
 
-  def message_relevancy_map(subject, prompt_context, context, options) do
-    # todo use prompt_context flag rather than checking for nil
-    cond do
-      prompt_context.agent -> ""
-      :else ->
-        Enum.map(subject.relevancy_map || [],
-          fn({id,rel}) ->
-            """
-                - for-user: #{id}
-                  for-user-slug: #{prompt_context.channel_member_lookup[id][:slug]}
-                  for-message: #{rel.responding_to}
-                  value: #{rel.relevancy}
-                  comment: |-1
-                   #{String.split(rel.comment || "", "\n") |> Enum.join("\n       ")}
-            """
-          end)
-        |> Enum.join("\n")
-        |>
-          case do
-            nil -> ""
-            "" -> ""
-            "\n" -> ""
-            r ->
-              """
 
-                  relevance:
-                  #{r}
-              """
-          end
-    end
-  end
 
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
     {sender_type, sender_slug, sender_name} = case subject.sender do
@@ -328,7 +277,6 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 
     current_time = options[:current_time] || DateTime.utc_now()
     priority = message_priority(subject, prompt_context, context, options)
-    relevancy_map = message_relevancy_map(subject, prompt_context, context, options)
     brief = summarize_message(subject, priority, prompt_context, context, options)
     contents = if (brief), do: subject.brief.body || "", else: subject.contents.body || ""
     prompt =
@@ -336,7 +284,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
         # Message
         - id: #{subject.identifier || "[NEW]"}
           processed: #{subject.read_on && "true" || "false"}
-          priority: #{priority}#{relevancy_map}
+          priority: #{priority}
           message_brief: #{brief && true || false}
           sender:
             id: #{subject.sender.identifier}
