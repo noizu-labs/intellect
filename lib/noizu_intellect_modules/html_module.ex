@@ -14,15 +14,23 @@ Enum.map(xml_tree,
                 ({"message", attr, contents}) ->
                   id = Enum.find_value(attr,
                     fn
-                      ({"id", x}) -> String.to_integer(x |> String.trim())
+                      ({"id", x}) ->
+                        case Integer.parse(String.trim(x)) do
+                          {integer, _} -> integer
+                          _ -> nil
+                        end
                       (_) -> nil
                     end)
                   confidence = Enum.find_value(attr,
                     fn
-                      ({"confidence", x}) -> String.to_integer(x |> String.trim())
+                      ({"confidence", x}) ->
+                        case Integer.parse(String.trim(x)) do
+                          {integer, _} -> integer
+                          _ -> nil
+                        end
                       (_) -> nil
                     end)
-                  {:responding_to, {id, confidence, Floki.text(contents) |> String.trim()}}
+                  id && confidence && {:responding_to, {id, confidence, Floki.text(contents) |> String.trim()}}
                 (_) -> nil
               end)
           ({"audience", _, contents}) ->
@@ -31,15 +39,23 @@ Enum.map(xml_tree,
                 ({"member", attr, contents}) ->
                   id = Enum.find_value(attr,
                     fn
-                      ({"id", x}) -> String.to_integer(x |> String.trim())
+                      ({"id", x}) ->
+                        case Integer.parse(String.trim(x)) do
+                          {integer, _} -> integer
+                          _ -> nil
+                        end
                       (_) -> nil
                     end)
                   confidence = Enum.find_value(attr,
                     fn
-                      ({"confidence", x}) -> String.to_integer(x |> String.trim())
+                      ({"confidence", x}) ->
+                        case Integer.parse(String.trim(x)) do
+                          {integer, _} -> integer
+                          _ -> nil
+                        end
                       (_) -> nil
                     end)
-                  {:audience, {id, confidence, Floki.text(contents) |> String.trim()}}
+                  id && confidence && {:audience, {id, confidence, Floki.text(contents) |> String.trim()}}
                 (_) -> nil
               end) |> Enum.reject(&is_nil/1)
           ({"summary", _, contents}) ->
@@ -107,46 +123,6 @@ end
         (_) -> nil
       end)
     has_response && {:ok, repair} || {:error, {:repair_attempt, repair}}
-  end
-
-  def extract_relevancy_response(response) do
-    IO.inspect(response, label: "REW REL RESPONSE")
-    {_, html_tree} = Floki.parse_document(response)
-    sections = Enum.map(html_tree,
-                 fn
-                   (x = {"nlp-intent", attrs, contents}) -> {:intent, Floki.text(contents, pretty: false, encode: false)}
-                   (x = {"summary", attrs, contents}) -> {:summary, Floki.text(contents, pretty: false, encode: false)}
-                   (x = {"relevance", attrs, contents}) ->
-                     Enum.map(contents,
-                       fn
-                         (x = {"relevancy", attr, contents}) ->
-                           member = Enum.find_value(attr,
-                             fn
-                               ({"for-user", x}) -> String.to_integer(x)
-                               (_) -> nil
-                             end)
-                           message = Enum.find_value(attr,
-                             fn
-                               ({"for-message", ""}) -> nil
-                               ({"for-message", x}) -> String.to_integer(x)
-                               (_) -> nil
-                             end)
-                           weight = Enum.find_value(attr,
-                             fn
-                               ({"value", x}) -> String.to_float(x)
-                               (_) -> nil
-                             end)
-                           contents = case contents |> IO.inspect() do
-                            v when is_bitstring(v) -> v
-                            v -> Floki.text(v, pretty: false, encode: false)
-                           end
-                           {:relevancy, [member: member, weight: weight, message: message, contents: contents]}
-                       end)
-                   (_) -> nil
-                 end)
-               |> List.flatten()
-               |> Enum.filter(&(&1))
-    {:ok, sections}
   end
 
   def extract_response_sections(response) do

@@ -4,12 +4,14 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
   @impl true
 
   def prompt(version, options \\ nil)
-  def prompt(:v2, _) do
+  def prompt(:v2, options) do
+    current_message = options[:current_message]
+
     %Noizu.Intellect.Prompt.ContextWrapper{
-      assigns: fn(assigns, prompt_context, _context, _options) ->
-                 Map.merge(assigns || %{}, %{message_graph: true, nlp: false, members: Map.merge(assigns[:members] || %{}, %{verbose: :detailed}) })
-                 assigns = (prompt_context.assigns || %{})
-                  |> put_in([:message_graph], false)
+      assigns: fn(prompt_context, _context, _options) ->
+                 assigns = Map.merge(prompt_context.assigns, %{message_graph: true, nlp: false, members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :detailed})})
+                           |> put_in([:message_graph], false)
+                           |> put_in([:current_message], current_message)
                   {:ok, assigns}
                end,
       prompt: [user:
@@ -21,8 +23,10 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         First given the following channel, channel members and graph representation a chat conversation
         please analyze the graph and identify the relationships between messages, including reply-to and target audience connections.
 
-        ### Channel
-        {channel definition}
+        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
+        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
+        <% _ -> %><%= "" %>
+        <% end %>
 
         ### Conversation Graph
         {insert_chat_graph}
@@ -31,8 +35,16 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         Then, based on the graph, analyze the following new message:
         Determine the most likely audience based on their backgrounds, message graph, and message content/direct mentions.
         <% else %>
+
         # Instructions
-        Review the following message and determine the most likely audience based on their backends, message contents and any direct mentions.
+
+        ## Review
+        Review the following channel description, members and message and to determine the most likely audience based on their backends, message contents and any direct mentions.
+
+        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
+        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
+        <% _ -> %><%= "" %>
+        <% end %>
         <% end %>
 
         Messages that @[member.slug| case insensitive] should list that user as a high confidence (90) audience member.
@@ -40,7 +52,10 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         Messages that mention (with out a slug) someone by name in passing with out directly querying them should have a med-low confidence level (40)
         Messages addressed to someone by name should have a high-med-high confidence (80)
 
-        {insert_new_message}
+        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
+        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
+        <% _ -> %><%= "" %>
+        <% end %>
 
         Determine which messages the new message is most likely responding to, and identify the most appropriate audience members for the message.
         Provide your final output in the following XML structure:

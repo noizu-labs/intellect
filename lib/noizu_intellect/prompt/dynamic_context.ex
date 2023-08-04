@@ -56,7 +56,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     # contexts
     nlp_prompt_context: nil,
     master_prompt_context: nil,
-    assigns: %{nlp: true, members: %{verbose: :brief}},
+    assigns: %{nlp: true, message_graph: false, members: %{verbose: :brief}},
     vsn: @vsn
   ]
 

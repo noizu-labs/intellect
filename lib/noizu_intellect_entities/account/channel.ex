@@ -22,7 +22,9 @@ defmodule Noizu.Intellect.Account.Channel do
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
 
-
+  def summarize_message?(channel, message, prompt_context, context, options) do
+    {:ok, message.token_size > 1024}
+  end
   def summarize_message(channel, message, prompt_context, context, options) do
     with {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(channel, [message], Noizu.Intellect.Prompt.ContextWrapper.summarize_message_prompt(), context, put_in(options || [], [:nlp], :disabled)),
          {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
@@ -39,37 +41,69 @@ defmodule Noizu.Intellect.Account.Channel do
 
   end
 
+
+  def agent_slugs(prompt_context, context, options \\ nil) do
+    slugs = Enum.map(prompt_context.channel_members || [], fn(member) ->
+      case member do
+        %{slug: slug} -> {member.identifier, Regex.compile!("(@#{slug} |@#{slug}$)", "i")}
+        %{user: %{slug: slug}} -> {member.identifier, Regex.compile!("(@#{slug} |@#{slug}$)", "i")}
+      end
+    end) |> Map.new()
+    {:ok, slugs}
+  end
+
+  def broadcast(message, prompt_context, context, options) do
+    with {:ok, agent_slugs} <- agent_slugs(prompt_context, context, options) do
+      v = String.contains?(String.downcase(message.contents.body || ""), "@everyone") || String.contains?(String.downcase(message.contents.body || ""), "@channel")
+      {:ok, v}
+    end
+  end
+
+  def extract_message_delivery(response) do
+    with %{choices: [%{message: %{content: reply}}|_]} <- response do
+      extract = Noizu.Intellect.HtmlModule.extract_message_delivery_details(reply)
+      {:ok, extract}
+    else
+      _ -> {:invalid_response, response}
+    end
+  end
+
+
   def deliver(this, message, context, options \\ nil) do
     # Retrieve related message history for this message (this will eventually be based on who is sending and previous weightings for now we simply pull recent history)
+
+    IO.inspect(message, label: "CURRENT_MESSAGE")
+
     with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent(this, context, put_in(options || [], [:limit], 30)),
          messages <- Enum.reverse(messages),
-         {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(this, messages, Noizu.Intellect.Prompt.ContextWrapper.relevancy_prompt(), context, options),
+         {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(this, messages, Noizu.Intellect.Prompt.ContextWrapper.relevancy_prompt(message), context, options),
          {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
          {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
-         {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options)
+         {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options),
+         {:ok, broadcast} <- broadcast(message, prompt_context, context, options),
+         {:ok, summarized_message?} <- summarize_message?(this, message, prompt_context, context, options),
+         {:ok, summarized_message} <- summarized_message? && summarize_message(this, message, prompt_context, context, options) || {:ok, message},
+         {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
+         :ok <- Logger.info(request_messages |> Enum.at(0) |> Map.get(:content), limit: :infinity),
+         {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages ++ [%{role: :user, content: prompt}], request_settings) |> IO.inspect,
+         {:ok, extracted_details} <- extract_message_delivery(response) |> IO.inspect
       do
-        #Logger.error("DELIVER: INBOUND MESSAGES #{length(messages)}")
-        #Logger.error("DIGEST MESSAGES: [#{get_in(request_messages, [Access.at(0), :content])}]")
 
-        # TODO save all
-      agent_slugs = Enum.map(prompt_context.channel_members || [], fn(member) ->
-        case member do
-          %{slug: slug} -> {member.identifier, Regex.compile!("(@#{slug} |@#{slug}$)", "i")}
-          %{user: %{slug: slug}} -> {member.identifier, Regex.compile!("(@#{slug} |@#{slug}$)", "i")}
+        details = Enum.group_by(extracted_details, &(elem(&1, 0)))
+        if responding_to = details[:responding_to] do
+          Enum.map(responding_to,
+            fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
+          )
         end
-      end) |> Map.new() |> IO.inspect()
-
-      broadcast = String.contains?(String.downcase(message.contents.body || ""), "@everyone") || String.contains?(String.downcase(message.contents.body || ""), "@channel")
-
-      # Special check for @channel @everyone
-
-      # Pre summarize message when large
-      Logger.error("[SUMMARIZE?] #{message.token_size}")
-        summarized_message = with true <- (message.token_size > 1024),
-                                  {:ok, sm} <- summarize_message(this, message, prompt_context, context, options) |> IO.inspect(label: "SUMMARIZATION")do
-          sm
-        else
-          _ -> message
+        if audience = details[:audience] do
+          Enum.map(audience,
+            fn(entry) -> Noizu.Intellect.Schema.Account.Message.Audience.record(entry, message, context, options) end
+          )
+        end
+        if summary = details[:summary] do
+          Enum.map(summary,
+            fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
+          )
         end
 
         with {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
@@ -78,8 +112,10 @@ defmodule Noizu.Intellect.Account.Channel do
           # response could be a function call or a response or a mix, need to handle all.
           with %{choices: [%{message: %{content: reply}}|_]} <- response,
                :ok <- Logger.warning("[DELIVER REPLY] #{reply}"),
-               {:ok, prepped} <- Noizu.Intellect.HtmlModule.extract_relevancy_response(reply)
+               {:ok, prepped} <- Noizu.Intellect.HtmlModule.extract_message_delivery_details(reply)
             do
+
+              IO.inspect(prepped)
 
               # Pending Update
 
@@ -274,10 +310,14 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Channel] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
     p = if prompt_context.channel_members do
-      prompt_context = put_in(prompt_context, [Access.key(:format)], :map)
+      prompt_context = put_in(prompt_context, [Access.key(:format)], :raw)
       members = Enum.map(prompt_context.channel_members, fn(member) ->
-        Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, prompt_context, context, options)
-      end)
+        with {:ok, member} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, prompt_context, context, options) do
+          member
+        else
+          _ -> nil
+        end
+      end) |> Enum.reject(&is_nil/1)
       %{identifier: subject.identifier,
         name: subject.slug,
         description: subject.details && subject.details.body || "[None]",

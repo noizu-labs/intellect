@@ -12,6 +12,20 @@ defmodule Noizu.Intellect.Schema.Account.Message.Audience do
     field :modified_on, :utc_datetime_usec
     field :deleted_on, :utc_datetime_usec
   end
+
+
+  def record({:audience, {id, confidence, comment}}, message, _context, options) do
+    now = options[:current_time] || DateTime.utc_now()
+    %Noizu.Intellect.Schema.Account.Message.Audience{
+      message: message.identifier,
+      recipient: id,
+      confidence: confidence,
+      comment: comment,
+      created_on: now,
+      modified_on: now,
+    } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
+  end
+
   @doc false
   def changeset(user, attrs) do
     user

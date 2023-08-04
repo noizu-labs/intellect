@@ -52,7 +52,8 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     }
   end
 
-  def relevancy_prompt(options \\ nil) do
+  def relevancy_prompt(current_message, options \\ nil) do
+    options = put_in(options || [], [:current_message], current_message)
     Noizu.Intellect.Prompts.ChatMonitor.prompt(:v2, options)
   end
 

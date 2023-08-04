@@ -65,6 +65,18 @@ defmodule Noizu.Intellect.Account.Message do
     super(entity, settings, context, options)
   end
 
+  def add_summary({:summary, {summary, features}}, message, context, options) do
+    summary = String.trim(summary)
+    unless summary == "" do
+      # todo detect existing
+      %{message|
+        brief: %{title: "Message Summary", body: summary}
+      }
+      |> Noizu.Intellect.Entity.Repo.update(context)
+    end
+    Logger.error("[TODO] populate message features #{inspect features, pretty: true}")
+  end
+
   defimpl Noizu.Entity.Protocol do
     def layer_identifier(entity, _layer) do
       {:ok, entity.identifier}
@@ -311,6 +323,9 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
       %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
       _ -> {"other", "other"}
     end
+
+    # @TODO switch to json response body, return in Repo and apply prompt method on repo.
+
     current_time = options[:current_time] || DateTime.utc_now()
     priority = message_priority(subject, prompt_context, context, options)
     relevancy_map = message_relevancy_map(subject, prompt_context, context, options)
@@ -318,6 +333,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     contents = if (brief), do: subject.brief.body || "", else: subject.contents.body || ""
     prompt =
       """
+        # Message
         - id: #{subject.identifier || "[NEW]"}
           processed: #{subject.read_on && "true" || "false"}
           priority: #{priority}#{relevancy_map}
