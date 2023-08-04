@@ -17,7 +17,7 @@ defmodule Noizu.Entity.VersionedString do
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
   use Noizu.Entity.Field.Behaviour
-
+  require Noizu.Entity.Meta.Persistence
 
   def type__before_update(%__MODULE__{} = this,_,context,options) do
     cond do
@@ -113,13 +113,28 @@ defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.Version
         options
       ) do
     as_name = field_store[table][:name] || field_store[store][:name] || name
-    case Map.get(record, as_name) do
-      ref = {:ref, Noizu.Entity.VersionedString, _} ->
-        with {:ok, entity} <- Noizu.Entity.VersionedString.Repo.get(ref, context, options) do
-          {:ok, {name, entity}}
-        end
-      entity = %Noizu.Entity.VersionedString{} -> {:ok,{name, entity}}
-      _ -> nil
+
+    # If present in loader[:ecto_load] section proceed to pull from there
+    cond do
+      loader = get_in(record, [Access.key(:loader, %{}), Access.key(as_name)]) -> loader
+      loader = get_in(record, [Access.key(as_name)]) -> loader
+      :else -> nil
     end
+    |> case do
+         ref = {:ref, Noizu.Entity.VersionedString, _} ->
+           with {:ok, entity} <- Noizu.Entity.VersionedString.Repo.get(ref, context, options) do
+             {:ok, {name, entity}}
+           end
+         entity = %{__struct__: Noizu.Entity.VersionedString} -> {:ok,{name, entity}}
+         field_record = %{__struct__: Noizu.Intellect.Schema.VersionedString} ->
+           with {:ok, entity} <- Noizu.Entity.VersionedString.entity(field_record, context) do
+             {:ok, {name, entity}}
+           end
+           v when is_integer(v) ->
+             with {:ok, entity} <- Noizu.Entity.VersionedString.entity(v, context) do
+               {:ok, {name, entity}}
+             end
+           _ -> {:error, :not_found}
+       end
   end
 end

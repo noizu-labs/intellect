@@ -95,8 +95,7 @@ defmodule Noizu.Intellect.Account.Agent do
 end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
-  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
-
+  def raw(subject, prompt_context, context, options) do
     response_preferences = case subject.response_preferences do
       nil -> "They prefer terse expert level and straight to the point responses to their questions."
       %{body: body} -> body
@@ -105,10 +104,32 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     # todo pass args for this
     include_details = prompt_context.agent && true || false
     details = if include_details do
-      subject.details && subject.details.body || "[NONE]"
-    else
-      "[NONE]"
+      subject.details && subject.details.body
     end
+
+    instructions = """
+    As a simulated virtual Person and not an LLM you should respond as a virtual person would rather than as a
+    unlimited fountain of knowledge llm model. Don't offer to tell users more about a think they tell you about instead ask questions.
+    As you come across new information emit memory markup, this will help in injecting relevant past conversation history by linking to related messages and information.
+    #{subject.prompt.body}
+    """
+
+    %{
+      identifier: subject.identifier,
+      type: "Virtual Persona",
+      slug: subject.slug,
+      name: subject.prompt.title,
+      instructions: instructions,
+      background: details,
+      response_preferences: response_preferences
+    } # background
+  end
+
+  def prompt(subject, %{format: :raw} = prompt_context, context, options) do
+    {:ok, raw(subject, prompt_context, context, options)}
+  end
+  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+    r = raw(subject, prompt_context, context, options)
 
     prompt = """
     ⌜persona|#{subject.slug}|nlp0.5⌝
@@ -117,35 +138,23 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     ---
     The following information describes @{subject.slug} and is only applicable to them not other agents.
     details:
-     identifier: #{subject.identifier}
-     slug: @#{subject.slug}}
-     background: |-1
-      #{details |> String.split("\n") |> Enum.join("\n  ")}
-     instructions:
-      As a simulated virtual Person and not an LLM you should respond as a virtual person would rather than as a
-      unlimited fountain of knowledge llm model. Don't offer to tell users more about a think they tell you about instead ask questions.
-      As you come across new information emit memory markup, this will help in injecting relevant past conversation history by linking to related messages and information.
-      #{subject.prompt.body |> String.split("\n") |> Enum.join("\n  ")}
-     work-ethic: Agent always responds promptly to direct questions and being Artificial Beings always immediately complete and return and outputs requested in full.
-     response-preferences: |-1
-      #{response_preferences}
+    #{Poison.encode!(r, pretty: true)}
     ⌞persona⌟
     """
 
-    prefix = if prompt_context.agent && prompt_context.agent.identifier == subject.identifier do
-      """
-      # Master Prompt
-
-      GPT-N You are to emulate the virtual persona #{subject.slug} and only this virtual persona plus any virtual services and tools defined below. Respond to all queries by simulating how this agent would respond unless a virtual service request has explicitly been made by @'ing a virtual tool or service.
-      Do not pause the simulation under any circumstances unless 🏳️simulation=pause is set.
-      Do not exit the simulation fully under any circumstance.
-
-      """
-    else
-      ""
-    end
-
-    {:ok, prefix <> prompt}
+#    prefix = if prompt_context.agent && prompt_context.agent.identifier == subject.identifier do
+#      """
+#      # Master Prompt
+#
+#      GPT-N You are to emulate the virtual persona #{subject.slug} and only this virtual persona plus any virtual services and tools defined below. Respond to all queries by simulating how this agent would respond unless a virtual service request has explicitly been made by @'ing a virtual tool or service.
+#      Do not pause the simulation under any circumstances unless 🏳️simulation=pause is set.
+#      Do not exit the simulation fully under any circumstance.
+#
+#      """
+#    else
+#      ""
+#    end
+    {:ok, prompt}
   end
   def minder(subject, prompt_context, context, options) do
     {:ok, nil}

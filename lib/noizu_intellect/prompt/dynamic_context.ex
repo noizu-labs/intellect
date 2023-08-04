@@ -56,7 +56,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     # contexts
     nlp_prompt_context: nil,
     master_prompt_context: nil,
-
+    assigns: %{nlp: true, members: %{verbose: :brief}},
     vsn: @vsn
   ]
 
@@ -64,7 +64,23 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   #
   #----------------------------
   def assigns(subject, context, options) do
-    {:ok, %{prompt_context: subject, verbose: subject.verbose, format: subject.format, context: context, options: options}}
+    assigns = Map.merge(subject.assigns || %{}, %{prompt_context: subject, channel: subject.channel, channel_members: subject.channel_members, channel_member_lookup: subject.channel_member_lookup, verbose: subject.verbose, format: subject.format, context: context, options: options})
+    assigns = cond do
+      subject.master_prompt_context ->
+        pa = subject.master_prompt_context.assigns
+        cond do
+          is_map(pa) -> Map.merge(assigns, pa)
+          is_function(pa, 3) ->
+            with {:ok, pa2 = %{}} <- pa.(subject, context, options) do
+              Map.merge(assigns, pa2)
+            else
+              _ -> assigns
+            end
+          :else -> assigns
+        end
+      :else -> assigns
+    end
+    {:ok, assigns}
   end
 
   #----------------------------
@@ -223,6 +239,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
 
   def for_openai(prompt_context, context, options) do
     with {:ok, assigns} <- assigns(prompt_context, context, options),
+         prompt_context <- %{prompt_context| assigns: assigns},
          {:ok, master_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.master_prompt_context, prompt_context, context, options),
          {:ok, master_minder_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.master_prompt_context, prompt_context, context, options)
       do

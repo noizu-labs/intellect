@@ -227,19 +227,16 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="kebrings" id="message_recipient_relevance table">
-        <createTable tableName="message_recipient_relevance">
+    <changeSet author="kebrings" id="message_audience table">
+        <createTable tableName="message_audience">
             <column name="message" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_recipient_weight"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_audience"/>
             </column>
             <column name="recipient" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_recipient_weight"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_audience"/>
             </column>
-            <column name="relevance" type="SMALLINT">
+            <column name="confidence" type="SMALLINT">
                 <constraints nullable="false"/>
-            </column>
-            <column name="responding_to" type="BIGINT">
-                <constraints nullable="true"/>
             </column>
             <column name="comment" type="TEXT">
                 <constraints nullable="false"/>
@@ -253,6 +250,32 @@
             <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
         </createTable>
     </changeSet>
+
+
+    <changeSet author="kebrings" id="message_responding_to table">
+        <createTable tableName="message_responding_to">
+            <column name="message" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_response"/>
+            </column>
+            <column name="responding_to" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_message_response"/>
+            </column>
+            <column name="confidence" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
 
     <changeSet author="kebrings" id="message_read table">
         <createTable tableName="message_read">

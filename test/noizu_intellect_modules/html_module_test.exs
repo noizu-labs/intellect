@@ -3,6 +3,33 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   @moduletag lib: :noizu_intellect_module
 
 
+  def delivery_details_happy_path() do
+    """
+      <message-details>
+        <replying-to>
+            <message id="123401" confidence="42">Apple Bapple</message>
+            <message id="123501" confidence="43">BApple Snapple</message>
+            <message id="123601" confidence="43"/>
+        </replying-to>
+        <audience>
+          <member id="111102" confidence="33">Henry</member>
+          <member id="111202" confidence="44">Ford</member>
+        </audience>
+
+        <summary>
+          Brief Details.
+          <features>
+            <feature>AAA</feature>
+            <feature>BBB</feature>
+          </features>
+        </summary>
+      </message-details>
+    """
+  end
+
+
+
+
   def valid_response() do
     """
 
@@ -56,7 +83,20 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   """
   end
 
-
+  describe "Handle Message Delivery Response" do
+    @tag :wip
+    test "happy path" do
+      sut = Noizu.Intellect.HtmlModule.extract_message_delivery_details(delivery_details_happy_path)
+      assert sut == [
+               responding_to: {123401, 42, "Apple Bapple"},
+               responding_to: {123501, 43, "BApple Snapple"},
+               responding_to: {123601, 43, ""},
+               audience: {111102, 33, "Henry"},
+               audience: {111202, 44, "Ford"},
+               summary: {"Brief Details.", [feature: "AAA", feature: "BBB"]}
+             ]
+    end
+  end
 
   test "extract_response_sections - valid" do
     {:ok, response} = Noizu.Intellect.HtmlModule.extract_response_sections(valid_response())

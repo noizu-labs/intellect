@@ -155,6 +155,10 @@
       <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/websock_adapter" />
       <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/mimic" />
       <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/noizu_labs_entities" />
+      <excludeFolder url="file://$MODULE_DIR$/_build/dev/lib/yamerl" />
+      <excludeFolder url="file://$MODULE_DIR$/_build/dev/lib/yaml_elixir" />
+      <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/yamerl" />
+      <excludeFolder url="file://$MODULE_DIR$/_build/test/lib/yaml_elixir" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="phoenix" level="project" />
@@ -281,5 +285,7 @@
     <orderEntry type="library" name="ecto_sqlite3_extras" level="project" />
     <orderEntry type="library" name="ecto_sqlite3" level="project" />
     <orderEntry type="library" name="easyhtml" level="project" />
+    <orderEntry type="library" name="yaml_elixir" level="project" />
+    <orderEntry type="library" name="yamerl" level="project" />
   </component>
 </module>

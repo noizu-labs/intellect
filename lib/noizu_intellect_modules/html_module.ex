@@ -1,6 +1,76 @@
 defmodule Noizu.Intellect.HtmlModule do
 
 
+def extract_message_delivery_details(response) do
+{_, xml_tree} = Floki.parse_document(response)
+Enum.map(xml_tree,
+  fn
+    ({"message-details", _, contents}) ->
+      details = Enum.map(contents,
+        fn
+          ({"replying-to", _, contents}) ->
+            Enum.map(contents,
+              fn
+                ({"message", attr, contents}) ->
+                  id = Enum.find_value(attr,
+                    fn
+                      ({"id", x}) -> String.to_integer(x |> String.trim())
+                      (_) -> nil
+                    end)
+                  confidence = Enum.find_value(attr,
+                    fn
+                      ({"confidence", x}) -> String.to_integer(x |> String.trim())
+                      (_) -> nil
+                    end)
+                  {:responding_to, {id, confidence, Floki.text(contents) |> String.trim()}}
+                (_) -> nil
+              end)
+          ({"audience", _, contents}) ->
+            Enum.map(contents,
+              fn
+                ({"member", attr, contents}) ->
+                  id = Enum.find_value(attr,
+                    fn
+                      ({"id", x}) -> String.to_integer(x |> String.trim())
+                      (_) -> nil
+                    end)
+                  confidence = Enum.find_value(attr,
+                    fn
+                      ({"confidence", x}) -> String.to_integer(x |> String.trim())
+                      (_) -> nil
+                    end)
+                  {:audience, {id, confidence, Floki.text(contents) |> String.trim()}}
+                (_) -> nil
+              end) |> Enum.reject(&is_nil/1)
+          ({"summary", _, contents}) ->
+            # Strip features.
+            {clean,_} = Floki.traverse_and_update(contents, [deleted: 0], fn
+              {"features", _attrs, _children}, acc ->
+                {nil, Keyword.put(acc, :deleted, acc[:deleted] + 1)}
+              tag, acc ->
+                {tag, acc}
+            end)
+
+            features = Enum.map(contents,
+              fn
+                ({"features", _, contents}) ->
+                  Enum.map(contents,
+                    fn
+                      ({"feature", _, contents}) ->
+                        [{:feature, Floki.text(contents) |> String.trim()}]
+                      (_) -> nil
+                    end)
+                (_) -> nil
+              end) |> List.flatten()  |> Enum.reject(&is_nil/1)
+            {:summary, {Floki.text(clean) |> String.trim(), features}}
+          (_) -> nil
+        end) |> Enum.reject(&is_nil/1)
+      details
+    (_) -> nil
+  end)
+  |> List.flatten()
+  |> Enum.reject(&is_nil/1)
+end
 
   def valid_response?(response) do
     response
