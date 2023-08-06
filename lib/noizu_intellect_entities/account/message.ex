@@ -17,8 +17,12 @@ defmodule Noizu.Intellect.Account.Message do
     identifier :integer
     field :sender, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
-    field :read_on, nil, Noizu.Entity.DerivedField, [pull: {:load, [:read_status, :read_on]}]
-    field :priority, nil, Noizu.Entity.DerivedField, [pull: {:load, [:audience, {:confidence, :__defualt__, :check}]}]
+
+    @store [name: :read_status]
+    field :read_on, nil, Noizu.Entity.DerivedField, [pull: {:load, [:read_on]}]
+
+    @store [name: :audience]
+    field :priority, nil, Noizu.Entity.DerivedField, [pull: {:load, [{:confidence, :__defualt__, :check}]}]
 
     @store [name: :audience_list]
     field :audience, nil, Noizu.Entity.DerivedField, [pull: &__MODULE__.unpack_audience_list/4] # todo provide a method to unpack the tuple

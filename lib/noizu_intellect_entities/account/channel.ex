@@ -100,7 +100,6 @@ defmodule Noizu.Intellect.Account.Channel do
           included = Enum.map(audience, fn({:audience, {id, confidence, comment}}) -> id end) |> MapSet.new()
           # Set non mentioned recipients to 0.
           additional = Enum.reject(prompt_context.channel_members, fn(member) -> Enum.member?(included, member.identifier) end)
-                       |> IO.inspect(label: "Unmentioned Audience")
           Enum.map(additional, & Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {&1.identifier, 0, nil}}, message, context, options))
         end
         if summary = details[:summary] do
@@ -109,111 +108,7 @@ defmodule Noizu.Intellect.Account.Channel do
           )
         end
 
-        with {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
-             {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages ++ [%{role: :user, content: prompt}], request_settings) do
-
-          # response could be a function call or a response or a mix, need to handle all.
-          with %{choices: [%{message: %{content: reply}}|_]} <- response,
-               :ok <- Logger.warning("[DELIVER REPLY] #{reply}"),
-               {:ok, prepped} <- Noizu.Intellect.HtmlModule.extract_message_delivery_details(reply)
-            do
-
-              IO.inspect(prepped)
-
-              # Pending Update
-
-#            # before setting relevancy do book keeping.
-#            Enum.map(prepped, fn
-#              ({:summary, summary}) ->
-#                %{message|
-#                  brief: %{title: "Message Summary", body: summary}
-#                }
-#                |> IO.inspect(label: "SET BRIEF")
-#                |> Noizu.Intellect.Entity.Repo.update(context)
-#
-#                with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(message.channel) do
-#                  temp = %Noizu.IntellectWeb.Message{
-#                    type: :system_message,
-#                    timestamp: DateTime.utc_now(),
-#                    user_name: "[System:Summary]",
-#                    profile_image: nil,
-#                    mood: :nothing,
-#                    body: "#{message.identifier} <> #{summary}"
-#                  }
-#                  Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: temp, options: [scroll: true]))
-#                end
-#
-#              ({:intent, response}) ->
-#                prepped_entries = Enum.group_by(prepped, (&(elem(&1, 0))))
-#                header = Enum.map(prepped_entries[:relevancy] || [], fn({_, settings}) -> " - #{settings[:member]}@#{settings[:weight]} - #{settings[:contents] || ""}</li>"  end) |> Enum.join("\n")
-#                header = "#Relevancy\n\n#{header}\n\n#Tabular\n\n"
-#                with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(message.channel) do
-#                  temp = %Noizu.IntellectWeb.Message{
-#                    type: :system_message,
-#                    timestamp: DateTime.utc_now(),
-#                    user_name: "[System:Relevancy]",
-#                    profile_image: nil,
-#                    mood: :nothing,
-#                    body: header <> response
-#                  }
-#
-#                  Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: temp, options: [scroll: true]))
-#                end
-#
-#              (_) -> nil
-#            end)
-#
-#            Enum.map(prepped, fn
-#              ({:relevancy, settings}) ->
-#                recipient_id = settings[:member]
-#                weight = settings[:weight]
-#                weight = if (weight < 0.7) do
-#                  slug = agent_slugs[recipient_id]
-#                  if broadcast || (slug && String.match?(prompt, slug)) do
-#                    Logger.error("[Deliver] Agent set incorrect weight #{weight} for #{recipient_id}")
-#                    0.7
-#                  else
-#                    weight
-#                  end
-#                else
-#                  weight
-#                end
-#                # Scan message, if it contains @recipient then min bar weight to 0.7
-#                weight = weight && trunc(Float.round(weight, 2) * 100)
-#                comment = settings[:contents]
-#                now = DateTime.utc_now()
-#                %Noizu.Intellect.Schema.Account.Message.Relevancy{
-#                  message: message.identifier,
-#                  recipient: recipient_id,
-#                  relevance: weight,
-#                  responding_to: settings[:message],
-#                  comment: comment,
-#                  created_on: now,
-#                  modified_on: now,
-#                } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
-#              (_) -> nil
-#            end)
-
-            {:ok, message}
-          end
-
-      end
-
-
-
     end
-
-
-    #    %Noizu.Intellect.Account.Message{
-    #      sender: socket.assigns[:user],
-    #      channel: socket.assigns[:channel],
-    #      depth: 0,
-    #      user_mood: nil,
-    #      event: :message,
-    #      contents: form["comment"],
-    #      time_stamp: Noizu.Entity.TimeStamp.now()
-    #    }
-    #
 
   end
 
@@ -251,7 +146,7 @@ defmodule Noizu.Intellect.Account.Channel do
           is_map(message.responding_to) && Map.keys(message.responding_to) || nil
         end) |> Enum.reject(&is_nil/1) |> List.flatten() |> Enum.uniq()
         include = include -- existing
-        final = with {:ok, additional} <- messages_in_set(include, channel, context, options) do
+        final = with {:ok, additional} <- messages_in_set_recipient(include, recipient, channel, context, options) do
           Enum.sort_by(messages ++ additional, &(&1.time_stamp.created_on), {:desc, DateTime})
         else
           _ -> messages
@@ -325,6 +220,66 @@ defmodule Noizu.Intellect.Account.Channel do
     end
 
 
+    def messages_in_set_recipient(set, recipient, channel, context, options \\ nil)
+    def messages_in_set_recipient([], recipient, channel, context, options), do: {:ok, []}
+    def messages_in_set_recipient(set, recipient, channel, context, options) do
+      with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
+           {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
+        Logger.error("Messages in Set: #{inspect set}")
+
+        responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
+                             group_by: p.message,
+                             select: %{message: p.message,
+                               array_agg: fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+
+        audience = from p in Noizu.Intellect.Schema.Account.Message.Audience,
+                        where: p.confidence > 0,
+                        group_by: p.message,
+                        select: %{message: p.message,
+                          array_agg: fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
+
+
+        q = from msg in Noizu.Intellect.Schema.Account.Message,
+                 left_join: contents in Noizu.Intellect.Schema.VersionedString,
+                 on: contents.identifier == msg.contents,
+                 left_join: brief in Noizu.Intellect.Schema.VersionedString,
+                 on: brief.identifier == msg.brief,
+                 left_join: resp_list in subquery(responding_to),
+                 on: msg.identifier == resp_list.message,
+                 left_join: aud_list in subquery(audience),
+                 on: msg.identifier == aud_list.message,
+                 left_join: aud in Noizu.Intellect.Schema.Account.Message.Audience,
+                 on: aud.message == msg.identifier,
+                 left_join: read_status in Noizu.Intellect.Schema.Account.Message.Read,
+                 on: read_status.message == msg.identifier,
+                 where: msg.channel == ^channel_id,
+                 where: msg.identifier in ^set,
+                 where: aud.recipient == ^recipient_id,
+                 where: read_status.recipient == ^recipient_id,
+                 select: %{msg|
+                   __loader__: %{
+                     contents: contents,
+                     brief: brief,
+                     audience: aud,
+                     read_status: read_status,
+                     audience_list: aud_list,
+                     responding_to_list: resp_list
+                   }
+                 }
+        messages = Enum.map(
+                     Noizu.Intellect.Repo.all(q),
+                     & Noizu.Intellect.Account.Message.entity(&1, context)
+                   ) |> Enum.map(
+                          fn
+                            ({:ok, v}) -> v
+                            (_) -> nil
+                          end)
+                   |> Enum.reject(&is_nil/1)
+        {:ok, messages}
+      end
+    end
+
+
     @doc """
         obtain 10 most recent messages plus most recent message by sender of new message
         obtain list of messages these are in responding to
@@ -386,7 +341,7 @@ defmodule Noizu.Intellect.Account.Channel do
                    }
                  }
         messages = Enum.map(
-                     Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "NEW RECENT"),
+                     Noizu.Intellect.Repo.all(q),
                      & Noizu.Intellect.Account.Message.entity(&1, context)
                    ) |> Enum.map(
                           fn
@@ -435,7 +390,7 @@ defmodule Noizu.Intellect.Account.Channel do
                    }
                  }
         messages = Enum.map(
-                     Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "NEW RECENT"),
+                     Noizu.Intellect.Repo.all(q),
                      & Noizu.Intellect.Account.Message.entity(&1, context)
                    ) |> Enum.map(
                           fn

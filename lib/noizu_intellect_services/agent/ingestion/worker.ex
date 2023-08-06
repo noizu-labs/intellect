@@ -87,7 +87,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
   def unread_messages?(state,context,options) do
     # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
-    with {:ok, o} <- Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options) do
+    with {:ok, o} <- message_history(state, context, options) do
       unless Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority > 0.5 && true || nil)) do
         inbox = Enum.filter(o, &(is_nil(&1.read_on)))
                 |> length()
@@ -103,11 +103,12 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
   def message_history(state,context,options) do
     # We'll actually pull agent digest messages, etc. here.
-    o = Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options)
-    with {:ok, x} <- o do
-      Enum.map(x, &(IO.puts "#{state.worker.agent.slug} - #{&1.identifier} - #{&1.read_on} - #{&1.time_stamp.created_on}"))
-    end
-    o
+    Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options)
+#    with {:ok, x} <- o do
+#      # Enum.map(x, fn(msg) -> msg.identifier == 7027 && IO.inspect(msg) end)
+#      Enum.map(x, &(IO.puts "#{state.worker.agent.slug} - #{&1.identifier} - priority: #{&1.priority || "NONE"}, read: #{&1.read_on || "NONE"} - #{&1.time_stamp.created_on}"))
+#    end
+#    o
   end
 
   #---------------------
@@ -221,7 +222,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
       do
 
       try do
-        #Logger.warn("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
+        IO.puts("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
         #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
         #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
 

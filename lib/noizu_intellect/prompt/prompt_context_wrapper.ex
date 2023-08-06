@@ -57,6 +57,10 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     Noizu.Intellect.Prompts.ChatMonitor.prompt(:v2, options)
   end
 
+  def respond_to_conversation(options \\ nil) do
+    Noizu.Intellect.Prompts.RespondToConversation.prompt(:v1, options)
+  end
+
   def master_prompt() do
     %__MODULE__{
       prompt: [system: """

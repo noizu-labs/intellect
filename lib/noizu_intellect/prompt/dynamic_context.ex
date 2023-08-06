@@ -37,7 +37,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   agent_message(id, channel, message, sender, status, created_on, modified_on, deleted_on)
   agent_message_digest(id, message) # list of messages a given agent message is digesting.
   """
-
+  require Logger
   @vsn 1.0
   alias Noizu.EntityReference.Protocol, as: ERP
   alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
@@ -64,7 +64,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   #
   #----------------------------
   def assigns(subject, context, options) do
-    assigns = Map.merge(subject.assigns || %{}, %{prompt_context: subject, channel: subject.channel, channel_members: subject.channel_members, channel_member_lookup: subject.channel_member_lookup, verbose: subject.verbose, format: subject.format, context: context, options: options})
+    assigns = Map.merge(subject.assigns || %{}, %{prompt_context: subject, agent: subject.agent, channel: subject.channel, channel_members: subject.channel_members, channel_member_lookup: subject.channel_member_lookup, verbose: subject.verbose, format: subject.format, context: context, options: options})
     assigns = cond do
       subject.master_prompt_context ->
         pa = subject.master_prompt_context.assigns
@@ -108,7 +108,15 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
         end
       end) |> Map.new()
 
-      %__MODULE__{channel_members: members, channel_member_lookup: channel_member_lookup, agent: agent, message_history: messages, channel: channel, master_prompt_context: Noizu.Intellect.Prompt.ContextWrapper.master_prompt() , verbose: verbose}
+      %__MODULE__{
+        channel_members: members,
+        channel_member_lookup: channel_member_lookup,
+        agent: agent,
+        message_history: messages,
+        channel: channel,
+        master_prompt_context: Noizu.Intellect.Prompt.ContextWrapper.respond_to_conversation(),
+        verbose: verbose
+      }
       |> prepare_prompt_context__process(:nlp, context, options)
       |> prepare_prompt_context__process(:agent, context, options)
       |> prepare_prompt_context__process(:intuition_pumps, context, options)
