@@ -2,6 +2,7 @@ defmodule Noizu.Intellect.Schema.Account.Channel do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive Noizu.EntityReference.Protocol
   @primary_key {:identifier, :integer, autogenerate: false}
   schema "channel" do
     field :slug, :string
@@ -12,6 +13,7 @@ defmodule Noizu.Intellect.Schema.Account.Channel do
     field :deleted_on, :utc_datetime_usec
   end
 
+  use Noizu.Entity.Meta.IntegerIdentifier
   @doc false
   def changeset(user, attrs) do
     user

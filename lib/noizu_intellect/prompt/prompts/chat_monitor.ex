@@ -8,9 +8,15 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
     current_message = options[:current_message]
 
     %Noizu.Intellect.Prompt.ContextWrapper{
-      assigns: fn(prompt_context, _context, _options) ->
+      assigns: fn(prompt_context, context, options) ->
+                 graph = with {:ok, graph} <- Noizu.Intellect.Account.Message.Graph.to_graph(prompt_context.message_history, context, options) do
+                   graph
+                 else
+                   _ -> false
+                 end
+
                  assigns = Map.merge(prompt_context.assigns, %{message_graph: true, nlp: false, members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :detailed})})
-                           |> put_in([:message_graph], false)
+                           |> put_in([:message_graph], graph)
                            |> put_in([:current_message], current_message)
                   {:ok, assigns}
                end,
@@ -24,12 +30,15 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         please analyze the graph and identify the relationships between messages, including reply-to and target audience connections.
 
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
+        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
         <% _ -> %><%= "" %>
         <% end %>
 
         ### Conversation Graph
-        {insert_chat_graph}
+        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@message_graph, @prompt_context, @context, @options) do %>
+        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
+        <% _ -> %><%= "" %>
+        <% end %>
 
         ## Predict
         Then, based on the graph, analyze the following new message:

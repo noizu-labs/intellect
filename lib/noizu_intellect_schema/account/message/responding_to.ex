@@ -22,7 +22,7 @@ defmodule Noizu.Intellect.Schema.Account.Message.RespondingTo do
       comment: comment,
       created_on: now,
       modified_on: now,
-    } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
+    } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :responding_to])
   end
 
   @doc false

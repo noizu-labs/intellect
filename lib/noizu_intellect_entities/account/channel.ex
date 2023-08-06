@@ -74,7 +74,7 @@ defmodule Noizu.Intellect.Account.Channel do
 
     IO.inspect(message, label: "CURRENT_MESSAGE")
 
-    with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent(this, context, put_in(options || [], [:limit], 30)),
+    with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent_graph(this, context, put_in(options || [], [:limit], 10)),
          messages <- Enum.reverse(messages),
          {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(this, messages, Noizu.Intellect.Prompt.ContextWrapper.relevancy_prompt(message), context, options),
          {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
@@ -84,7 +84,7 @@ defmodule Noizu.Intellect.Account.Channel do
          {:ok, summarized_message?} <- summarize_message?(this, message, prompt_context, context, options),
          {:ok, summarized_message} <- summarized_message? && summarize_message(this, message, prompt_context, context, options) || {:ok, message},
          {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
-         :ok <- Logger.info(request_messages |> Enum.at(0) |> Map.get(:content), limit: :infinity),
+         :ok <- Logger.warn(request_messages |> Enum.at(0) |> Map.get(:content), limit: :infinity),
          {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages ++ [%{role: :user, content: prompt}], request_settings) |> IO.inspect,
          {:ok, extracted_details} <- extract_message_delivery(response) |> IO.inspect
       do
@@ -96,9 +96,12 @@ defmodule Noizu.Intellect.Account.Channel do
           )
         end
         if audience = details[:audience] do
-          Enum.map(audience,
-            fn(entry) -> Noizu.Intellect.Schema.Account.Message.Audience.record(entry, message, context, options) end
-          )
+          Enum.map(audience, & Noizu.Intellect.Schema.Account.Message.Audience.record(&1, message, context, options))
+          included = Enum.map(audience, fn({:audience, {id, confidence, comment}}) -> id end) |> MapSet.new()
+          # Set non mentioned recipients to 0.
+          additional = Enum.reject(prompt_context.channel_members, fn(member) -> Enum.member?(included, member.identifier) end)
+                       |> IO.inspect(label: "Unmentioned Audience")
+          Enum.map(additional, & Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {&1.identifier, 0, nil}}, message, context, options))
         end
         if summary = details[:summary] do
           Enum.map(summary,
@@ -239,19 +242,41 @@ defmodule Noizu.Intellect.Account.Channel do
       {:ok, members}
     end
 
-    def relevant_or_recent(recipient, channel, context, options \\ nil) do
+
+    def relevant_or_recent(recipient, channel, context, options \\ nil)
+    def relevant_or_recent(recipient, channel, context, options) do
+      with {:ok, messages} <- relevant_or_recent__inner(recipient, channel, context, options) do
+        existing = Enum.map(messages, & &1.identifier)
+        include = Enum.map(messages, fn(message) ->
+          is_map(message.responding_to) && Map.keys(message.responding_to) || nil
+        end) |> Enum.reject(&is_nil/1) |> List.flatten() |> Enum.uniq()
+        include = include -- existing
+        final = with {:ok, additional} <- messages_in_set(include, channel, context, options) do
+          Enum.sort_by(messages ++ additional, &(&1.time_stamp.created_on), {:desc, DateTime})
+        else
+          _ -> messages
+        end
+        {:ok, final}
+      end
+    end
+    def relevant_or_recent__inner(recipient, channel, context, options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
         limit = options[:limit] || 20
         relevancy = options[:relevancy] || 50
         recent_cut_off = DateTime.utc_now() |> Timex.shift(minutes: -45)
 
+
         responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
                              group_by: p.message,
-                             select: {p.message, fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+                             select: %{message: p.message,
+                               array_agg: fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+
         audience = from p in Noizu.Intellect.Schema.Account.Message.Audience,
+                        where: p.confidence > 0,
                         group_by: p.message,
-                        select: {p.message, fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
+                        select: %{message: p.message,
+                          array_agg: fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
 
 
         q = from msg in Noizu.Intellect.Schema.Account.Message,
@@ -286,7 +311,131 @@ defmodule Noizu.Intellect.Account.Channel do
                    }
                  }
         messages = Enum.map(
-                     Noizu.Intellect.Repo.all(q) |> IO.inspect("NEW MESSAGE LOADER"),
+                     Noizu.Intellect.Repo.all(q),
+                     & Noizu.Intellect.Account.Message.entity(&1, context)
+                   )
+                   |> Enum.map(
+                          fn
+                            ({:ok, v}) -> v
+                            (_) -> nil
+                          end)
+                   |> Enum.reject(&is_nil/1)
+        {:ok, messages}
+      end
+    end
+
+
+    @doc """
+        obtain 10 most recent messages plus most recent message by sender of new message
+        obtain list of messages these are in responding to
+        obtain list of messages those are responding to
+        order by date
+    """
+    def recent_graph(channel, context, options \\ nil)
+    def recent_graph(channel, context, options) do
+      with {:ok, messages} <- recent_messages(channel, context, options) do
+        existing = Enum.map(messages, & &1.identifier)
+        include = Enum.map(messages, fn(message) ->
+          is_map(message.responding_to) && Map.keys(message.responding_to) || nil
+        end) |> Enum.reject(&is_nil/1) |> List.flatten() |> Enum.uniq()
+        include = include -- existing
+        final = with {:ok, additional} <- messages_in_set(include, channel, context, options) do
+          Enum.sort_by(messages ++ additional, &(&1.time_stamp.created_on), {:desc, DateTime})
+          else
+          _ -> messages
+        end
+        {:ok, final}
+      end
+    end
+
+    def messages_in_set(set, channel, context, options \\ nil)
+    def messages_in_set([], channel, context, options), do: {:ok, []}
+    def messages_in_set(set, channel, context, options) do
+      with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel) do
+        Logger.error("Messages in Set: #{inspect set}")
+
+        responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
+                             group_by: p.message,
+                             select: %{message: p.message,
+                               array_agg: fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+
+        audience = from p in Noizu.Intellect.Schema.Account.Message.Audience,
+                        where: p.confidence > 0,
+                        group_by: p.message,
+                        select: %{message: p.message,
+                          array_agg: fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
+
+
+        q = from msg in Noizu.Intellect.Schema.Account.Message,
+                 left_join: contents in Noizu.Intellect.Schema.VersionedString,
+                 on: contents.identifier == msg.contents,
+                 left_join: brief in Noizu.Intellect.Schema.VersionedString,
+                 on: brief.identifier == msg.brief,
+                 left_join: resp_list in subquery(responding_to),
+                 on: msg.identifier == resp_list.message,
+                 left_join: aud_list in subquery(audience),
+                 on: msg.identifier == aud_list.message,
+                 where: msg.channel == ^channel_id,
+                 where: msg.identifier in ^set,
+                 select: %{msg|
+                   __loader__: %{
+                     contents: contents,
+                     brief: brief,
+                     audience_list: aud_list,
+                     responding_to_list: resp_list
+                   }
+                 }
+        messages = Enum.map(
+                     Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "NEW RECENT"),
+                     & Noizu.Intellect.Account.Message.entity(&1, context)
+                   ) |> Enum.map(
+                          fn
+                            ({:ok, v}) -> v
+                            (_) -> nil
+                          end)
+                   |> Enum.reject(&is_nil/1)
+        {:ok, messages}
+      end
+    end
+
+    def recent_messages(channel, context, options \\ nil) do
+      with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel) do
+        limit = options[:limit] || 10
+
+        responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
+                             group_by: p.message,
+                             select: %{message: p.message,
+                               array_agg: fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+
+        audience = from p in Noizu.Intellect.Schema.Account.Message.Audience,
+                        where: p.confidence > 0,
+                        group_by: p.message,
+                        select: %{message: p.message,
+                          array_agg: fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
+
+
+        q = from msg in Noizu.Intellect.Schema.Account.Message,
+                 left_join: contents in Noizu.Intellect.Schema.VersionedString,
+                 on: contents.identifier == msg.contents,
+                 left_join: brief in Noizu.Intellect.Schema.VersionedString,
+                 on: brief.identifier == msg.brief,
+                 left_join: resp_list in subquery(responding_to),
+                 on: msg.identifier == resp_list.message,
+                 left_join: aud_list in subquery(audience),
+                 on: msg.identifier == aud_list.message,
+                 where: msg.channel == ^channel_id,
+                 order_by: [desc: msg.created_on],
+                 limit: ^limit,
+                 select: %{msg|
+                   __loader__: %{
+                     contents: contents,
+                     brief: brief,
+                     audience_list: aud_list,
+                     responding_to_list: resp_list
+                   }
+                 }
+        messages = Enum.map(
+                     Noizu.Intellect.Repo.all(q) |> IO.inspect(label: "NEW RECENT"),
                      & Noizu.Intellect.Account.Message.entity(&1, context)
                    ) |> Enum.map(
                           fn

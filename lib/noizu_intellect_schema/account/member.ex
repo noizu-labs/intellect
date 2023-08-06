@@ -2,6 +2,7 @@ defmodule Noizu.Intellect.Schema.Account.Member do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive Noizu.EntityReference.Protocol
   @primary_key {:identifier, :integer, autogenerate: false}
   schema "account_member" do
     field :user, Noizu.Entity.Reference
@@ -11,6 +12,8 @@ defmodule Noizu.Intellect.Schema.Account.Member do
     field :modified_on, :utc_datetime_usec
     field :deleted_on, :utc_datetime_usec
   end
+
+  use Noizu.Entity.Meta.IntegerIdentifier
 
   @doc false
   def changeset(user, attrs) do

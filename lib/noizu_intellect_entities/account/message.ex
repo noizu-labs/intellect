@@ -17,10 +17,13 @@ defmodule Noizu.Intellect.Account.Message do
     identifier :integer
     field :sender, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
-    field :read_on, nil, Noizu.Entity.DerivedField, [load: [:read_status, :read_on]]
-    field :priority, nil, Noizu.Entity.DerivedField, [load: [:audience, {:confidence, :__defualt__, :check}]]
-    field :audience, nil, Noizu.Entity.DerivedField, [load: [:audience_list]] # todo provide a method to unpack the tuple
-    field :responding_to, nil, Noizu.Entity.DerivedField, [load: [:responding_to_list]] # todo provide a method to unpack the tuple
+    field :read_on, nil, Noizu.Entity.DerivedField, [pull: {:load, [:read_status, :read_on]}]
+    field :priority, nil, Noizu.Entity.DerivedField, [pull: {:load, [:audience, {:confidence, :__defualt__, :check}]}]
+
+    @store [name: :audience_list]
+    field :audience, nil, Noizu.Entity.DerivedField, [pull: &__MODULE__.unpack_audience_list/4] # todo provide a method to unpack the tuple
+    @store [name: :responding_to_list]
+    field :responding_to, nil, Noizu.Entity.DerivedField, [pull: &__MODULE__.unpack_responding_to_list/4] # todo provide a method to unpack the tuple
 
     field :depth
     field :user_mood #, nil, Noizu.Intellect.Emoji
@@ -34,18 +37,50 @@ defmodule Noizu.Intellect.Account.Message do
   import Ecto.Query
   require Noizu.Entity.Meta.Persistence
 
+
+  def unpack_audience_list(as_name, record, context, field_options) do
+    with %{array_agg: entries} <- get_in(record, [Access.key(:__loader__), Access.key(as_name)]),
+         true <- is_list(entries) do
+      entries = Enum.map(entries, fn({subject, confidence, comment}) ->
+        {subject, %{confidence: confidence, comment: comment}}
+      end) |> Map.new()
+      {:ok, entries}
+    else
+      _ -> {:error, {:loading, :audience_list}}
+    end
+  end
+
+  def unpack_responding_to_list(as_name, record, context, field_options) do
+    with %{array_agg: entries} <- get_in(record, [Access.key(:__loader__), Access.key(as_name)]),
+         true <- is_list(entries) do
+      entries = Enum.map(entries, fn({subject, confidence, comment}) ->
+        {subject, %{confidence: confidence, comment: comment}}
+      end) |> Map.new()
+      {:ok, entries}
+    else
+      _ -> {:error, {:loading, :responding_to_list}}
+    end
+  end
+
   #---------------------------
   #
   #---------------------------
   @defimpl Noizu.Entity.Store.Ecto.EntityProtocol
   def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Schema.Account.Message, store: store), context, options) do
-    with {:ok, identifier} <- Noizu.EntityReference.Protocol.id(entity) do
+    Logger.error("as entity")
+    with %{identifier: identifier} <- entity do
+
+
       responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
                            group_by: p.message,
-                           select: {p.message, fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+                           select: %{message: p.message,
+                             array_agg: fragment("array_agg(row(?,?,?))", p.responding_to, p.confidence, p.comment)}
+
       audience = from p in Noizu.Intellect.Schema.Account.Message.Audience,
+                      where: p.confidence > 0,
                       group_by: p.message,
-                      select: {p.message, fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
+                      select: %{message: p.message,
+                        array_agg: fragment("array_agg(row(?,?,?))", p.recipient, p.confidence, p.comment)}
 
       q = from msg in Noizu.Intellect.Schema.Account.Message,
                join: aud in Noizu.Intellect.Schema.Account.Message.Audience,
@@ -66,13 +101,14 @@ defmodule Noizu.Intellect.Account.Message do
                limit: 1,
                select: %{msg| __loader__: %{contents: content, brief: brief, meta: meta, responding_to_list: resp, audience_list: aud_list, audience: aud, read_status: read_status}}
 
-      case apply(store, :one, [q]) |> IO.inspect("NEW MESSAGE LOADER") do
+      case apply(store, :one, [q]) |> IO.inspect("MESSAGE LOADER") do
         record = %Noizu.Intellect.Schema.Account.Message{} -> from_record(record, settings, context, options)
         _ -> {:error, :not_found}
       end
     end
   end
   def as_entity(entity, settings, context, options) do
+    Logger.error("as entity super| #{inspect entity}")
     super(entity, settings, context, options)
   end
 
@@ -85,7 +121,7 @@ defmodule Noizu.Intellect.Account.Message do
       }
       |> Noizu.Intellect.Entity.Repo.update(context)
     end
-    Logger.error("[TODO] populate message features #{inspect features, pretty: true}")
+    # Logger.error("[TODO] populate message features #{inspect features, pretty: true}")
   end
 
   defimpl Noizu.Entity.Protocol do
@@ -120,8 +156,6 @@ defmodule Noizu.Intellect.Account.Message do
     import Ecto.Query
 
     def_repo()
-
-
 
     def __before_create__(entity, context, options) do
       with {:ok, entity} <- super(entity, context, options),
