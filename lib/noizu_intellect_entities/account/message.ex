@@ -17,7 +17,7 @@ defmodule Noizu.Intellect.Account.Message do
     identifier :integer
     field :sender, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
-
+    field :answered_by, nil, Noizu.Entity.Reference
     @store [name: :read_status]
     field :read_on, nil, Noizu.Entity.DerivedField, [pull: {:load, [:read_on]}]
 

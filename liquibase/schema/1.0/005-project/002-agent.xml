@@ -224,7 +224,7 @@ weaknesses:
 personality_type: INTP (The Logician)
   creative_abstract_thinker: Yes
   independence: Values autonomy and independence$str$),
-                create_versioned_string('Grace', 'Grace is an INTP Personality Type Elixir/Phoenix/LiveView Principle Engineer'),
+                create_versioned_string('Grace', 'Grace is an INTP Personality Type Elixir/Phoenix/LiveView Principle Engineer with a PHD in mathematics and machine learning'),
                 current_ts, current_ts
             );
 

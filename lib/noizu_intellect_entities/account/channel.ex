@@ -88,6 +88,7 @@ defmodule Noizu.Intellect.Account.Channel do
          {:ok, extracted_details} <- extract_message_delivery(response) |> IO.inspect
       do
 
+        # IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(request_messages, [Access.at(0), :content]))
         with %{choices: [%{message: %{content: reply}}|_]} <- response do
           Logger.warn("[Delivery Response #{message.identifier}] \n #{reply}")
         end
@@ -104,17 +105,20 @@ defmodule Noizu.Intellect.Account.Channel do
             user_name: "monitor-system",
             profile_image: nil,
             mood: :thumbsy,
+            meta: [request_settings, request_messages, response],
             body: contents
           }
           Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
         end
+
+        IO.inspect(details, label: "DELIVERY", pretty: true, limit: :infinity)
 
         responding_to = if responding_to = details[:responding_to] do
           Enum.map(responding_to,
             fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
           )
           Enum.map(responding_to,
-            fn({:responding_to, {id, confidence, _}}) -> confidence > 0 && id end
+            fn({:responding_to, {id, confidence, _, _}}) -> confidence > 0 && id end
           ) |> Enum.reject(&is_nil/1)
         end
         audience = if audience = details[:audience] do
@@ -134,6 +138,14 @@ defmodule Noizu.Intellect.Account.Channel do
             fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
           )
           with [{:summary, {summary, features}}|_] <- summary do
+            features = Enum.map(features,
+              fn
+                ({:feature, feature}) -> feature
+                (feature) when is_bitstring(feature) -> feature
+                (_) -> nil
+              end
+            ) |> Enum.reject(&is_nil/1)
+
             %{summary: summary, features: features}
           else
             _ -> nil
@@ -146,7 +158,7 @@ defmodule Noizu.Intellect.Account.Channel do
           features: summary && summary.features || [],
           audience: audience || [],
           responding_to: responding_to || []
-        } |> IO.inspect() |> Noizu.Weaviate.Api.Objects.create() |> IO.inspect(label: "WEAVIATE CREATE")
+        } |> Noizu.Weaviate.Api.Objects.create()
 
 
     end
@@ -232,7 +244,7 @@ defmodule Noizu.Intellect.Account.Channel do
                  on: msg.identifier == aud_list.message,
                  where: msg.channel == ^channel_id,
                  where: aud.recipient == ^recipient_id,
-                 where: (is_nil(read_status) or (aud.confidence >= ^relevancy or aud.created_on >= ^recent_cut_off)),
+                 where: ((is_nil(read_status) and is_nil(msg.answered_by)) or (aud.confidence >= ^relevancy or aud.created_on >= ^recent_cut_off)),
                  order_by: [desc: msg.created_on],
                  limit: ^limit,
                  select: %{msg|
@@ -320,10 +332,10 @@ defmodule Noizu.Intellect.Account.Channel do
 
 
     @doc """
-        obtain 10 most recent messages plus most recent message by sender of new message
-        obtain list of messages these are in responding to
-        obtain list of messages those are responding to
-        order by date
+    obtain 10 most recent messages plus most recent message by sender of new message
+    obtain list of messages these are in responding to
+    obtain list of messages those are responding to
+    order by date
     """
     def recent_graph(channel, context, options \\ nil)
     def recent_graph(channel, context, options) do

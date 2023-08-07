@@ -198,6 +198,7 @@
             <column name="sender" type="BIGINT"/>
             <column name="channel" type="BIGINT"/>
             <column name="depth" type="SMALLINT"/>
+            <column name="answered_by" type="BIGINT"/>
             <column name="user_mood" remarks="Emoji of Mood type" type="BIGINT"/>
             <column name="event" type="MESSAGE_EVENT_TYPE" >
                 <constraints nullable="false"/>

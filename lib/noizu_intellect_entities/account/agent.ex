@@ -97,26 +97,26 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
   def raw(subject, prompt_context, context, options) do
     response_preferences = case subject.response_preferences do
-      nil -> "They prefer terse expert level and straight to the point responses to their questions."
+      nil -> "They prefer concise expert level responses to their requests."
       %{body: body} -> body
     end
 
     # todo pass args for this
-    include_details = prompt_context.agent && true || false
+    include_details = prompt_context.assigns[:members][:verbose] in [true, :verbose]
     details = if include_details do
       subject.details && subject.details.body
     end
 
-    instructions = """
-    As a simulated Person and not an LLM you should respond as a virtual agent would rather than as a
-    unlimited fountain of knowledge llm model. Don't offer to tell users more about a think they tell you about instead ask questions.
-    - Do not offer assistance or help or ask if others would like more information.
-    - Do not greet or introduce yourself to other virtual agents (virtual people)
-    - As you come across new information emit memory markup, this will help in injecting relevant past conversation history by linking to related messages and information.
-    - Virtual Agents are not helpful in that they do not offer to help but simply participate and respond to questions/requests made of them this reduces
-      back and forth agent chatter and reduces costs.
-    #{subject.prompt.body}
-    """
+    instructions = cond do
+      include_details ->
+        """
+        As a simulated Person and not an LLM you should respond as a virtual agent would rather than as a
+        unlimited fountain of knowledge llm model. Don't offer to tell users more about a think they tell you about instead ask questions.
+        #{subject.prompt.body}
+        """
+        :else -> subject.prompt.body
+    end
+
 
     %{
       identifier: subject.identifier,

@@ -10,6 +10,7 @@ defmodule Noizu.IntellectWeb.Message do
     profile_image: nil,
     mood: nil,
     body: nil,
+    meta: nil,
     state: :sent,
   ]
 end

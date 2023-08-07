@@ -55,8 +55,25 @@ defmodule Noizu.IntellectWeb.Chat.Component do
           </div>
             <!-- <%# <div class="markdown-body"><%= raw(Earmark.as_html!(@message.body) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %></div> %> -->
           <div class="markdown-body"><%=  raw(Earmark.as_html!(@message.body, smartypants: false) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %></div>
+
+      <%= if @message.meta do %>
+      <div class="meta-details hidden">
+        <%= for section <- @message.meta do %>
+          <pre>
+          <%= Poison.encode!(section) %>
+          </pre>
+        <% end %>
+      </div>
+      <% end %>
+
       </div>
     """
   end
 
+end
+
+defimpl Poison.Encoder, for: Tuple do
+  def encode(tuple,opts) do
+    Poison.Encoder.encode("#{inspect tuple}", opts)
+  end
 end

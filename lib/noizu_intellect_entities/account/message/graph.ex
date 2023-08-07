@@ -11,8 +11,9 @@ defmodule Noizu.Intellect.Account.Message.Graph do
   def to_graph([], context, options), do: {:error, :empty}
   def to_graph(messages, context, options) do
     recent_cut_off = (options[:current_time] || DateTime.utc_now()) |> Timex.shift(minutes: -15)
-
+    messages = Enum.sort_by(messages, &(&1.time_stamp.created_on), {:desc, DateTime})
     message_nodes = Enum.map(messages, & &1.identifier)
+
     message_edges = Enum.map(messages, fn(message) ->
       responding_to = Enum.map(message.responding_to || %{}, fn({x, xm}) ->
         %{
@@ -80,6 +81,7 @@ defmodule Noizu.Intellect.Account.Message.Graph do
         },
         contents: contents,
         read: read,
+        reply?: is_nil(message.answered_by) && message.priority > 40 && is_nil(read) && true || false,
         time: message.time_stamp.created_on,
         recipients: audience,
       }

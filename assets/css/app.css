@@ -12,6 +12,10 @@
     #user-menu
     */
 
+    message-link {
+        @apply text-blue-800;
+    }
+
     .chat-input-contents{
         @apply fixed left-0 bottom-0 h-48  w-screen flex flex-col items-end justify-end content-end;
         @apply lg:pl-16;

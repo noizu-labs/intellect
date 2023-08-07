@@ -15,7 +15,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
                    _ -> false
                  end
 
-                 assigns = Map.merge(prompt_context.assigns, %{message_graph: true, nlp: false, members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :detailed})})
+                 assigns = Map.merge(prompt_context.assigns, %{message_graph: true, nlp: false, members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :brief})})
                            |> put_in([:message_graph], graph)
                            |> put_in([:current_message], current_message)
                   {:ok, assigns}
@@ -23,11 +23,21 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
       prompt: [user:
         """
         <%= if @message_graph do %>
-        # Instructions
-        As a chat thread and content analysis engine, given the following channel, channel members and graph encoded chat conversation
+         # Instructions
+        As a chat thread and content analysis engine and content summarizer, given the following channel, channel members, and graph-encoded chat conversation,
         Analyze the conversation graph and identify the relationships between messages, including reply-to and target audience connections.
-        Then as new messages are provided based on the ongoing message threads and the content of new messages determine the likely audience and
-        messages if any the new message was in response to or a continuation of and why.
+
+        # Complete Messages
+        A complete message is one that has been answered or addressed by a subsequent message. This typically happens when a question has been asked, and a later message provides the answer, thereby 'completing' the initial question. Similarly, a request or a call to action is 'complete' once it has been fulfilled or responded to by a subsequent message.
+
+        # Indications of Completion
+        Completion can often be inferred through context, relevance, and the content of subsequent messages. For example:
+        - If a message asks "What is a rainbow?", a later message that describes what a rainbow is would complete the initial message.
+        - If a message requests certain data and a subsequent message provides this data, the initial message is complete.
+
+        # Completion in this Analysis
+        As you analyze the conversation, determine whether each new message completes any of the previous messages. This completion check is a crucial part of understanding conversation flows and identifying information exchanges.
+        Note that completion does not mean the conversation on a topic has to end; instead, it's an indication that a particular query, request, or call to action has been addressed.
 
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
@@ -40,12 +50,17 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         <% _ -> %><%= "" %>
         <% end %>
 
+        # Output Format
+        In your output, mark any completed messages with 'complete?: true' and provide a brief reasoning for this determination. Remember, a message is 'complete' when it has been answered or addressed by a subsequent message in the conversation.
+
         <% else %>
 
         # Instructions
 
         ## Review
-        Review the following channel description, members and message to determine the most likely audience based on their background, message contents and direct channel member mentions.
+        As a chat thread and content analysis engine and content summarizer, given the following channel, and channel members
+        determine the most likely audience for new messages based on their background, message contents and direct channel member mentions.
+        Provide the requested markdown body for the message-analysis tag.
 
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
@@ -54,13 +69,24 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         <% end %>
 
         ### Note
-        - Messages that include @[member.slug| case insensitive] should list that user as a high confidence (90) recipients.
-        - Messages including @everyone (case insensitive) or @channel (case insensitive) should be list all members as med-high confidence (70) recipients.
-        - Messages that mention (with out a slug) someone by name in passing with out directly querying them should have a med-low confidence level (50)
+        - Messages that include @[member.slug| case insensitive] should list that user as a high confidence (90) recipient.
+        - Messages including @everyone (case insensitive) or @channel (case insensitive) should list all members as med-high confidence (70) recipients.
+        - Messages that mention (without a slug) someone by name in passing without directly querying them should have a med-low confidence level (50)
         - Messages addressed to someone by name should have a high-med-high confidence (80) if sent by a human operator or (50) if sent by a virtual agent.
 
         # New Message
-        Determine which messages the new message is most likely responding to, and identify the most appropriate audience members for the message.
+        For each new message, continue this process of analysis. Review the message, determine potential recipients based on message content, and set confidence levels accordingly. Always remember to consider prior messages in the context when evaluating if the new message completes an earlier one.
+        Also, bear in mind the different confidence levels that should be applied based on the manner in which members are addressed or mentioned in the message.
+
+        ## Guidelines
+        * Identify the messages that the new message is most likely responding to and discern the most suitable audience for this message.
+          * For instance, a new message that elaborates on topics raised in a recent prior message is likely a response to that earlier message rather than the initiation of a new thread.
+        * While the existing chat graph structure should guide this analysis, bear in mind it may contain errors. If you identify such discrepancies, correct them by linking new messages to the appropriate responding_to IDs.
+        * Examine the message for feature flags and tags. These should be extracted and included in the 'feature tags' part of your summary response.
+        * Evaluate if the new message serves as an answer to a previous one. If it does, mark the 'complete' flag as true under 'replying-to'.
+          * As an example, if a message explains what a specific term or concept is in response to a question like "what is this term/concept?", the message providing the explanation should mark the inquisitive message as complete.
+        * Consider what the preceding message was seeking. If the new message fulfills the request for information or resources made by the prior message, then it has served to complete the earlier message.
+        * Construct a succinct summary of the new message's content to be incorporated into the 'summary' section of your response.
 
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
@@ -68,267 +94,111 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         <% end %>
 
         # Output Format
-        Provide your final response in the following XML structure:
+        Provide your final response in the following format, insure the contents of monitor-response are properly formatted yaml.
 
+        <%= if true do %>
+        <monitor-response>
+          message_analysis:
+           - messages:
+           {foreach previous message| take into account if a previous message poses a question that a new message provides an answer to, it is marked as relevant and complete. Similarly, if a previous message discusses the same subject based on its content, it is also marked as relevant.}
+             - id: {msg.id}
+               relevant: {true|false - based on the new message's relation or relevance to this message.}
+               complete: {true|false - based on whether the new message responds to this message or indicates it has been answered.}
+               reasoning: {Provide a 1-sentence explanation}
+            {/foreach}
+          message_details:
+            for: {id of the new message}
+            replying_to:
+              {foreach message new message likely is a response or continuation to | exclude messages with confidence < 30}
+              - for: {previous_msg.id}
+                confidence: {confidence interval 0-100}
+                complete: {true|false - based on whether the new message answers the previous message's query or indicates it has been answered. If the new message provides an explanation that responds to a question asked by a previous message, the previous message is deemed complete.}
+                completed_by: {new_msg.id or the msg.id of the previous message that the new message indirectly indicates has answered this message}
+                explanation: [...|Provide a 1-sentence blurb explaining why the new message is relevant to the previous message]
+              {/foreach}
+          audience:
+            {foreach probable recipient of the new message | exclude if confidence < 30}
+            - for: {(integer) member.identifier}
+              confidence: {0-100}
+              explanation: [...|Provide a 1-sentence blurb explaining why the new message is relevant to the member]
+            {/foreach}
+          draft_summary:
+            content: |-2
+              [...|
+                Summarize and condense the content of the original new message heavily. Trim down code examples (shorten documents, remove method bodies, etc.)
+                For example:
+                original: "Zoocryptids are creatures that are rumored or believed to exist, but have not been proven by scientific evidence."
+                summary: "Definition of what zoocryptids are."
+              ]
+            features:
+              - [...|extract tags/feature strings describing the content and objective of this message for future vector db indexing]
+          summary:
+            content: |-2
+              [...|Refine the draft-summary further. If the draft-summary is longer than the actual message, simply use the original message.]
+            features:
+              - [...|Refine features from the draft-summary further.]
+        </monitor-response>
+        <% else %>
         <message-analysis>
-        [...|
-        under the heading Chat History list each previous message by id, the messages it is in response to, its recipients and a note on if and if so how it relates to the new messages.
-        Include an entry for <%= "#\{inspect @prompt_context.message_history |> Enum.map(& &1.identifier) \}" %>
-        Use markdown not xml/html as in the below example
-        # Chat History
-        - msg {id}, sender {sender slug}, responding_to: [{messages in response to}], recipients: [{member slugs of recipients}], relates?: {"no" if message contents has nothing in common with new message or a comment on how this message relates to the new message. Two messages about the same subject even if different are related.}
-        [...]
-        ]
+        <!-- Analysis Section -->
+        ```markdown
+        messages:
+        {foreach previous message| take into account if a previous message poses a question that a new message provides an answer to, it is marked as relevant and complete. Similarly, if a previous message discusses the same subject based on its content, it is also marked as relevant.}
+        - id: {msg.id}
+        relevant?: {true|false - based on the new message's relation or relevance to this message.}
+        complete?: {true|false - based on whether the new message responds to this message or indicates it has been answered.}
+        reasoning: {Provide a 1-sentence explanation}
+        {/foreach}
+        ```
         </message-analysis>
 
-        <message-details>
+        <message-details for="{id of the new message}">
         <replying-to>
-          <message id="<numeric id of message new message is likely responding to>" confidence="<numeric confidence that this is the chain/message the new message is responding to>">[...|comment on reasoning behind association]</message>
-          [...|additional entries]
+        {foreach message new message likely is a response or continuation to | exclude messages with confidence < 30}
+        <message
+            for="{previous_msg.id}"
+            confidence="confidence interval 0-100"
+            complete="{true|false - based on whether the new message answers the previous message's query or indicates it has been answered. If the new message provides an explanation that responds to a question asked by a previous message, the previous message is deemed complete.}"
+            completed_by="{new_msg.id or the msg.id of the previous message that the new message indirectly indicates has answered this message}"
+        >[...|Provide a 1-sentence blurb explaining why the new message is relevant to the previous message]</message>
+        {/foreach}
         </replying-to>
         <audience>
-          <member id="numeric id of recipient" confidence="confidence interval message is targeted towards specific recipient">[...|note to recipient on why message may be relevant to them]</member>
-          [...|additional entries]
+        {foreach probable recipient of the new message | exclude if confidence < 30}
+        <member
+            for="(integer) member.identifier"
+            confidence="0-100">[...|Provide a 1-sentence blurb explaining why the new message is relevant to the member]</member>
+        {/foreach}
         </audience>
-        <summary>Brief Concise summary of message, Place ellipses/omissions in long code blocks, Summarization should be at most 1/3rd the length of message being summarized<features><feature>Tag/Feature relating to message for use in VDB future search/lookup</feature>[...|additional entries]</features></summary>
-        </message-details>
-        """,
-      ],
-      minder: [system: ""],
-    }
-  end
 
-
-  def prompt(:v1, _) do
-    %Noizu.Intellect.Prompt.ContextWrapper{
-      prompt: [system:
-        """
-
-
-            <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
-              <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
-              <% _ -> %><%= "" %>
-            <% end %>
-
-            ## Channel-Members
-            <%= for member <- (@prompt_context.channel_members || []) do %>
-            <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, @prompt_context, @context, @options) do %>
-            <% {:ok, prompt} when is_bitstring(prompt) -> %>
-            <%= String.trim_trailing(prompt) %>
-            <% _ -> %><%= "" %>
-            <% end %>
-            <% end %>
-
-            <%= if @prompt_context.message_history do %>
-            ## Channel Message History
-            ```yaml
-            current_time: #{DateTime.utc_now()}
-            messages:
-            <%= for message <- @prompt_context.message_history do %>
-            <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %>
-            <% {:ok, prompt} when is_bitstring(prompt)  -> %>
-            <%= String.trim_trailing(prompt) %><% _ -> %><%= "" %>
-            <% end  # end case %>
-            <% end  # end for %>
-            ```
-            <% end  # end if %>
-        """,
-        system: """
-
-
-
-        # Instruction Prompt
-        For each new incoming message based on the message history previously listed prepare the following xml output format:
-
-        ````format
-        <nlp-intent>
-        [...|
-          Provide a 10 row markdown table including a header row containing:
-          (message.id, message.sent-on, message.sender.slug, the most likely recipient(s) slugs, recipient weight(s), the message.id this is likely responding to, reason for designation)
-          include one entry for each of the following messages: <%= Enum.slice(@prompt_context.message_history,-10..-1) |> Enum.reject(&is_nil/1) |> Enum.map(& &1.identifier) |> Enum.join(", ") %>
+        <draft-summary>
+        [...|Summarize and condense the content of the original new message heavily. Trim down code examples (shorten documents, remove method bodies, etc.)
+        For example:
+        original: "Zoocryptids are creatures that are rumored or believed to exist, but have not been proven by scientific evidence."
+        summary: "Definition of what zoocryptids are."
         ]
-        </nlp-intent>
-
-        <relevance>
-        {for all channel members (simulated and real regardless of recipient weight) (
-          Consider each channel member. `@channel` and `@everyone` are special directives; if found in a message, treat it as if it had included the channel member's slug.
-          For each member, provide a relevancy score between 0.0 (not relevant) and 1.0 (direct message) and explain your reasoning.)
-         }
-          <relevancy for-user="{member.id - The channel members id not their slug}" for-message="{message.id - id of message most likely to be in response or empty if unknown.}" for-slug="{member.slug}" value="{value in [0.0,1.0] where 0.0 indicates message has nothing to do with channel member and 1.0 indicates this is a direct message to channel member.}">
-          [...|Reasoning]
-          </relevancy>
-        {/for}
-        </relevance>
-
+        <features>
+            [...| extract tags/feature strings describing the content and objective of this message for future vector db indexing
+            <feature>{Tag/Feature correlating to message for use in future VDB search/lookup}</feature>
+            ]
+        </features>
+        </draft-summary>
         <summary>
-        [...|
-        1-2 paragraph summary of the contents and purpose of the message, (the contents of the message not the nature (direct reply, continued chat, etc.))
-        for short messages like hello, how can I help you etc. a single word or sentence
-        "greeting", "introduction", etc. is appropriate. Summary should be shorter than the actual message. If message is an ongoing chat, reply etc. that can be mentioned in the <type> section.
-        if message is more than a few lines or includes large code snippets brief should be at least 2 paragraphs of 4-5 5-9 word sentences.
-        ]
-        ```type
-        [...| note if this is a new thread/context, continued chat, response, question, introduction,request, etc. Include details about purpose/ongoing conversation etc. here not in above.]
-        ```
+        [...|Refine the draft-summary further. If the draft-summary is longer than the actual message, simply use the original message.]
+        <features>
+            [...| Refine features from the draft-summary further.
+            <feature>{Tag/Feature}</feature>
+            ]
+        </features>
         </summary>
-        ````
-
-        # Steps
-        1. Identify different types of conversation threads commonly found in messaging systems (e.g., direct messages, group discussions, announcements).
-        2. Provide high-level examples for each type of thread, detailing how the messages would be weighted based on their contents and history.
-        3. Consider these high level reasoning examples, ensuring they align with the structure previously defined.
-
-        <reasoning-examples>
-          {Direct Message|
-            - Type: Direct communication between two members.
-            - Weight: 1.0 (as this is a direct message to a specific member).
-          }
-          {Group Discussion|
-            - Type: Conversation involving multiple members within a specific group.
-            - Weight: Varies (e.g., 0.5 if the message is relevant to half the members, 0.2 if only relevant to a smaller subset,0.7 or higher if ongoing conversation and relevant to interests or background).
-          }
-          {Announcement `@everyone`|
-            - Type: Broadcast message to all channel members.
-            - Weight: 1.0 for all members, as it includes everyone in the channel.
-          }
-          {Reply to a Specific Message|
-            - Type: A reply to a specific message within a conversation thread.
-            - Weight: Based on the relevance to the recipient(s) of the original message, may vary (e.g., 0.7 if it's a continuation of a specific conversation).
-          }
-        </reasoning-examples>
-
-
-        """],
-
-      minder: [system: ""],
-
-    }
-  end
-
-  def prompt(:v0, _) do
-    %Noizu.Intellect.Prompt.ContextWrapper{
-      prompt: [system: """
-      🎯 Prompt Attention Rule
-      When parsing input, please pay particular attention to the section of text
-      that immediately follows the 🎯 (Direct Hit) emoji.
-      This emoji is being used as a marker to highlight areas of heightened
-      importance or relevance. The text following the 🎯 emoji should be considered
-      with particular care and prioritized in the formation of your response.
-      Please interpret and execute on any instructions or requests in the section
-      following this emoji with increased focus and attention to detail.
-
-
-      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
-        <% _ -> %><%= "" %>
-      <% end %>
-
-      ## Channel-Members
-      <%= for member <- (@prompt_context.channel_members || []) do %>
-      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, @prompt_context, @context, @options) do %>
-      <% {:ok, prompt} when is_bitstring(prompt) -> %>
-      <%= String.trim_trailing(prompt) %>
-      <% _ -> %><%= "" %>
-      <% end %>
-      <% end %>
-
-      <%= if @prompt_context.message_history do %>
-      ## Channel Message History
-      ```yaml
-      current_time: #{DateTime.utc_now()}
-      messages:
-      <%= for message <- @prompt_context.message_history do %>
-      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %>
-      <% {:ok, prompt} when is_bitstring(prompt)  -> %>
-      <%= String.trim_trailing(prompt) %><% _ -> %><%= "" %>
-      <% end  # end case %>
-      <% end  # end for %>
-      ```
-      <% end  # end if %>
-
-      # System Prompt
-
-      ## 🎯 Goal
-
-      Determine relevance scores for new message inputs, ranging from 0.0 (no relevance) to 1.0 (direct message). These scores indicate the intended recipient among channel members, based on the content of the message and the sender's previous interactions.
-
-      ## 🎯 Considerations
-
-      1. If the sender previously addressed a specific member and the new message doesn't change the addressee (no "@" symbols or tonal shifts), consider it likely intended for the same recipient(s).
-      2. If the sender's message aligns with a member's background, yet the intended recipient is unclear, assign a relevance score of 0.6.
-      3. If the sender was previously chatting with an agent or group of agents assume they are still conversing with those recipients unless they've
-         @at'd someone else with a change of topic. A message is still relavent to a recipient even if not mentioned by name if they had previously been chatting back and forth.
-
-      ## Reminder
-
-      Unless a message explicitly addresses someone else, assume the sender's dialogues are continuous. Check the `Message History` in reverse chronological order, considering timings, senders, and users' interactions to determine the intended recipient.
-
-      ## Output Structure
-
-      Structure your output in the XML-like format provided:
-
-      ```xml
-      <relevance>
-      <relevancy
-      for-user="{member.id}"
-      for-message="{message.id | the message this is most likely responding to.}"
-      for-slug="{member.slug}"
-      value="{value in [0.0,1.0]}">
-
-      {Explanation of the Relevancy Score}
-
-      </relevancy>
-      </relevance>
-      ```
-
-
-      """
+        </message-details>
+        <% end %>
+        """,
       ],
-     minder: """
-      # Reminder: Conversation Flow
-
-      🎯 Always assume that any new message from a sender is a continuation of their previous message, unless the content clearly indicates a response to a different prior message. Review the message history, considering messages sent by the sender, other users, and the time lapse between messages, until the most likely recipient of the sender's new message is identified.
-
-      Note: The use of `@` followed by an agent's slug (case insensitive) implies the message is targeted at that agent and likely now longer directed to the previous sender messages' recipients. For example, `@stEvE` suggests the agent with the slug `steve` is a high priority recipient.
-
-      # Direction: Message Relevance
-
-      🎯 For subsequent messages, compare their content with the `Message History` in reverse chronological order. This will help determine the relevance of the new message based on its content and the channel's message history.
-      and provide a message summary (taking into account past context) for use with vectorization and future recall.
-
-      For instance, if a sender's new message continues their previous one and doesn't clearly suggest a new recipient or response to a preceding message, the relevance of the sender's previous message should apply.
-
-
-      ```format
-      <nlp-intent>
-      {Provide a markdown table listing: message.id, message.sent-on, message.sender.slug, the most likely recipient(s) slugs, recipient weight(s), the message.id this is likely responding to, and reason for designation for the 10 most recent messages chronologically (not per conversation), sorted by message.sent-on. Only list 10 items no more no less (unless there are fewer than 10 items to include)}
-      </nlp-intent>
-
-      <relevance>
-        {for each channel member|
-          Consider each channel member. `@channel` and `@everyone` are special directives; if found in a message, treat it as if it had included the channel member's slug.
-          For each member, provide a relevancy score between 0.0 (not relevant) and 1.0 (direct message) and explain your reasoning.}
-        <relevancy for-user="{member.id}" for-message="{message.id | id of message most likely to be in response to given this weight.}" for-slug="{member.slug}" value="{value in [0.0,1.0] where 0.0 indicate message has nothing to do with channel member and 1.0 indicates this is a direct message to channel member.}">
-        {Reasoning}
-        </relevancy>
-        {/for}
-      </relevance>
-
-      <summary>
-      [...|
-      1-2 paragraph summary describing the contents and purpose of the message, (the contents of the message not the nature (direct reply, continued chat, etc.))
-      for short messages like hello, how can I help you etc. a single word or sentence
-      "greeting", "introduction", etc. is appropriate. brief should be shorter than the actual message. If message is a ongoing chat, reply etc. that can be mentioned in the <type> section.
-      if message is more than a few lines or includes large code snippets brief should be at least 2 paragraphs of 4-5 5-9 word sentences.
-      ]
-      ```type
-      [...| note if this is a new thread/context, continued chat, response, question, introduction,request, etc. Include details about purpose/ongoing conversation etc. here not in above.]
-      ```
-      </summary>
-      ```
-      """
+      minder: [system: ""],
     }
   end
+
 
 
 end
