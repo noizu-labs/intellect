@@ -72,7 +72,7 @@ defmodule Noizu.Intellect.Account.Channel do
   def deliver(this, message, context, options \\ nil) do
     # Retrieve related message history for this message (this will eventually be based on who is sending and previous weightings for now we simply pull recent history)
 
-    IO.inspect(message, label: "CURRENT_MESSAGE")
+    # IO.inspect(message, label: "CURRENT_MESSAGE")
 
     with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent_graph(this, context, put_in(options || [], [:limit], 10)),
          messages <- Enum.reverse(messages),
@@ -84,29 +84,51 @@ defmodule Noizu.Intellect.Account.Channel do
          {:ok, summarized_message?} <- summarize_message?(this, message, prompt_context, context, options),
          {:ok, summarized_message} <- summarized_message? && summarize_message(this, message, prompt_context, context, options) || {:ok, message},
          {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
-         :ok <- Logger.warn(request_messages |> Enum.at(0) |> Map.get(:content), limit: :infinity),
+         # :ok <- Logger.warn(request_messages |> Enum.at(0) |> Map.get(:content), limit: :infinity),
          {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages ++ [%{role: :user, content: prompt}], request_settings) |> IO.inspect,
          {:ok, extracted_details} <- extract_message_delivery(response) |> IO.inspect
       do
 
         details = Enum.group_by(extracted_details, &(elem(&1, 0)))
-        if responding_to = details[:responding_to] do
+        responding_to = if responding_to = details[:responding_to] do
           Enum.map(responding_to,
             fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
           )
+          Enum.map(responding_to,
+            fn({:responding_to, {id, confidence, _}}) -> confidence > 0 && id end
+          ) |> Enum.reject(&is_nil/1)
         end
-        if audience = details[:audience] do
+        audience = if audience = details[:audience] do
           Enum.map(audience, & Noizu.Intellect.Schema.Account.Message.Audience.record(&1, message, context, options))
           included = Enum.map(audience, fn({:audience, {id, confidence, comment}}) -> id end) |> MapSet.new()
           # Set non mentioned recipients to 0.
           additional = Enum.reject(prompt_context.channel_members, fn(member) -> Enum.member?(included, member.identifier) end)
           Enum.map(additional, & Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {&1.identifier, 0, nil}}, message, context, options))
+
+          Enum.map(audience,
+            fn({:audience, {id, confidence, _}}) -> confidence > 0 && id  end
+          ) |> Enum.reject(&is_nil/1)
+
         end
-        if summary = details[:summary] do
+        summary = if summary = details[:summary] do
           Enum.map(summary,
             fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
           )
+          with [{:summary, {summary, features}}|_] <- summary do
+            %{summary: summary, features: features}
+          else
+            _ -> nil
+          end
         end
+
+        %Noizu.Intellect.Weaviate.Message{
+          content: message.contents.body,
+          brief: summary && summary.summary || message.contents.body,
+          features: summary && summary.features || [],
+          audience: audience || [],
+          responding_to: responding_to || []
+        } |> IO.inspect() |> Noizu.Weaviate.Api.Objects.create() |> IO.inspect(label: "WEAVIATE CREATE")
+
 
     end
 
@@ -225,8 +247,6 @@ defmodule Noizu.Intellect.Account.Channel do
     def messages_in_set_recipient(set, recipient, channel, context, options) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
-        Logger.error("Messages in Set: #{inspect set}")
-
         responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
                              group_by: p.message,
                              select: %{message: p.message,

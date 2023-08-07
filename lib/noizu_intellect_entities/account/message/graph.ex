@@ -46,6 +46,7 @@ defmodule Noizu.Intellect.Account.Message.Graph do
       %{
         id: message.identifier,
         to_nodes: responding_to,
+        priority: message.priority,
         sender: message.sender.identifier,
         contents: contents,
         read: read,

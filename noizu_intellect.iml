@@ -287,5 +287,7 @@
     <orderEntry type="library" name="easyhtml" level="project" />
     <orderEntry type="library" name="yaml_elixir" level="project" />
     <orderEntry type="library" name="yamerl" level="project" />
+    <orderEntry type="library" name="elixir_weaviate" level="project" />
+    <orderEntry type="library" name="noizu_weaviate" level="project" />
   </component>
 </module>

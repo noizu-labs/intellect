@@ -10,6 +10,10 @@ import Config
 
 Code.require_file("elixir-framework/archives/config_helper/helper_lib/config_helper.ex")
 
+
+config :noizu_weaviate,
+       endpoint: "http://localhost:7400/"
+
 config :noizu_labs_services,
        configuration: Noizu.Intellect.Services.ConfigurationProvider
 

@@ -75,7 +75,7 @@ defmodule Noizu.Intellect.MixProject do
       {:junit_formatter, "~> 3.3", only: [:test]},
 
       # Internal - Dev
-
+      {:noizu_weaviate, path: "elixir-framework/apps/elixir-weaviate"},
       {:noizu_github, path: "elixir-framework/apps/noizu_github"},
       {:noizu_labs_open_ai, path: "elixir-framework/apps/noizu_labs_open_ai"},
       {:noizu_labs_entities_ecto, path: "elixir-framework/apps/entities/ecto_entities"},
