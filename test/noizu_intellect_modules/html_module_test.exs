@@ -1,29 +1,41 @@
 defmodule Noizu.Intellect.Module.HtmlModuleTest do
   use ExUnit.Case, async: false
   @moduletag lib: :noizu_intellect_module
-
+  import Noizu.Intellect.HtmlModule
 
   def delivery_details_happy_path() do
     """
-      <message-details>
-        <replying-to>
-            <message id="123401" confidence="42">Apple Bapple</message>
-            <message id="123501" confidence="43">BApple Snapple</message>
-            <message id="123601" confidence="43"/>
-        </replying-to>
-        <audience>
-          <member id="111102" confidence="33">Henry</member>
-          <member id="111202" confidence="44">Ford</member>
-        </audience>
-
-        <summary>
-          Brief Details.
-          <features>
-            <feature>AAA</feature>
-            <feature>BBB</feature>
-          </features>
-        </summary>
-      </message-details>
+    <monitor-response>
+      message_details:
+        replying_to:
+          - message:
+            for: 123401
+            confidence: 42
+            explanation: "Apple Bapple"
+            complete: true
+            completed_by: 532
+          - message:
+            for: 123501
+            confidence: 43
+            explanation: "BApple Snapple"
+          - message:
+            for: 123601
+            confidence: 43
+      audience:
+        - member:
+          for: 111102
+          confidence: 33
+          explanation: "Henry"
+        - member:
+          for: 111202
+          confidence: 44
+          explanation: "Ford"
+      summary:
+        content: "Brief Details."
+        features:
+          - "AAA"
+          - "BBB"
+    </monitor-response>
     """
   end
 
@@ -33,7 +45,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   def valid_response() do
     """
 
-    <ignore for="1,2,3,4,5"/>
+    <mark-read for="1,2,3,4,5"/>
     <reply for="6,7">
       <nlp-intent>
       I will do a thing
@@ -58,7 +70,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   def malformed_response() do
   """
   Ignore this
-  <ignore for="1,2,3,4,5"/>
+  <mark-read for="1,2,3,4,5"/>
   Ignore this as well
   <reply for="6,7">
     <nlp-intent>
@@ -83,17 +95,87 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   """
   end
 
+  describe "yaml parsing suite" do
+
+    test "should convert map to yaml" do
+      map = %{a: 1, b: 2, c: 3}
+      assert to_yaml(map) == """
+             a: 1
+             b: 2
+             c: 3
+             """
+    end
+
+    test "should convert nested map to yaml" do
+      map = %{a: %{b: 1, c: 2}, d: 3}
+      assert to_yaml(map) == """
+             a:
+               b: 1
+               c: 2
+             d: 3
+             """
+    end
+
+    test "should convert list to yaml" do
+      list = [1, 2, 3]
+      assert to_yaml(list) == """
+             - 1
+             - 2
+             - 3
+             """
+    end
+
+    test "should convert nested list to yaml" do
+      list = [1, [2, 3], 4]
+      assert to_yaml(list) == """
+             - 1
+             - - 2
+               - 3
+             - 4
+             """
+    end
+
+    test "should convert complex data structure to yaml" do
+      data = %{a: [1,2,3,4], b: [%{c: 1, d: 2}, %{c: [5, %{beta: 7, zeta: 8, mecka: [1,2,3]}, "apple"], d: 5}, "hey"], f: "apple aple\n apple"}
+
+      assert to_yaml(data) == """
+             a:
+               - 1
+               - 2
+               - 3
+               - 4
+             b:
+               - c: 1
+                 d: 2
+               - c:
+                   - 5
+                   - beta: 7
+                     mecka:
+                       - 1
+                       - 2
+                       - 3
+                     zeta: 8
+                   - apple
+                 d: 5
+               - hey
+             f: |-
+               apple aple
+                apple
+             """
+    end
+  end
+
   describe "Handle Message Delivery Response" do
     @tag :wip
     test "happy path" do
       sut = Noizu.Intellect.HtmlModule.extract_message_delivery_details(delivery_details_happy_path)
       assert sut == [
-               responding_to: {123401, 42, "Apple Bapple"},
-               responding_to: {123501, 43, "BApple Snapple"},
-               responding_to: {123601, 43, ""},
                audience: {111102, 33, "Henry"},
                audience: {111202, 44, "Ford"},
-               summary: {"Brief Details.", [feature: "AAA", feature: "BBB"]}
+               responding_to: {123401, 42, {true, 532}, "Apple Bapple"},
+               responding_to: {123501, 43, {nil, nil}, "BApple Snapple"},
+               responding_to: {123601, 43, {nil, nil}, nil},
+               summary: {"Brief Details.", ["AAA", "BBB"]}
              ]
     end
   end

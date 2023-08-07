@@ -169,7 +169,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
               user_mood: nil,
               event: :message,
               contents: %{body: response},
-              meta: %{title: "Settings, Request Messages, Request Response", body: Poison.encode!(meta_list)},
+              meta: %{title: "Settings, Request Messages, Request Response", body: Ymlr.document!(meta_list)},
               time_stamp: Noizu.Entity.TimeStamp.now()
             }
             {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)

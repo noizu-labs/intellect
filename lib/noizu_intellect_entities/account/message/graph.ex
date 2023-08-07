@@ -3,102 +3,68 @@
 # Copyright (C) 2023 Noizu Labs, Inc. All rights reserved.
 #-------------------------------------------------------------------------------
 defmodule Noizu.Intellect.Account.Message.Graph do
+  @derive Ymlr.Encoder
   defstruct [
-    nodes: nil,
-    edges: nil
+    message_node_list: nil,
+    message_edge_list: nil,
+    messages: nil
   ]
 
-  def to_graph([], context, options), do: {:error, :empty}
-  def to_graph(messages, context, options) do
-    recent_cut_off = (options[:current_time] || DateTime.utc_now()) |> Timex.shift(minutes: -15)
+  def to_graph([], channel_members, context, options), do: {:error, :empty}
+  def to_graph(messages, channel_members, context, options) do
+    recent_cut_off = (options[:current_time] || DateTime.utc_now()) |> Timex.shift(minutes: -5)
     messages = Enum.sort_by(messages, &(&1.time_stamp.created_on), {:desc, DateTime})
-    message_nodes = Enum.map(messages, & &1.identifier)
+    node_list = Enum.map(messages, & &1.identifier)
+    edge_list = Enum.map(messages, fn(message) ->
+      Enum.map(message.responding_to || %{}, fn({x, xm}) ->
+        unless xm.confidence < 30 do
+          {message.identifier, x}
+        end
+      end) |> Enum.reject(&is_nil/1)
+    end) |> List.flatten()
 
-    message_edges = Enum.map(messages, fn(message) ->
-      responding_to = Enum.map(message.responding_to || %{}, fn({x, xm}) ->
-        %{
-          message: x,
-          confidence: xm.confidence,
-          comment: xm.comment
-        }
-      end)
+    slug_lookup = Enum.map(channel_members, fn(member) ->
+      case member do
+        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual agent"}}
+        %{user: %{slug: slug}} -> {member.identifier, %{slug: slug, type: "human operator"}}
+      end
+    end) |> Map.new()
 
-      audience = Enum.map(message.audience || %{}, fn({x, xm}) ->
-        slugs = %{
-          1019 => "grace",
-          2019 => "mindy",
-          1016 => "keith"
-        }
-
-        type = %{
-          1019 => "virtual agent",
-          2019 => "virtual agent",
-          1016 => "human operator"
-        }
-
-        %{
-          member: %{
-            identifier: x,
-            slug: slugs[x],
-            type: type[x]
-          },
-          confidence: xm.confidence,
-          comment: xm.comment
-        }
-      end)
-
-      # include recency checks
+    nodes = Enum.map(messages, fn(message) ->
+      # todo user vdb to determine if recent messages has matching features.
       contents = cond do
         DateTime.compare(recent_cut_off, message.time_stamp.created_on) == :lt ->
           message.contents && message.contents.body
-        message.priority && message.priority > 40 ->
-          message.contents && message.contents.body
+        message.answered_by ->
+          message.brief && message.brief.body || message.contents && message.contents.body
+        message.priority && message.priority > 60 -> message.contents && message.contents.body
         :else ->
           message.brief && message.brief.body || message.contents && message.contents.body
       end
 
-      #
-      read = message.read_on && true || false
-
-      sender_type = case message.sender do
-        %Noizu.Intellect.Account.Agent{} -> "virtual agent"
-        %Noizu.Intellect.Account.Member{} -> "human"
-      end
-
-      slug = case message.sender do
-        %Noizu.Intellect.Account.Agent{} -> message.sender.slug
-        %Noizu.Intellect.Account.Member{} -> message.sender.user.slug
-      end
-
       %{
         id: message.identifier,
-        to_nodes: responding_to,
-        priority: message.priority,
-        sender: %{
-           type: sender_type,
-           identifier: message.sender.identifier,
-           slug: slug
-        },
+        sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual agent"})",
         contents: contents,
-        read: read,
-        reply?: is_nil(message.answered_by) && message.priority > 40 && is_nil(read) && true || false,
-        time: message.time_stamp.created_on,
-        recipients: audience,
+        processed?: !is_nil(message.read_on),
+        review?: is_nil(message.answered_by) && message.priority > 60 && is_nil(message.read_on) && true || false,
+        time: DateTime.to_unix(message.time_stamp.created_on),
       }
     end)
 
     {
       :ok,
       %__MODULE__{
-        nodes: message_nodes,
-        edges: message_edges,
+        message_node_list: node_list,
+        message_edge_list: edge_list,
+        messages: nodes
       }
     }
   end
 
   defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol do
     def prompt(subject, prompt_context, context, options) do
-      Poison.encode(subject, pretty: true)
+      {:ok, Ymlr.document!(subject)}
     end
     def minder(subject, prompt_context, context, options), do: {:ok, nil}
   end

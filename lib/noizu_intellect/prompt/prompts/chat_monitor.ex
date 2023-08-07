@@ -9,7 +9,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
 
     %Noizu.Intellect.Prompt.ContextWrapper{
       assigns: fn(prompt_context, context, options) ->
-                 graph = with {:ok, graph} <- Noizu.Intellect.Account.Message.Graph.to_graph(prompt_context.message_history, context, options) do
+                 graph = with {:ok, graph} <- Noizu.Intellect.Account.Message.Graph.to_graph(prompt_context.message_history, prompt_context.channel_members, context, options) do
                    graph
                  else
                    _ -> false

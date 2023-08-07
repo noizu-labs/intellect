@@ -138,15 +138,7 @@ defmodule Noizu.Intellect.Account.Channel do
             fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
           )
           with [{:summary, {summary, features}}|_] <- summary do
-            features = Enum.map(features,
-              fn
-                ({:feature, feature}) -> feature
-                (feature) when is_bitstring(feature) -> feature
-                (_) -> nil
-              end
-            ) |> Enum.reject(&is_nil/1)
-
-            %{summary: summary, features: features}
+            %{summary: summary, features: features || []}
           else
             _ -> nil
           end
@@ -210,7 +202,7 @@ defmodule Noizu.Intellect.Account.Channel do
     def relevant_or_recent__inner(recipient, channel, context, options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
-        limit = options[:limit] || 20
+        limit = options[:limit] || 10
         relevancy = options[:relevancy] || 50
         recent_cut_off = DateTime.utc_now() |> Timex.shift(minutes: -45)
 
@@ -482,7 +474,14 @@ end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Channel] do
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
-    p = if prompt_context.channel_members do
+
+    a = %{
+      identifier: subject.identifier,
+      name: subject.slug,
+      description: subject.details && subject.details.body || "[None]",
+      current_time: DateTime.utc_now()
+    }
+    b = if prompt_context.channel_members do
       prompt_context = put_in(prompt_context, [Access.key(:format)], :raw)
       members = Enum.map(prompt_context.channel_members, fn(member) ->
         with {:ok, member} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, prompt_context, context, options) do
@@ -491,21 +490,20 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
           _ -> nil
         end
       end) |> Enum.reject(&is_nil/1)
-      %{identifier: subject.identifier,
-        name: subject.slug,
-        description: subject.details && subject.details.body || "[None]",
-        channel_members: members
-      }
+      members
     else
-      %{identifier: subject.identifier,
-        name: subject.slug,
-        description: subject.details && subject.details.body || "[None]"}
+      []
     end
+
+
 
     prompt = """
     # Channel
-    You are currently in the following channel
-    #{Poison.encode!(p, pretty: true)}
+    Your are currently processing messages in the following channel
+    #{Ymlr.document!(a)}
+
+    ## Chanel Members
+    #{Ymlr.document!(b)}
 
     """
     {:ok, prompt}

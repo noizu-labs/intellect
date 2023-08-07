@@ -1,17 +1,17 @@
-- [ ] Simplify prompts to use Yaml like structures rather than harder to parse json.
-- [ ] Simplify output format to use Yaml as it's easier for agents.
-- [ ] Improve Message Graph 
-  - [ ] List Edges
-  - [ ] List Nodes and their maps to other Edges
-  - [ ] Then list node contents. Simplify/reduce data structure.
-- [ ] Rephrase multi message parser to focus on outputting memories. Produce mark read, reply as a secondary feature
+- [x] Simplify prompts to use Yaml like structures rather than harder to parse json.
+- [x] Simplify output format to use Yaml as it's easier for agents.
+- [x] Improve Message Graph 
+  - [x] List Edges
+  - [x] List Nodes and their maps to other Edges
+  - [x] Then list node contents. Simplify/reduce data structure.
+- [x] Rephrase multi message parser to focus on outputting memories. Produce mark read, reply as a secondary feature
       to reduce the likelihood of agents incorrectly responding.
 - [ ] Hook up functions and function responses handling.
   - [ ] Prepare message digest
   - [ ] Hook up github project
   - [ ] Github code
   - [ ] Jira
-  - [ ] JetBraings
+  - [ ] JetBrains
   - [ ] Code Interpreter
 - [p] Hook up message feature extraction and VDB. (in progress)
 - [ ] Hook up synthetics.

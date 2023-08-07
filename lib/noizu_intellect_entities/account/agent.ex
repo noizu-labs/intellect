@@ -141,8 +141,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     🙋 @#{subject.slug}
     ---
     The following information describes @#{subject.slug} and is only applicable to them not other agents.
-    details:
-    #{Poison.encode!(r, pretty: true)}
+    #{Ymlr.document!(%{details: r})}
     ⌞persona⌟
     """
 

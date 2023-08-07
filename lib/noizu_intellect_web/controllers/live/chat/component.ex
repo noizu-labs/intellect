@@ -60,7 +60,7 @@ defmodule Noizu.IntellectWeb.Chat.Component do
       <div class="meta-details hidden">
         <%= for section <- @message.meta do %>
           <pre>
-          <%= Poison.encode!(section) %>
+          <%= Ymlr.document!(section) %>
           </pre>
         <% end %>
       </div>

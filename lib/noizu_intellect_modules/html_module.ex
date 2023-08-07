@@ -1,5 +1,51 @@
 defmodule Noizu.Intellect.HtmlModule do
 
+  def to_yaml(value) do
+    Ymlr.document!(value) |> String.trim_leading("---\n")
+  end
+#
+#  def to_yaml__newline(value, v) do
+#    cond do
+#      is_list(value) && is_map(v) -> false
+#      is_struct(v) -> true
+#      is_map(v) -> true
+#      is_list(v) -> true
+#      :else -> false
+#    end
+#  end
+#
+#  def to_yaml(value, offset \\ 0, new_line \\ false) do
+#    padding = String.duplicate(" ", offset)
+#    cond do
+#      is_struct(value) ->
+#        v = value
+#            |> Map.from_struct()
+#            |> Enum.map(fn {k, v} -> "#{k}:#{to_yaml__newline(value, v) && "\n" || " "}#{to_yaml(v, offset + 2, to_yaml__newline(value, v))}" end)
+#            |> Enum.join("\n#{padding}")
+#        if new_line, do: padding <> v, else: v
+#      is_map(value) ->
+#        v = value
+#        |> Enum.map(fn {k, v} -> "#{k}:#{to_yaml__newline(value, v) && "\n" || " "}#{to_yaml(v, offset + 2, to_yaml__newline(value, v))}" end)
+#        |> Enum.join("\n#{padding}")
+#        if new_line, do: padding <> v, else: v
+#      is_list(value) ->
+#        v = value
+#        |> Enum.map(fn v -> "-#{to_yaml__newline(value, v) && "\n" || " "}#{to_yaml(v, offset + 2, to_yaml__newline(value, v))}" end)
+#        |> Enum.join("\n#{padding}")
+#        if new_line, do: padding <> v, else: v
+#      is_bitstring(value) && String.contains?(value, "\n") ->
+#        #padding = String.duplicate(" ", offset + 2)
+#        value = value
+#                |> String.split("\n")
+#                |> Enum.join("\n#{padding}")
+#        "|-2\n#{padding}" <> value
+#      :else ->
+#        "#{inspect(value)}"
+#    end |> then(& if offset == 0, do: &1 <> "\n", else: &1)
+#
+#  end
+
+
   def extract_message_delivery_details(response) do
     {_, xml_tree} = Floki.parse_document(response)
     Enum.map(xml_tree,
@@ -31,7 +77,7 @@ defmodule Noizu.Intellect.HtmlModule do
                        end)
             message_analysis = (with s <- yaml["message_analysis"],
                                      false <- is_nil(s) do
-                                  [{:message_analysis, Poison.encode!(s)}]
+                                  [{:message_analysis, Ymlr.document!(s)}]
                                 else
                                   _ -> []
                                 end)
@@ -43,113 +89,6 @@ defmodule Noizu.Intellect.HtmlModule do
     |> List.flatten()
   end
 
-  def extract_message_delivery_details(response) do
-    {_, xml_tree} = Floki.parse_document(response)
-    Enum.map(xml_tree,
-      fn
-        ({"message-analysis", _, contents}) -> {:message_analysis, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
-        ({"message-details", _, contents}) ->
-          details = Enum.map(contents,
-                      fn
-                        ({"replying-to", _, contents}) ->
-                          Enum.map(contents,
-                            fn
-                              ({"message", attr, contents}) ->
-                                id = Enum.find_value(attr,
-                                  fn
-                                    ({"for", x}) ->
-                                      case Integer.parse(String.trim(x)) do
-                                        {integer, _} -> integer > 0 && integer || nil
-                                        _ -> nil
-                                      end
-                                    (_) -> nil
-                                  end)
-                                confidence = Enum.find_value(attr,
-                                  fn
-                                    ({"confidence", x}) ->
-                                      case Integer.parse(String.trim(x)) do
-                                        {integer, _} -> integer
-                                        _ -> nil
-                                      end
-                                    (_) -> nil
-                                  end)
-                                complete = Enum.find_value(attr,
-                                  fn
-                                    ({"complete", x}) ->
-                                      case String.trim(x) do
-                                        "true" -> true
-                                        _ -> false
-                                      end
-                                    (_) -> nil
-                                  end)
-
-                                completed_by = Enum.find_value(attr,
-                                  fn
-                                    ({"completed_by", x}) ->
-                                      case Integer.parse(String.trim(x)) do
-                                        {integer, _} -> integer > 0 && integer || nil
-                                        _ -> nil
-                                      end
-                                    (_) -> nil
-                                  end)
-
-
-                                id && confidence && {:responding_to, {id, confidence, {complete, completed_by}, Floki.text(contents) |> String.trim()}}
-                              (_) -> nil
-                            end)
-                        ({"audience", _, contents}) ->
-                          Enum.map(contents,
-                            fn
-                              ({"member", attr, contents}) ->
-                                id = Enum.find_value(attr,
-                                  fn
-                                    ({"for", x}) ->
-                                      case Integer.parse(String.trim(x)) do
-                                        {integer, _} -> integer > 0 && integer || nil
-                                        _ -> nil
-                                      end
-                                    (_) -> nil
-                                  end)
-                                confidence = Enum.find_value(attr,
-                                  fn
-                                    ({"confidence", x}) ->
-                                      case Integer.parse(String.trim(x)) do
-                                        {integer, _} -> integer
-                                        _ -> nil
-                                      end
-                                    (_) -> nil
-                                  end)
-                                id && confidence && {:audience, {id, confidence, Floki.text(contents) |> String.trim()}}
-                              (_) -> nil
-                            end) |> Enum.reject(&is_nil/1)
-                        ({"summary", _, contents}) ->
-                          # Strip features.
-                          #            {clean,_} = Floki.traverse_and_update(contents, [deleted: 0], fn
-                          #              {"features", _attrs, _children}, acc ->
-                          #                {nil, Keyword.put(acc, :deleted, acc[:deleted] + 1)}
-                          #              tag, acc ->
-                          #                {tag, acc}
-                          #            end)
-                          features = Enum.map(contents,
-                                       fn
-                                         ({"features", _, contents}) ->
-                                           Enum.map(contents,
-                                             fn
-                                               ({"feature", _, contents}) ->
-                                                 [{:feature, Floki.text(contents) |> String.trim()}]
-                                               (_) -> nil
-                                             end)
-                                         (_) -> nil
-                                       end) |> List.flatten()  |> Enum.reject(&is_nil/1)
-                          {:summary, {Floki.raw_html(contents, pretty: false, encode: false) |> String.trim(), features}}
-                        (_) -> nil
-                      end) |> Enum.reject(&is_nil/1)
-          details
-        (_) -> nil
-      end)
-    |> List.flatten()
-    |> Enum.reject(&is_nil/1)
-  end
 
   def valid_response?(response) do
     response
@@ -159,8 +98,7 @@ defmodule Noizu.Intellect.HtmlModule do
            ({:reply, _}) -> nil
            ({:memories, _}) -> nil
            ({:message_analysis, _}) -> nil
-           #(other) -> {:invalid_section, other}
-           (_) -> nil
+           (other) -> {:invalid_section, other}
          end
        )
     |> Enum.filter(&(&1))
@@ -187,6 +125,62 @@ defmodule Noizu.Intellect.HtmlModule do
         (_) -> nil
       end)
     has_response && {:ok, repair} || {:error, {:repair_attempt, repair}}
+  end
+
+  def extract_response_sections(response) do
+    {_, html_tree} = Floki.parse_document(response)
+    o = Enum.map(html_tree,
+      fn
+        (x = {"nlp-chat_analysis", _, contents}) ->
+          {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+        (x = {"agent-response", _, contents}) ->
+          text = Floki.text(contents)
+          with {:ok, yaml} <- YamlElixir.read_from_string(text) do
+            memories = (with s <- yaml["memories"],
+                             true <- is_list(s) do
+                          Enum.map(s, fn
+                            (x = %{"memory" => _}) -> {:memory, x}
+                            (_) -> nil
+                          end) |> Enum.reject(&is_nil/1)
+                        else
+                          _ -> []
+                        end)
+            replies = (with s <- yaml["replies"],
+                            true <- is_list(s) do
+                         Enum.map(s, fn(x) ->
+                           with %{"for" => [_|_], "response" => response} <- x do
+                             a = [{:ids, x["for"]}, {:response, response}]
+                             if i = x["nlp-intent"] do
+                               {:reply, a ++ [{:intent, Ymlr.document!(i)}]}
+                             else
+                               {:reply, a}
+                             end
+                           else
+                             _ -> nil
+                           end
+                         end) |> Enum.reject(&is_nil/1)
+                       else
+                         _ -> []
+                       end)
+            mark = (with s <- yaml["mark-processed"],
+                         true <- is_list(s) do
+                      Enum.map(s, fn(x) ->
+                        with %{"for" => [h|t]} <- x do
+                          {:ack, [ids: [h|t]]}
+                        else
+                          _ -> nil
+                        end
+                      end) |> Enum.reject(&is_nil/1)
+                    else
+                      _ -> []
+                    end)
+            memories ++ replies ++ mark
+          end
+        (_) -> nil
+      end)
+    |> Enum.reject(&is_nil/1)
+    |> List.flatten()
+    {:ok, o}
   end
 
   def extract_response_sections(response) do
