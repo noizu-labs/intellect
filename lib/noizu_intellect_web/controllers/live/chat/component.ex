@@ -47,7 +47,7 @@ defmodule Noizu.IntellectWeb.Chat.Component do
                         </span>
                   <% end %>
               <span class="font-medium text-gray-900"><%= @message.user_name %>
-
+              <span class="message-id">#<%= @message.identifier %></span>
 
 
               </span> commented</div>

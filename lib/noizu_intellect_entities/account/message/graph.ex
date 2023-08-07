@@ -23,8 +23,24 @@ defmodule Noizu.Intellect.Account.Message.Graph do
       end)
 
       audience = Enum.map(message.audience || %{}, fn({x, xm}) ->
+        slugs = %{
+          1019 => "grace",
+          2019 => "mindy",
+          1016 => "keith"
+        }
+
+        type = %{
+          1019 => "virtual agent",
+          2019 => "virtual agent",
+          1016 => "human operator"
+        }
+
         %{
-          member: x,
+          member: %{
+            identifier: x,
+            slug: slugs[x],
+            type: type[x]
+          },
           confidence: xm.confidence,
           comment: xm.comment
         }
@@ -43,15 +59,29 @@ defmodule Noizu.Intellect.Account.Message.Graph do
       #
       read = message.read_on && true || false
 
+      sender_type = case message.sender do
+        %Noizu.Intellect.Account.Agent{} -> "virtual agent"
+        %Noizu.Intellect.Account.Member{} -> "human"
+      end
+
+      slug = case message.sender do
+        %Noizu.Intellect.Account.Agent{} -> message.sender.slug
+        %Noizu.Intellect.Account.Member{} -> message.sender.user.slug
+      end
+
       %{
         id: message.identifier,
         to_nodes: responding_to,
         priority: message.priority,
-        sender: message.sender.identifier,
+        sender: %{
+           type: sender_type,
+           identifier: message.sender.identifier,
+           slug: slug
+        },
         contents: contents,
         read: read,
         time: message.time_stamp.created_on,
-        audience: audience,
+        recipients: audience,
       }
     end)
 

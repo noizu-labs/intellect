@@ -1,4 +1,6 @@
 <div id={@id} class="card">
     <h1 class="heading prose prose-xl">Channels</h1>
-    [Channels]
+    <%= for channel <- @channels do %>
+    <div><a href="#" phx-target="#project-chat" phx-click="channel:switch" phx-value-channel={channel.slug} ><%= channel.slug %> - <%= channel.details && channel.details.body %></a></div>
+    <% end %>
 </div>

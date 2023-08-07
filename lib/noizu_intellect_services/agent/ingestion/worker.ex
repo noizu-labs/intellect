@@ -184,6 +184,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
             with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
               # need a from message method.
               push = %Noizu.IntellectWeb.Message{
+                identifier: message.identifier,
                 type: :message,
                 timestamp: message.time_stamp.created_on,
                 user_name: state.worker.agent.slug,
@@ -222,7 +223,10 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
       do
 
       try do
-        # IO.puts("[MESSAGE 1] " <> get_in(request_messages, [Access.at(0), :content]))
+        IO.puts("[MESSAGE 1: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(0), :content]))
+        IO.puts("[MESSAGE 2: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(1), :content]))
+        IO.puts("[MESSAGE 3: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(2), :content]))
+        IO.puts("[MESSAGE 4: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(3), :content]))
         #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
         #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
 
@@ -246,10 +250,40 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
             clear_response_acks(response, messages, state, context, options)
             # process replies.
             process_response_replies(response, messages, state, context, options)
+
+
+            with [{:nlp_chat_analysis, details}|_] <- response[:nlp_chat_analysis],
+                 {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
+
+              inbox = Enum.map(messages, fn(message) -> message.identifier end)
+              inbox = """
+
+              # Inbox
+              - #{inspect inbox}
+              """
+
+              # need a from message method.
+              push = %Noizu.IntellectWeb.Message{
+                identifier: :system,
+                type: :system_message,
+                timestamp: DateTime.utc_now(),
+                user_name: "#{state.worker.agent.slug}-system",
+                profile_image: nil,
+                mood: :thumbsy,
+                body: (details[:contents] || "Missing Contents") <> inbox
+              }
+              Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+            end
+
+
           end
         end
-      rescue _ -> :nop
-      catch _ -> :nop
+      rescue error ->
+        Logger.error(Exception.format(:error, error, __STACKTRACE__))
+        :nop
+      catch error ->
+        Logger.error(Exception.format(:error, error, __STACKTRACE__))
+        :nop
       end
       {:ok, state}
     else

@@ -84,12 +84,31 @@ defmodule Noizu.Intellect.Account.Channel do
          {:ok, summarized_message?} <- summarize_message?(this, message, prompt_context, context, options),
          {:ok, summarized_message} <- summarized_message? && summarize_message(this, message, prompt_context, context, options) || {:ok, message},
          {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
-         # :ok <- Logger.warn(request_messages |> Enum.at(0) |> Map.get(:content), limit: :infinity),
-         {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages ++ [%{role: :user, content: prompt}], request_settings) |> IO.inspect,
+         {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages ++ [%{role: :user, content: prompt}], request_settings),
          {:ok, extracted_details} <- extract_message_delivery(response) |> IO.inspect
       do
 
+        with %{choices: [%{message: %{content: reply}}|_]} <- response do
+          Logger.warn("[Delivery Response #{message.identifier}] \n #{reply}")
+        end
+
         details = Enum.group_by(extracted_details, &(elem(&1, 0)))
+
+        with [{:message_analysis, contents}|_] <- details[:message_analysis],
+             {:ok, sref} <- Noizu.EntityReference.Protocol.sref(this) do
+          # need a from message method.
+          push = %Noizu.IntellectWeb.Message{
+            identifier: :system,
+            type: :system_message,
+            timestamp: DateTime.utc_now(),
+            user_name: "monitor-system",
+            profile_image: nil,
+            mood: :thumbsy,
+            body: contents
+          }
+          Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+        end
+
         responding_to = if responding_to = details[:responding_to] do
           Enum.map(responding_to,
             fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end

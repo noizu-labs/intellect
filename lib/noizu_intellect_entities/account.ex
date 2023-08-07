@@ -21,6 +21,28 @@ defmodule Noizu.Intellect.Account do
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
 
+  def channels(this, context) do
+    with {:ok, identifier} <- id(this) do
+      q = from account in Noizu.Intellect.Schema.Account,
+               join: channel in Noizu.Intellect.Schema.Account.Channel,
+               on: account.identifier == channel.account,
+               where: is_nil(account.deleted_on),
+               where: is_nil(channel.deleted_on),
+               select: channel
+      case Noizu.Intellect.Repo.all(q) do
+        channels when is_list(channels) ->
+          channels = channels
+                     |> Enum.map(fn(channel) -> Noizu.Intellect.Account.Channel.entity(channel, context) end)
+                     |> Enum.map(
+                          fn ({:ok, v}) -> v
+                            (_) -> nil
+                          end ) |> Enum.reject(&is_nil/1)
+          {:ok, channels}
+        _ -> {:error, :not_found}
+      end
+    end
+  end
+
   def channel_by_slug(this, slug, context) do
     with {:ok, identifier} <- id(this) do
       q = from account in Noizu.Intellect.Schema.Account,

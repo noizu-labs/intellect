@@ -18,7 +18,11 @@ defmodule Noizu.IntellectWeb.Project do
           channel={@active_channel_ref}
           context={@context}
         />
-        <.live_component module={Noizu.IntellectWeb.Account.Channels}, class="" id="project-channels" />
+        <.live_component module={Noizu.IntellectWeb.Account.Channels},
+          class=""
+          project={@active_project_ref}
+          context={@context}
+          id="project-channels" />
         <%= live_render(@socket, Noizu.IntellectWeb.Issues, id: "project-issues", session: %{"some_key" => "some_value"}) %>
     </.sidebar>
 
@@ -57,7 +61,13 @@ defmodule Noizu.IntellectWeb.Project do
     {:noreply, socket}
   end
 
-  def handle_event(_, _, socket) do
+
+  def handle_event(event, params, socket) do
+    IO.puts """
+    uncaught #{__MODULE__}.handle_event
+      event: #{inspect event}
+      params: #{inspect params}
+    """
     {:noreply, socket}
   end
 

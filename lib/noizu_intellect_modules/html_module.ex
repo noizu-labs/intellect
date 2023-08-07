@@ -5,6 +5,7 @@ def extract_message_delivery_details(response) do
 {_, xml_tree} = Floki.parse_document(response)
 Enum.map(xml_tree,
   fn
+  ({"message-analysis", _, contents}) -> {:message_analysis, Floki.text(contents) |> String.trim()}
     ({"message-details", _, contents}) ->
       details = Enum.map(contents,
         fn
@@ -130,7 +131,9 @@ end
     sections = Enum.map(html_tree, fn
       (x = {"memories", _, contents}) ->
           {:memories, Floki.text(contents)}
-      (x = {"ignore", attrs, _}) ->
+      (x = {"nlp-intent", _, contents}) ->
+        {:intent, Floki.text(contents)}
+      (x = {"mark-read", attrs, _}) ->
         ids = Enum.find_value(attrs, fn
           ({"for", ids}) ->
             ids
@@ -160,7 +163,7 @@ end
         else
           {:error, {:malformed_section, x}}
         end
-      (x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+      (x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.text(contents) |> String.trim()]}
       (other = {_,_,_}) -> {:other, other}
       (other) when is_bitstring(other) ->
         case String.trim(other) do

@@ -18,6 +18,7 @@ Definitions:
 at'd: Specifying a specific agent, service, tool by name using @<agent> syntax: only the specified <agent> was at'd not other agents.
 
 Syntax Guidelines:
+ - Use `🎯` to highlight high importance instructions that should be paid extra attention to.
  - Use `🙋` in definitions to identify aliases an agent/intuition-pump (not function) can be referenced by.
  - Use `✔`, `❌` for positive/negative examples.
  - Use `{directive}`, '<directive>` for replaceable content.
@@ -32,7 +33,7 @@ Syntax Guidelines:
    ===
    A handy fiz bopper that will randomly return the string fiz, bop, boop, bop, biz, bizop, or fizbop.
    ⌞service⌟
- - Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory. Agents/Virtual Personas should include these blocks
+ - Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory. Agents/virtual agentas should include these blocks
    in their responses if encountering interesting or new information relevant to the person they are talking to or their own interests and dislikes.
 
 Special Directives:

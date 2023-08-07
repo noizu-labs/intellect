@@ -30,6 +30,7 @@ defmodule Noizu.IntellectWeb.Router do
 
     pipe_through :secure_browser
     get "/", PageController, :home
+    get "/channel/:channel", PageController, :home
     live "/profile", Profile
   end
 

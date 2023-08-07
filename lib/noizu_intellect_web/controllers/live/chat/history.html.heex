@@ -4,7 +4,7 @@
     role="list"
     class="space-y-4 mt-auto mb-0 p-0 min-w-full max-w-full">
     <%= for msg <- @messages do %>
-        <%= cond do %>
+          <%= cond do %>
             <% msg.type == :event -> %>
                 <li class="relative flex gap-x-4  w-full ">
                     <Noizu.IntellectWeb.Chat.Component.event message={msg} />

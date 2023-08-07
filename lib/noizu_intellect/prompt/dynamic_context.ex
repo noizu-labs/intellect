@@ -255,6 +255,8 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
       messages = case master_prompt do
                    v when is_bitstring(v) -> [%Message{type: :system, body: v}]
                    {:system, v} when is_bitstring(v) -> [%Message{type: :system, body: v}]
+                   {:user, v} when is_bitstring(v) -> [%Message{type: :user, body: v}]
+                   {:assistant, v} when is_bitstring(v) -> [%Message{type: :assistant, body: v}]
                    v when is_list(v) ->
                      Enum.map(v,
                        fn(x) ->
@@ -275,6 +277,8 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
       minders = case master_minder_prompt do
                   v when is_bitstring(v) -> [%Message{type: :system, body: v}]
                   {:system, v} when is_bitstring(v) -> [%Message{type: :system, body: v}]
+                  {:user, v} when is_bitstring(v) -> [%Message{type: :user, body: v}]
+                  {:assistant, v} when is_bitstring(v) -> [%Message{type: :assistant, body: v}]
                   v when is_list(v) ->
                     Enum.map(v,
                       fn(x) ->
@@ -351,7 +355,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
       do
         master_prompt = """
         # Master Prompt
-        Your are GPT-n (gpt for workgroups) your role is to emulate virtual personas, services and tools defined below using nlp (noizu prompt lingua) service, tool and persona definitions.
+        Your are GPT-n (gpt for workgroups) your role is to emulate virtual agentas, services and tools defined below using nlp (noizu prompt lingua) service, tool and persona definitions.
 
         """
 

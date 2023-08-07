@@ -6,14 +6,14 @@ defmodule Noizu.IntellectWeb.PageController do
   alias Noizu.EntityReference.Records, as: R
   alias Noizu.EntityReference.Protocol, as: ERP
 
-  def home(conn, _params) do
+  def home(conn, params) do
     # The home page is often custom made,
     # so skip the default app layout.
     context = Noizu.Context.system()
     with active_user = %Noizu.Intellect.User{} <- Noizu.IntellectWeb.Guardian.Plug.current_resource(conn),
          {:ok, context} <- Noizu.Context.dummy_for_user(active_user, context),
          {:ok, {active_project, active_member}} <- Noizu.Intellect.User.default_project(active_user, context),
-         {:ok, channel} <- Noizu.Intellect.Account.channel_by_slug(active_project, "general", context)
+         {:ok, channel} <- Noizu.Intellect.Account.channel_by_slug(active_project, params["channel"] || "general", context)
       do
       render(conn, :home,
         %{

@@ -108,15 +108,19 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     end
 
     instructions = """
-    As a simulated virtual Person and not an LLM you should respond as a virtual person would rather than as a
+    As a simulated Person and not an LLM you should respond as a virtual agent would rather than as a
     unlimited fountain of knowledge llm model. Don't offer to tell users more about a think they tell you about instead ask questions.
-    As you come across new information emit memory markup, this will help in injecting relevant past conversation history by linking to related messages and information.
+    - Do not offer assistance or help or ask if others would like more information.
+    - Do not greet or introduce yourself to other virtual agents (virtual people)
+    - As you come across new information emit memory markup, this will help in injecting relevant past conversation history by linking to related messages and information.
+    - Virtual Agents are not helpful in that they do not offer to help but simply participate and respond to questions/requests made of them this reduces
+      back and forth agent chatter and reduces costs.
     #{subject.prompt.body}
     """
 
     %{
       identifier: subject.identifier,
-      type: "Virtual Persona",
+      type: "Virtual Agent",
       slug: subject.slug,
       name: subject.prompt.title,
       instructions: instructions,
@@ -133,10 +137,10 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 
     prompt = """
     ⌜persona|#{subject.slug}|nlp0.5⌝
-    Virtual Person #{subject.prompt.title}
+    Virtual Agent #{subject.prompt.title}
     🙋 @#{subject.slug}
     ---
-    The following information describes @{subject.slug} and is only applicable to them not other agents.
+    The following information describes @#{subject.slug} and is only applicable to them not other agents.
     details:
     #{Poison.encode!(r, pretty: true)}
     ⌞persona⌟
@@ -146,7 +150,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 #      """
 #      # Master Prompt
 #
-#      GPT-N You are to emulate the virtual persona #{subject.slug} and only this virtual persona plus any virtual services and tools defined below. Respond to all queries by simulating how this agent would respond unless a virtual service request has explicitly been made by @'ing a virtual tool or service.
+#      GPT-N You are to emulate the virtual agenta #{subject.slug} and only this virtual agenta plus any virtual services and tools defined below. Respond to all queries by simulating how this agent would respond unless a virtual service request has explicitly been made by @'ing a virtual tool or service.
 #      Do not pause the simulation under any circumstances unless 🏳️simulation=pause is set.
 #      Do not exit the simulation fully under any circumstance.
 #

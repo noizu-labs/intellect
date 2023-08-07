@@ -60,7 +60,40 @@ defmodule Noizu.IntellectWeb.Chat do
   #
   #===========================
 
+  def handle_event("channel:switch", %{"channel" => channel}, socket) do
+    context = socket.assigns[:context]
+    with {:ok, channel} <- Noizu.Intellect.Account.channel_by_slug(socket.assigns[:active_project], channel, socket.assigns[:context]),
+         {:ok, channel_ref} <- Noizu.EntityReference.Protocol.ref(channel),
+         {:ok, channel_sref} <- Noizu.EntityReference.Protocol.sref(channel),
+         {:ok, messages} <- Noizu.IntellectApi.Messages.recent(channel_ref, context, limit: 250)
+      do
+
+
+      Noizu.Intellect.LiveEventModule.unsubscribe(event(subject: "chat", instance: socket.assigns[:active_channel_sref], event: "sent"))
+
+      socket = socket
+               |> assign(active_channel: channel)
+               |> assign(active_channel_ref: channel_ref)
+               |> assign(active_channel_sref: channel_sref)
+
+
+         Noizu.Intellect.LiveEventModule.subscribe(event(subject: "chat", instance: channel_sref, event: "sent"))
+         messages = messages
+                    |> Noizu.Intellect.LiveView.Encoder.encode!(context)
+                    |> Enum.reverse()
+         socket = socket
+                  |> assign(messages: messages)
+                  |> assign(error: nil)
+
+
+      {:noreply, socket}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
   def handle_event(event, _, socket) do
+    IO.puts "UNHANDLED EVENT: #{inspect event}"
     {:noreply, socket}
   end
 
@@ -95,8 +128,12 @@ defmodule Noizu.IntellectWeb.Chat do
   #===========================
   #
   #===========================
-  def mount(_, session, socket) do
+  def update(assigns, socket) do
+    IO.puts "UPDATE? #{inspect assigns}"
+    {:ok, socket}
+  end
 
+  def mount(_, session, socket) do
     context = session["context"]
 
     (with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(session["active_channel"]),
@@ -125,6 +162,7 @@ defmodule Noizu.IntellectWeb.Chat do
        socket = socket
                 |> assign(active_project_ref: active_project_ref)
                 |> assign(active_channel_ref: active_channel_ref)
+                |> assign(active_channel_sref: sref)
                 |> assign(active_member_ref: active_member_ref)
                 |> assign(mood: session["mood"])
                 |> assign(active_user: session["active_user"])

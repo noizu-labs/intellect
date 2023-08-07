@@ -20,6 +20,7 @@
 <%= live_render(
 @conn,
 Noizu.IntellectWeb.Project,
+id: "intellect-project",
 container: {:div, [class: "w-full h-full p-0 m-0"]},
 session: %{
 "active_channel" => assigns[:active_channel],

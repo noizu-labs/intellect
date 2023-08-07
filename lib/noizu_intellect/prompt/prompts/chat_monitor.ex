@@ -1,6 +1,6 @@
 defmodule Noizu.Intellect.Prompts.ChatMonitor do
   @behaviour Noizu.Intellect.Prompt.ContextWrapper
-
+  require Logger
   @impl true
 
   def prompt(version, options \\ nil)
@@ -24,31 +24,28 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         """
         <%= if @message_graph do %>
         # Instructions
-
-        ## Review
-        First given the following channel, channel members and graph representation a chat conversation
-        please analyze the graph and identify the relationships between messages, including reply-to and target audience connections.
+        As a chat thread and content analysis engine, given the following channel, channel members and graph encoded chat conversation
+        Analyze the conversation graph and identify the relationships between messages, including reply-to and target audience connections.
+        Then as new messages are provided based on the ongoing message threads and the content of new messages determine the likely audience and
+        messages if any the new message was in response to or a continuation of and why.
 
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
         <% _ -> %><%= "" %>
         <% end %>
 
-        ### Conversation Graph
+        # Conversation Graph
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@message_graph, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
         <% _ -> %><%= "" %>
         <% end %>
 
-        ## Predict
-        Then, based on the graph, analyze the following new message:
-        Determine the most likely audience based on their backgrounds, message graph, and message content/direct mentions.
         <% else %>
 
         # Instructions
 
         ## Review
-        Review the following channel description, members and message and to determine the most likely audience based on their backends, message contents and any direct mentions.
+        Review the following channel description, members and message to determine the most likely audience based on their background, message contents and direct channel member mentions.
 
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
@@ -56,18 +53,33 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         <% end %>
         <% end %>
 
-        Messages that @[member.slug| case insensitive] should list that user as a high confidence (90) audience member.
-        Messages that @everyone (case insensitive) or @everyone (case insensitive) should be list all audience members med-high confidence (70)
-        Messages that mention (with out a slug) someone by name in passing with out directly querying them should have a med-low confidence level (40)
-        Messages addressed to someone by name should have a high-med-high confidence (80)
+        ### Note
+        - Messages that include @[member.slug| case insensitive] should list that user as a high confidence (90) recipients.
+        - Messages including @everyone (case insensitive) or @channel (case insensitive) should be list all members as med-high confidence (70) recipients.
+        - Messages that mention (with out a slug) someone by name in passing with out directly querying them should have a med-low confidence level (50)
+        - Messages addressed to someone by name should have a high-med-high confidence (80) if sent by a human operator or (50) if sent by a virtual agent.
+
+        # New Message
+        Determine which messages the new message is most likely responding to, and identify the most appropriate audience members for the message.
 
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
         <% _ -> %><%= "" %>
         <% end %>
 
-        Determine which messages the new message is most likely responding to, and identify the most appropriate audience members for the message.
-        Provide your final output in the following XML structure:
+        # Output Format
+        Provide your final response in the following XML structure:
+
+        <message-analysis>
+        [...|
+        under the heading Chat History list each previous message by id, the messages it is in response to, its recipients and a note on if and if so how it relates to the new messages.
+        Include an entry for <%= "#\{inspect @prompt_context.message_history |> Enum.map(& &1.identifier) \}" %>
+        Use markdown not xml/html as in the below example
+        # Chat History
+        - msg {id}, sender {sender slug}, responding_to: [{messages in response to}], recipients: [{member slugs of recipients}], relates?: {"no" if message contents has nothing in common with new message or a comment on how this message relates to the new message. Two messages about the same subject even if different are related.}
+        [...]
+        ]
+        </message-analysis>
 
         <message-details>
         <replying-to>
@@ -78,7 +90,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
           <member id="numeric id of recipient" confidence="confidence interval message is targeted towards specific recipient">[...|note to recipient on why message may be relevant to them]</member>
           [...|additional entries]
         </audience>
-        <summary>Summarization of message, adding ellipses/omissions to long code blocks, summarizing contents for vdb search<features><feature>Tag/Feature relating to message for use in VDB future search/lookup</feature>[...|additional entries]</features></summary>
+        <summary>Brief Concise summary of message, Place ellipses/omissions in long code blocks, Summarization should be at most 1/3rd the length of message being summarized<features><feature>Tag/Feature relating to message for use in VDB future search/lookup</feature>[...|additional entries]</features></summary>
         </message-details>
         """,
       ],
@@ -150,9 +162,9 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
 
         <summary>
         [...|
-        1-2 paragraph summary describing the contents and purpose of the message, (the contents of the message not the nature (direct reply, continued chat, etc.))
+        1-2 paragraph summary of the contents and purpose of the message, (the contents of the message not the nature (direct reply, continued chat, etc.))
         for short messages like hello, how can I help you etc. a single word or sentence
-        "greeting", "introduction", etc. is appropriate. Brief should be shorter than the actual message. If message is an ongoing chat, reply etc. that can be mentioned in the <type> section.
+        "greeting", "introduction", etc. is appropriate. Summary should be shorter than the actual message. If message is an ongoing chat, reply etc. that can be mentioned in the <type> section.
         if message is more than a few lines or includes large code snippets brief should be at least 2 paragraphs of 4-5 5-9 word sentences.
         ]
         ```type

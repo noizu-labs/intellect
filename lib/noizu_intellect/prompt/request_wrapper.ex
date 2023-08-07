@@ -2,7 +2,7 @@ defmodule Noizu.Intellect.Prompt.RequestWrapper do
   @vsn 1.0
   defstruct [
     model: "gpt-3.5-turbo-16k",
-    model_settings: [temperature: 0.4],
+    model_settings: [temperature: 0.3, max_tokens: 4096],
     messages: [],
     functions: [],
     vsn: @vsn
