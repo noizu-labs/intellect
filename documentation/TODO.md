@@ -18,8 +18,16 @@
 - [ ] Tweak prompts to let agent scan messages, record memories and ack with out reply.
 
 
-
-
+https://towardsdatascience.com/qlora-fine-tune-a-large-language-model-on-your-gpu-27bed5a03e2b
+https://github.com/huggingface/peft/tree/main
+https://huggingface.co/blog/how-to-train
+https://github.com/BlinkDL/RWKV-LM#rwkv-parallelizable-rnn-with-transformer-level-llm-performance-pronounced-as-rwakuv-from-4-major-params-r-w-k-v
+https://www.mosaicml.com/blog/mpt-7b
+https://arxiv.org/abs/2306.08568
+https://github.com/nlpxucan/WizardLM
+https://huggingface.co/blog/starcoder
+https://www.databricks.com/blog/2023/04/12/dolly-first-open-commercially-viable-instruction-tuned-llm
+https://blog.gopenai.com/how-to-speed-up-llms-and-use-100k-context-window-all-tricks-in-one-place-ffd40577b4c
 
 
 

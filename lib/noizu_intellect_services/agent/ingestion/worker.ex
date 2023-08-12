@@ -103,6 +103,13 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
   def message_history(state,context,options) do
     # We'll actually pull agent digest messages, etc. here.
+
+    # 1. get unprocessed
+    # 2. for each get responding_to
+    # 3. for all get features
+    # 4. for unprocessed get near text
+    # 5. query messages with tags in channel
+
     Noizu.Intellect.Account.Channel.Repo.relevant_or_recent(state.worker.agent, state.worker.channel, context, options)
 #    with {:ok, x} <- o do
 #      # Enum.map(x, fn(msg) -> msg.identifier == 7027 && IO.inspect(msg) end)

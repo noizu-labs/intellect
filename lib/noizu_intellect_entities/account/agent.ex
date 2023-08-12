@@ -97,7 +97,7 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
   def raw(subject, prompt_context, context, options) do
     response_preferences = case subject.response_preferences do
-      nil -> "They prefer concise expert level responses to their requests."
+      nil -> "They prefer verbose expert level responses to their requests."
       %{body: body} -> body
     end
 

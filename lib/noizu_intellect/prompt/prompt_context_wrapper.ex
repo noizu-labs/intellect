@@ -18,6 +18,12 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
 
   @callback prompt(version :: any, options :: any) :: {:ok, __MODULE__.t}
 
+
+  def answered_prompt(current_message, options \\ nil) do
+    options = put_in(options || [], [:current_message], current_message)
+    Noizu.Intellect.Prompts.MessageAnswerStatus.prompt(:v2, options)
+  end
+
   def summarize_message_prompt() do
     %__MODULE__{
     prompt: [system: """

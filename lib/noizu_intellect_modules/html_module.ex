@@ -46,6 +46,35 @@ defmodule Noizu.Intellect.HtmlModule do
 #  end
 
 
+  def extract_message_completion_details(response) do
+    {_, xml_tree} = Floki.parse_document(response)
+    Enum.map(xml_tree,
+      fn
+        ({"monitor-response", _, contents}) ->
+          text = Floki.text(contents)
+          with {:ok, yaml} <- YamlElixir.read_from_string(text) do
+            message_analysis = (with s <- yaml["message_analysis"]["chat-history"],
+                                     true <- is_list(s) do
+                                  Enum.map(s, fn(message) ->
+                                    id = message["id"]
+                                    Enum.map((message["answered"]),
+                                      fn(answer) ->
+                                        by = answer["by"]
+                                        by && {:answered_by, {id, by}}
+                                      end) |> Enum.reject(&is_nil/1)
+                                  end)
+                                else
+                                  _ -> []
+                                end) |> List.flatten()
+            message_analysis
+          end
+        (_) -> nil
+      end)
+    |> Enum.reject(&is_nil/1)
+    |> List.flatten()
+  end
+
+
   def extract_message_delivery_details(response) do
     {_, xml_tree} = Floki.parse_document(response)
     Enum.map(xml_tree,
@@ -53,7 +82,9 @@ defmodule Noizu.Intellect.HtmlModule do
         ({"monitor-response", _, contents}) ->
           text = Floki.text(contents)
           with {:ok, yaml} <- YamlElixir.read_from_string(text) do
-            audience = (with s <- yaml["audience"],
+            IO.inspect(yaml, label: "YAML", pretty: true)
+            yaml2 = yaml["message_analysis"]["message_details"] || yaml["message_details"]
+            audience = (with s <- yaml["audience"] || yaml2["audience"],
                              true <- is_list(s) do
                           Enum.map(s, fn(x) ->
                             {:audience, {x["for"], x["confidence"], x["explanation"]}}
@@ -61,7 +92,7 @@ defmodule Noizu.Intellect.HtmlModule do
                         else
                           _ -> []
                         end)
-            responding_to = (with s <- yaml["message_details"]["replying_to"],
+            responding_to = (with s <- yaml["relates-to"] ||yaml2["relates-to"],
                                   true <- is_list(s) do
                                Enum.map(s, fn(x) ->
                                  {:responding_to, {x["for"], x["confidence"], {x["complete"], x["completed_by"]}, x["explanation"]}}
@@ -69,13 +100,13 @@ defmodule Noizu.Intellect.HtmlModule do
                              else
                                _ -> []
                              end)
-            summary = (with s <- yaml["summary"],
+            summary = (with s <- yaml["summary"] || yaml2["summary"],
                             false <- is_nil(s) do
-                         [{:summary, {s["content"], s["features"]}}]
+                         [{:summary, {s["content"], s["action"], s["features"]}}]
                        else
                          _ -> []
                        end)
-            message_analysis = (with s <- yaml["message_analysis"],
+            message_analysis = (with s <- yaml["message_analysis"]["chat-history"],
                                      false <- is_nil(s) do
                                   [{:message_analysis, Ymlr.document!(s)}]
                                 else

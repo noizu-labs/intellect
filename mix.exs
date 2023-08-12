@@ -24,7 +24,14 @@ defmodule Noizu.Intellect.MixProject do
   def application do
     [
       mod: {Noizu.Intellect.Application, []},
-      extra_applications: [:logger, :runtime_tools, :noizu_labs_core, :noizu_labs_entities, :noizu_labs_open_ai]
+      extra_applications: [
+        :logger,
+        :runtime_tools,
+        :noizu_labs_core,
+        :noizu_labs_entities,
+        :noizu_labs_open_ai,
+        :noizu_weaviate
+      ]
     ]
   end
 

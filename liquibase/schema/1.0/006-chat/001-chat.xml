@@ -195,6 +195,7 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" />
             </column>
+            <column name="weaviate_object" type="UUID"/>
             <column name="sender" type="BIGINT"/>
             <column name="channel" type="BIGINT"/>
             <column name="depth" type="SMALLINT"/>
@@ -226,6 +227,51 @@
                 SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Message.Repo'));
             </sql>
         </rollback>
+    </changeSet>
+
+
+
+    <changeSet author="kebrings" id="tag table">
+        <createTable tableName="tag">
+            <column name="identifier" type="BIGSERIAL">
+                <constraints nullable="false" primaryKey="true" />
+            </column>
+            <column name="tag" type="CITEXT"/>
+        </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="index:tag.unique">
+        <createIndex indexName="IDX_tag" tableName="tag" unique="true">
+            <column name="tag"/>
+        </createIndex>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="message_relates_to table">
+        <createTable tableName="message_relates_to">
+            <column name="message" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_message_relates_to" />
+            </column>
+            <column name="relates_to" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_message_relates_to" />
+            </column>
+            <column name="confidence" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+
+    <changeSet author="kebrings" id="message_tag table">
+        <createTable tableName="message_tag">
+            <column name="message" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_message_tag" />
+            </column>
+            <column name="tag" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_message_tag" />
+            </column>
+        </createTable>
     </changeSet>
 
     <changeSet author="kebrings" id="message_audience table">

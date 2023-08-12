@@ -15,6 +15,7 @@ defmodule Noizu.Intellect.Account.Message do
   @derive Noizu.Entity.Store.Ecto.EntityProtocol
   def_entity do
     identifier :integer
+    field :weaviate_object
     field :sender, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
     field :answered_by, nil, Noizu.Entity.Reference
@@ -116,7 +117,42 @@ defmodule Noizu.Intellect.Account.Message do
     super(entity, settings, context, options)
   end
 
-  def add_summary({:summary, {summary, features}}, message, context, options) do
+  def tag_lookup(tag) do
+    f = String.downcase(tag)
+    case Noizu.Intellect.Redis.get("tag:#{f}") do
+      {:ok, nil} -> nil
+      {:ok, id} -> {:ok, String.to_integer(id)}
+      _ -> nil
+    end
+  end
+
+  def cache_tag_lookup(id, tag) do
+    f = String.downcase(tag)
+    Noizu.Intellect.Redis.set("tag:#{f}", id)
+  end
+
+  def insert_tag(tag) do
+    # 1. lookup
+    q = from q in Noizu.Intellect.Schema.Tag,
+        where: q.tag == ^tag,
+        limit: 1
+    case Noizu.Intellect.Repo.one(q) do
+      %Noizu.Intellect.Schema.Tag{identifier: identifier} ->
+        cache_tag_lookup(identifier, tag)
+        {:ok, identifier}
+    _ ->
+      %Noizu.Intellect.Schema.Tag{tag: tag}
+      |> Noizu.Intellect.Repo.insert()
+      |> case do
+           {:ok, %Noizu.Intellect.Schema.Tag{identifier: identifier}} ->
+             cache_tag_lookup(identifier, tag)
+             {:ok, identifier}
+           _ -> nil
+         end
+    end
+  end
+
+  def add_summary({:summary, {summary, _action, tags}}, message, context, options) do
     summary = String.trim(summary)
     unless summary == "" do
       # todo detect existing
@@ -125,7 +161,28 @@ defmodule Noizu.Intellect.Account.Message do
       }
       |> Noizu.Intellect.Entity.Repo.update(context)
     end
-    # Logger.error("[TODO] populate message features #{inspect features, pretty: true}")
+
+    # Add Features
+    Enum.map(tags || [],
+      fn(tag) ->
+        tid = tag_lookup(tag)
+              |> case do
+                   {:ok, id} -> {:ok, id}
+                   _ -> insert_tag(tag)
+                 end
+              |> case do
+                   {:ok, id} -> id
+                   _ -> nil
+                 end
+        if tid do
+          %Noizu.Intellect.Schema.Message.Tag{
+            message: message.identifier,
+            tag: tid
+          }
+          |> Noizu.Intellect.Repo.insert()
+        end
+      end
+    )
   end
 
   defimpl Noizu.Entity.Protocol do
@@ -341,6 +398,41 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
   end
 end
 
+
+
+
+defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message.Repo] do
+  require Logger
+
+  def prompt(subject, prompt_context, context, options) do
+    messages = Enum.map(subject.entities,
+      fn(message) ->
+        {sender_type, sender_slug, sender_name} = case message.sender do
+          %Noizu.Intellect.Account.Member{user: user} -> {"human", user.slug, user.name}
+          %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
+          _ -> {"other", "other", "other"}
+        end
+        contents = message.brief && message.brief.body || message.contents.body
+        %{
+        id: message.identifier,
+        contents: contents,
+        created_on: message.time_stamp.created_on,
+        sender: %{
+            id: message.sender.identifier,
+            type: sender_type,
+            slug: sender_slug
+          }
+        }
+      end)
+
+    prompt = Ymlr.document!({["Chat History"], %{messages: messages}}) |> String.trim_leading("---\n")
+    {:ok, prompt}
+  end
+  def minder(subject, prompt_context, context, options) do
+    prompt = nil
+    {:ok, prompt}
+  end
+end
 
 defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message] do
   def encode!(message, context, options \\ nil) do
