@@ -144,8 +144,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
         [...| more mark-processed entries.]
       </agent-response>
 
-      ## Message Graph
-      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@message_graph, @prompt_context, @context, @options) do %>
+      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@message_history, @prompt_context, @context, @options) do %>
       <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
       <% _ -> %><%= "" %>
       <% end %>

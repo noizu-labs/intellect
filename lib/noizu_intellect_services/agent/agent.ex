@@ -2,7 +2,6 @@ defmodule Noizu.Intellect.Service.Agent do
   use Noizu.Service
   import Ecto.Query
   Noizu.Service.Server.default()
-  alias Noizu.EntityReference.Protocol, as: ERP
   require Logger
 
   def bring_workers_online(context) do

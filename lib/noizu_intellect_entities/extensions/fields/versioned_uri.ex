@@ -65,8 +65,8 @@ defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.Version
 
   def field_as_record(
         field,
-        field_settings = Meta.Field.field_settings(name: name, store: field_store),
-        persistence_settings = Meta.Persistence.persistence_settings(store: store, table: table),
+        _field_settings = Meta.Field.field_settings(name: name, store: field_store),
+        _persistence_settings = Meta.Persistence.persistence_settings(store: store, table: table),
         _context,
         _options
       ) do
@@ -75,7 +75,7 @@ defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.Version
   end
 
   def field_from_record(
-        field,
+        _field,
         record,
         Meta.Field.field_settings(name: name, store: field_store),
         Meta.Persistence.persistence_settings(store: store, table: table),

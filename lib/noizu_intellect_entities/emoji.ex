@@ -7,7 +7,6 @@ defmodule Noizu.Intellect.Emoji do
   use Noizu.Entities
   use Noizu.Core
   alias Noizu.Intellect.Entity.Repo
-  alias Noizu.Entity.TimeStamp
 
   @vsn 1.0
   @sref "emoji"
@@ -26,10 +25,6 @@ defmodule Noizu.Intellect.Emoji do
 
   defmodule Repo do
     use Noizu.Repo
-    alias Noizu.Intellect.User.Credential
-    alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
-    alias Noizu.EntityReference.Protocol, as: ERP
     def_repo()
   end
 end

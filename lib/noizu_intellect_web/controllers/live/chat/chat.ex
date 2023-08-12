@@ -17,7 +17,6 @@ end
 
 defmodule Noizu.IntellectWeb.Chat do
   use Noizu.IntellectWeb, :live_view
-  import Noizu.IntellectWeb.Nav.Tags
   require Logger
   require Noizu.Intellect.LiveEventModule
   import Noizu.Intellect.LiveEventModule
@@ -108,7 +107,7 @@ defmodule Noizu.IntellectWeb.Chat do
 #             |> assign(messages: socket.assigns[:messages] ++ [message])
 #    {:noreply, socket}
 #  end
-  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "sent", payload: message, options: options), socket) do
+  def handle_info(_info = event(subject: "chat", instance: _channel_sref, event: "sent", payload: message, options: options), socket) do
     messages = socket.assigns[:messages] ++ [message]
     socket = socket
              |> assign(messages: messages)

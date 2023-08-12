@@ -1,6 +1,5 @@
 defmodule Noizu.IntellectWeb.Documents.V1_0.ImageController do
   use Noizu.IntellectWeb, :controller
-  import Noizu.Core.Helpers
   import Plug.Conn
 
   def get(conn, %{"type" => "profile", "image" => image} = _params) do

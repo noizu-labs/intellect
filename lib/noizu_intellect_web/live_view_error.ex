@@ -12,12 +12,12 @@ defmodule Noizu.IntellectWeb.LiveViewError do
     context: nil
   ]
 
-  def show_details(this, context) do
+  def show_details(this, _context) do
     # take into account user context/permissions.
     this.error && true
   end
 
-  def show_trace(this, context) do
+  def show_trace(this, _context) do
     # take into account user context/permissions.
     this.trace && true
   end

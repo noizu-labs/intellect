@@ -8,7 +8,6 @@ defmodule Noizu.Intellect.User.Credential.LoginPass do
   use Noizu.Core
   alias Noizu.Intellect.User.Credential
   alias Noizu.Intellect.Entity.Repo
-  alias Noizu.Entity.TimeStamp
 
   @vsn 1.0
   @sref "credential"
@@ -27,16 +26,13 @@ defmodule Noizu.Intellect.User.Credential.LoginPass do
 
   defmodule Repo do
     use Noizu.Repo
-    alias Noizu.Intellect.User.Credential
-    alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
     alias Noizu.EntityReference.Protocol, as: ERP
 
     def_repo()
 
 
     def add_login(credential, login, password, context, options) do
-      now = options[:current_time] || DateTime.utc_now()
+      _now = options[:current_time] || DateTime.utc_now()
       with {:ok, identifier} <- ERP.id(credential) do
         %Noizu.Intellect.User.Credential.LoginPass{
           identifier: identifier,

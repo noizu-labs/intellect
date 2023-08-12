@@ -25,7 +25,7 @@ defmodule Noizu.Intellect.User do
     end
   end
 
-  def default_project(active_user, context, options \\ nil) do
+  def default_project(active_user, context, _options \\ nil) do
     with {:ok, identifier} <- id(active_user) do
       q = from account in Noizu.Intellect.Schema.Account,
                join: member in Noizu.Intellect.Schema.Account.Member,

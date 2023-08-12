@@ -128,7 +128,7 @@ defmodule Noizu.IntellectWeb.Issues do
   #=========================
   #
   #=========================
-  def handle_event("submit:issue" = event, body, socket) do
+  def handle_event("submit:issue" = _event, body, socket) do
     submit_issue(body, socket)
   end
   def handle_event("show:issue" , %{"issue" => issue}, socket) do
@@ -162,7 +162,7 @@ defmodule Noizu.IntellectWeb.Issues do
   def load_issues(s \\ nil) do
     s = s || self()
     spawn fn ->
-      issues = case Noizu.Github.Api.Issues.list() do
+      _issues = case Noizu.Github.Api.Issues.list() do
         {:ok, issues} -> send(s, {:issues_loaded, issues})
         _ ->
           Process.sleep(5000)
@@ -171,7 +171,7 @@ defmodule Noizu.IntellectWeb.Issues do
     end
   end
 
-  def mount(_, session, socket) do
+  def mount(_, _session, socket) do
     load_issues()
     socket = socket
              |> assign(issues: nil)

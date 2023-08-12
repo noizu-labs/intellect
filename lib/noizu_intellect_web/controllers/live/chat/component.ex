@@ -1,6 +1,5 @@
 defmodule Noizu.IntellectWeb.Chat.Component do
   use Noizu.IntellectWeb, :live_component
-  import Noizu.IntellectWeb.Nav.Tags
 
   def render(assigns) do
     ~H"""

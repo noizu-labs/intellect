@@ -7,7 +7,6 @@ defmodule Noizu.Intellect.Account.Member do
   use Noizu.Entities
   use Noizu.Core
   alias Noizu.Intellect.Entity.Repo
-  alias Noizu.Entity.TimeStamp
 
   @vsn 1.0
   @sref "account-member"
@@ -28,10 +27,6 @@ defmodule Noizu.Intellect.Account.Member do
 
   defmodule Repo do
     use Noizu.Repo
-    alias Noizu.Intellect.User.Credential
-    alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
-    alias Noizu.EntityReference.Protocol, as: ERP
     def_repo()
   end
 end
@@ -40,14 +35,14 @@ end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Member] do
 
-  def raw(subject, prompt_context, context, options) do
+  def raw(subject, prompt_context, _context, _options) do
     # There should be per agent response_preferences overrides
     response_preferences = case subject.user.response_preferences do
       nil -> "This operator is a fellow expert with advanced knowledge of physics, match and computer science. They prefer high level concise academic or technical level responses."
       %{body: body} -> body
     end
 
-    include_details = prompt_context.assigns[:members][:verbose] in [true, :verbose]
+    _include_details = prompt_context.assigns[:members][:verbose] in [true, :verbose]
 
     %{
       identifier: subject.identifier,
@@ -64,7 +59,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
   end
 
 
-  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+  def prompt(subject, %{format: :markdown} = _prompt_context, _context, _options) do
 
     # There should be per agent response_preferences overrides
     response_preferences = case subject.user.response_preferences do
@@ -88,7 +83,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     """
     {:ok, prompt}
   end
-  def minder(subject, prompt_context, context, options) do
+  def minder(_subject, _prompt_context, _context, _options) do
     {:ok, nil}
   end
 end

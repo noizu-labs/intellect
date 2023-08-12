@@ -7,7 +7,6 @@ defmodule Noizu.Intellect.Account.Agent do
   use Noizu.Entities
   use Noizu.Core
   alias Noizu.Intellect.Entity.Repo
-  alias Noizu.Entity.TimeStamp
 
   @vsn 1.0
   @sref "agent"
@@ -33,15 +32,11 @@ defmodule Noizu.Intellect.Account.Agent do
 
   defmodule Repo do
     use Noizu.Repo
-    alias Noizu.Intellect.User.Credential
-    alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
-    alias Noizu.EntityReference.Protocol, as: ERP
     import Ecto.Query
 
     def_repo()
 
-    def channels(agent, account, context, options \\ nil) do
+    def channels(agent, account, context, _options \\ nil) do
       with {:ok, account_id} <- Noizu.EntityReference.Protocol.id(account),
            {:ok, agent_id} <- Noizu.EntityReference.Protocol.id(agent)
         do
@@ -69,7 +64,7 @@ defmodule Noizu.Intellect.Account.Agent do
       end
     end
 
-    def by_project(project, context, options \\ nil) do
+    def by_project(project, context, _options \\ nil) do
       with {:ok, project_id} <- Noizu.EntityReference.Protocol.id(project) do
         (from a in Noizu.Intellect.Schema.Account.Agent,
               where: a.account == ^project_id,
@@ -95,7 +90,7 @@ defmodule Noizu.Intellect.Account.Agent do
 end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Agent] do
-  def raw(subject, prompt_context, context, options) do
+  def raw(subject, prompt_context, _context, _options) do
     response_preferences = case subject.response_preferences do
       nil -> "They prefer verbose expert level responses to their requests."
       %{body: body} -> body
@@ -159,7 +154,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 #    end
     {:ok, prompt}
   end
-  def minder(subject, prompt_context, context, options) do
+  def minder(_subject, _prompt_context, _context, _options) do
     {:ok, nil}
   end
 end

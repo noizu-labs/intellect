@@ -11,14 +11,14 @@ defmodule Noizu.Intellect.Services.ConfigurationProvider do
   def cached(node), do: configuration(node)
 
   def configuration(node) do
-    service_config = node_service(
+    _service_config = node_service(
       pool: Noizu.Intellect.Service.VirtualService,
       node: node,
       priority: 0,
       supervisor_target: target_window(target: 3, low: 1, high: 5),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    service_ingestion_config = node_service(
+    _service_ingestion_config = node_service(
       pool: Noizu.Intellect.Service.VirtualService.Ingestion,
       node: node,
       priority: 0,
@@ -39,21 +39,21 @@ defmodule Noizu.Intellect.Services.ConfigurationProvider do
       supervisor_target: target_window(target: 3, low: 1, high: 5),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    agent_monitor_config = node_service(
+    _agent_monitor_config = node_service(
       pool: Noizu.Intellect.Service.Agent.Monitor,
       node: node,
       priority: 0,
       supervisor_target: target_window(target: 3, low: 1, high: 5),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    agent_memory_config = node_service(
+    _agent_memory_config = node_service(
       pool: Noizu.Intellect.Service.Agent.Memory,
       node: node,
       priority: 0,
       supervisor_target: target_window(target: 3, low: 1, high: 5),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    messenger_config = node_service(
+    _messenger_config = node_service(
       pool: Noizu.Intellect.Service.Messenger,
       node: node,
       priority: 0,
@@ -74,13 +74,13 @@ defmodule Noizu.Intellect.Services.ConfigurationProvider do
 
   def configuration() do
     n = node()
-    service_config = cluster_service(
+    _service_config = cluster_service(
       pool: Noizu.Intellect.Service.VirtualService,
       priority: 1,
       node_target: target_window(target: 1, low: 0, high: 2),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    service_ingestion_config = cluster_service(
+    _service_ingestion_config = cluster_service(
       pool: Noizu.Intellect.Service.VirtualService.Ingestion,
       priority: 1,
       node_target: target_window(target: 1, low: 0, high: 2),
@@ -98,19 +98,19 @@ defmodule Noizu.Intellect.Services.ConfigurationProvider do
       node_target: target_window(target: 1, low: 0, high: 2),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    agent_memory_config = cluster_service(
+    _agent_memory_config = cluster_service(
       pool: Noizu.Intellect.Service.Agent.Memory,
       priority: 1,
       node_target: target_window(target: 1, low: 0, high: 2),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    agent_monitor_config = cluster_service(
+    _agent_monitor_config = cluster_service(
       pool: Noizu.Intellect.Service.Agent.Monitor,
       priority: 1,
       node_target: target_window(target: 1, low: 0, high: 2),
       worker_target: target_window(target: 100, low: 25, high: 250)
     )
-    messenger_config = cluster_service(
+    _messenger_config = cluster_service(
       pool: Noizu.Intellect.Service.Messenger,
       priority: 1,
       node_target: target_window(target: 1, low: 0, high: 2),

@@ -3,7 +3,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
   require Logger
   @impl true
 
-  def assigns(subject, prompt_context, context, options) do
+  def assigns(subject, prompt_context, _context, _options) do
     assigns = Map.merge(
                 prompt_context.assigns,
                 %{

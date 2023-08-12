@@ -29,7 +29,7 @@ defmodule Noizu.Intellect.LiveEventModule do
     PubSub.unsubscribe(Noizu.Intellect.LiveViewEvent, key)
   end
 
-  def subscribe(msg = event(
+  def subscribe(_msg = event(
     subject: s_subject,
     instance: s_instance,
     event: s_event

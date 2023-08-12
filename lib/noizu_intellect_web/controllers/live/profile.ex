@@ -1,6 +1,5 @@
 defmodule Noizu.IntellectWeb.Profile do
   use Noizu.IntellectWeb, :live_view
-  import Noizu.IntellectWeb.CoreComponents
   def render(assigns) do
     ~H"""
     [Profile]
@@ -18,7 +17,7 @@ defmodule Noizu.IntellectWeb.Profile do
     {:noreply, socket}
   end
 
-  def mount(conn, session, socket) do
+  def mount(_conn, session, socket) do
     context = Noizu.Context.system()
     with {:ok, active_user = %Noizu.Intellect.User{}, _} <- Noizu.IntellectWeb.Guardian.resource_from_token(session["guardian_default_token"]),
          {:ok, context} <- Noizu.Context.dummy_for_user(active_user, context)

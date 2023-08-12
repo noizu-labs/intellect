@@ -32,7 +32,6 @@ defmodule Noizu.Intellect.User.Credential do
     use Noizu.Repo
     alias Noizu.Intellect.User.Credential
     alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
     alias Noizu.EntityReference.Protocol, as: ERP
 
     def_repo()

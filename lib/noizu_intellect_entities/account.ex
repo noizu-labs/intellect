@@ -7,7 +7,6 @@ defmodule Noizu.Intellect.Account do
   use Noizu.Entities
   use Noizu.Core
   alias Noizu.Intellect.Entity.Repo
-  alias Noizu.Entity.TimeStamp
   import Ecto.Query
 
   @vsn 1.0
@@ -22,7 +21,7 @@ defmodule Noizu.Intellect.Account do
   end
 
   def channels(this, context) do
-    with {:ok, identifier} <- id(this) do
+    with {:ok, _identifier} <- id(this) do
       q = from account in Noizu.Intellect.Schema.Account,
                join: channel in Noizu.Intellect.Schema.Account.Channel,
                on: account.identifier == channel.account,
@@ -44,7 +43,7 @@ defmodule Noizu.Intellect.Account do
   end
 
   def channel_by_slug(this, slug, context) do
-    with {:ok, identifier} <- id(this) do
+    with {:ok, _identifier} <- id(this) do
       q = from account in Noizu.Intellect.Schema.Account,
                join: channel in Noizu.Intellect.Schema.Account.Channel,
                on: account.identifier == channel.account,
@@ -71,10 +70,6 @@ defmodule Noizu.Intellect.Account do
 
   defmodule Repo do
     use Noizu.Repo
-    alias Noizu.Intellect.User.Credential
-    alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
-    alias Noizu.EntityReference.Protocol, as: ERP
     def_repo()
   end
 end

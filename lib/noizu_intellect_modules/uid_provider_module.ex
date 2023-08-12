@@ -20,7 +20,7 @@ defmodule Noizu.Intellect.UIDProviderModule do
   def ref_type_index(identifier) when is_integer(identifier) do
     rem(identifier, 1000)
   end
-  def ref_type_index(<<_,_,_,_,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,_,_,_,_,_,h0,h1,h2>> = identifier) do
+  def ref_type_index(<<_,_,_,_,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,?-,_,_,_,_,_,_,_,_,_,h0,h1,h2>> = _identifier) do
     String.to_integer(<<h0,h1,h2>>,16)
   end
 
@@ -53,7 +53,7 @@ defmodule Noizu.Intellect.UIDProviderModule do
   end
 
   def generate(repo, _) do
-    uuid = repo_uuid(repo)
+    _uuid = repo_uuid(repo)
     query = "SELECT generate_uid($1)"
     case Ecto.Adapters.SQL.query(Noizu.Intellect.Repo, query, ["#{repo}"]) do
       {:ok, %{rows: [[v]]}} when is_integer(v) ->

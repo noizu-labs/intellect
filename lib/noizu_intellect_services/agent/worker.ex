@@ -1,7 +1,6 @@
 defmodule Noizu.Intellect.Service.Agent.Worker do
   require Noizu.Service.Types
   use Noizu.Entities
-  import Ecto.Query
 
   @vsn 1.0
   @sref "worker-agent"
@@ -58,7 +57,7 @@ defmodule Noizu.Intellect.Service.Agent.Worker do
   #---------------------
   #
   #---------------------
-  def queue_heart_beat(state, context, options \\ nil, fuse \\ 5_000) do
+  def queue_heart_beat(state, _context, _options \\ nil, _fuse \\ 5_000) do
     # Start HeartBeat
 #    identifier = {self(), :os.system_time(:millisecond)}
 #    settings = apply(__pool__(), :__cast_settings__, [])

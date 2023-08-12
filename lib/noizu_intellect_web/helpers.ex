@@ -218,7 +218,7 @@ defmodule Noizu.IntellectWeb.Helpers do
 
     def inner_html(message, tag) do
       case Floki.find(message, tag) do
-        [{tag, _, inner}] -> {:ok, Floki.raw_html(inner, pretty: false, encode: false)}
+        [{_tag, _, inner}] -> {:ok, Floki.raw_html(inner, pretty: false, encode: false)}
       end
     end
 
@@ -247,7 +247,7 @@ defmodule Noizu.IntellectWeb.Helpers do
       tag = Floki.find(html, tag)
       count = length(tag)
       content = if (count > 0) do
-        Enum.map(tag, fn({tag, args, body}) ->
+        Enum.map(tag, fn({_tag, args, body}) ->
           function = Enum.find_value(args, fn({k,v}) -> k == "function" && v end)
           args = Floki.raw_html(body, pretty: false, encode: false)
           %{
@@ -326,7 +326,7 @@ defmodule Noizu.IntellectWeb.Helpers do
             with {:ok, d} <- Earmark.as_html!(v, escape: false, inner_html: true) |> Floki.parse_document() do
               [d]
             else
-              error ->
+              _error ->
                 [v]
             end
             :else ->  [v]
@@ -336,11 +336,11 @@ defmodule Noizu.IntellectWeb.Helpers do
       |>  Floki.traverse_and_update(fn
         {"nlp-reply", _, contents} ->
            [{"br", [], []}] ++ escape_llm_response(contents, allowed)
-        {"nlp-meta", _, contents} ->
+        {"nlp-meta", _, _contents} ->
           ""
         {"nlp-query", attributes, contents} ->
           {"pre", [], [{"code", [{"class", "query"}] ++ attributes, escape_llm_response(contents, allowed)}]}
-        {"nlp-intent", attributes, contents} ->
+        {"nlp-intent", _attributes, _contents} ->
           ""
         {"nlp-" <> nlp, attributes, contents} ->
           {"nlp-" <> nlp, attributes, escape_llm_response(contents, allowed)}
@@ -381,7 +381,7 @@ defmodule Noizu.IntellectWeb.Helpers do
                                |> Floki.parse_document() do
                 [d]
               else
-                error ->
+                _error ->
                   [v]
               end
             :else ->  [v]
@@ -390,9 +390,9 @@ defmodule Noizu.IntellectWeb.Helpers do
       end
      #  document
     |>  Floki.traverse_and_update(fn
-        {"nlp-reply", attributes, contents} ->
+        {"nlp-reply", _attributes, contents} ->
           do_strip_llm_response(contents, allowed)
-        {"nlp-intent", attributes, contents} ->
+        {"nlp-intent", _attributes, contents} ->
           #IO.puts "DROP nil-#{elem}"
           {:comment, [], contents}
         {"nlp-" <> elem, attributes, contents} when elem in ["fim", "git", "reply", "conclusion", "request", "query", "pub", "cr", "memory"] ->
@@ -401,7 +401,7 @@ defmodule Noizu.IntellectWeb.Helpers do
           {"llm-fim-content", attributes, contents}
         {"llm-" <> elem, attributes, contents} ->
           {"llm-" <> elem, attributes, do_strip_llm_response(contents, allowed)}
-        {"code" = tag, attributes, contents} ->
+        {"code" = _tag, attributes, contents} ->
           # if not inline then add a inner element to show type.
           cond do
             v = Enum.find_value(attributes, fn({k,v}) -> k == "class" && v != "inline" && v end) ->

@@ -1,10 +1,7 @@
 defmodule Noizu.IntellectWeb.PageController do
   use Noizu.IntellectWeb, :controller
-  import Noizu.Core.Helpers
   require Noizu.EntityReference.Records
   require Noizu.EntityReference.Protocol
-  alias Noizu.EntityReference.Records, as: R
-  alias Noizu.EntityReference.Protocol, as: ERP
 
   def home(conn, params) do
     # The home page is often custom made,

@@ -9,7 +9,7 @@ defmodule Noizu.Intellect.Prompt.RequestWrapper do
     vsn: @vsn
   ]
 
-  def messages(this, context, options) do
+  def messages(this, _context, _options) do
     messages = Enum.map(this.messages,
       fn
         (x = %Noizu.Intellect.Prompt.MessageWrapper{}) ->

@@ -7,7 +7,6 @@ defmodule Noizu.Intellect.Account.Message do
   use Noizu.Entities
   use Noizu.Core
   alias Noizu.Intellect.Entity.Repo
-  alias Noizu.Entity.TimeStamp
 
   @vsn 1.0
   @sref "account-message"
@@ -43,7 +42,7 @@ defmodule Noizu.Intellect.Account.Message do
   require Noizu.Entity.Meta.Persistence
 
 
-  def unpack_audience_list(as_name, record, context, field_options) do
+  def unpack_audience_list(as_name, record, _context, _field_options) do
     with %{array_agg: entries} <- get_in(record, [Access.key(:__loader__), Access.key(as_name)]),
          true <- is_list(entries) do
       entries = Enum.map(entries, fn({subject, confidence, comment}) ->
@@ -55,7 +54,7 @@ defmodule Noizu.Intellect.Account.Message do
     end
   end
 
-  def unpack_responding_to_list(as_name, record, context, field_options) do
+  def unpack_responding_to_list(as_name, record, _context, _field_options) do
     with %{array_agg: entries} <- get_in(record, [Access.key(:__loader__), Access.key(as_name)]),
          true <- is_list(entries) do
       entries = Enum.map(entries, fn({subject, confidence, comment}) ->
@@ -70,7 +69,7 @@ defmodule Noizu.Intellect.Account.Message do
   #---------------------------
   #
   #---------------------------
-  @defimpl Noizu.Entity.Store.Ecto.EntityProtocol
+  @_defimpl Noizu.Entity.Store.Ecto.EntityProtocol
   def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Schema.Account.Message, store: store), context, options) do
     Logger.error("as entity")
     with %{identifier: identifier} <- entity do
@@ -152,7 +151,7 @@ defmodule Noizu.Intellect.Account.Message do
     end
   end
 
-  def add_summary({:summary, {summary, _action, tags}}, message, context, options) do
+  def add_summary({:summary, {summary, _action, tags}}, message, context, _options) do
     summary = String.trim(summary)
     unless summary == "" do
       # todo detect existing
@@ -191,7 +190,7 @@ defmodule Noizu.Intellect.Account.Message do
     end
   end
 
-  def mark_read(this, recipient, context, options) do
+  def mark_read(this, recipient, _context, _options) do
     with {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
       IO.puts "MARK READ #{this.identifier}@#{recipient_id}"
       %Noizu.Intellect.Schema.Account.Message.Read{
@@ -202,7 +201,7 @@ defmodule Noizu.Intellect.Account.Message do
     end
   end
 
-  def message_token_size(this, context, options) do
+  def message_token_size(this, _context, _options) do
     # http://erlport.org/docs/python.html
     # Temp logic we'll eventually want to call a tokenizer lib to determine the true length.
     {:ok, trunc(String.length(this.contents.body || "") / 3)}
@@ -210,10 +209,6 @@ defmodule Noizu.Intellect.Account.Message do
 
   defmodule Repo do
     use Noizu.Repo
-    alias Noizu.Intellect.User.Credential
-    alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
-    alias Noizu.EntityReference.Protocol, as: ERP
     import Ecto.Query
 
     def_repo()
@@ -232,7 +227,7 @@ defmodule Noizu.Intellect.Account.Message do
       end
     end
 
-    def has_unread?(recipient, channel, context, options \\ nil) do
+    def has_unread?(recipient, channel, _context, _options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
 
@@ -323,13 +318,13 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message] do
   require Logger
 
-  def message_priority(subject, prompt_context, context, options) do
+  def message_priority(subject, prompt_context, _context, _options) do
     if prompt_context.agent do
       subject.priority
     end
   end
 
-  def summarize_message(message, priority, prompt_context, context, options) do
+  def summarize_message(message, priority, prompt_context, _context, options) do
     current_time = options[:current_time] || DateTime.utc_now()
     cond do
       is_nil(message.brief) || is_nil(message.brief.body) -> false
@@ -370,7 +365,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 
     # @TODO switch to json response body, return in Repo and apply prompt method on repo.
 
-    current_time = options[:current_time] || DateTime.utc_now()
+    _current_time = options[:_current_time] || DateTime.utc_now()
     priority = message_priority(subject, prompt_context, context, options)
     brief = summarize_message(subject, priority, prompt_context, context, options)
     contents = if (brief), do: subject.brief.body || "", else: subject.contents.body || ""
@@ -392,7 +387,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
       """
     {:ok, prompt}
   end
-  def minder(subject, prompt_context, context, options) do
+  def minder(_subject, _prompt_context, _context, _options) do
     prompt = nil
     {:ok, prompt}
   end
@@ -404,38 +399,63 @@ end
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message.Repo] do
   require Logger
 
-  def prompt(subject, prompt_context, context, options) do
-    messages = Enum.map(subject.entities,
-      fn(message) ->
-        {sender_type, sender_slug, sender_name} = case message.sender do
-          %Noizu.Intellect.Account.Member{user: user} -> {"human", user.slug, user.name}
-          %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
-          _ -> {"other", "other", "other"}
-        end
-        contents = message.brief && message.brief.body || message.contents.body
-        %{
-        id: message.identifier,
-        contents: contents,
-        created_on: message.time_stamp.created_on,
-        sender: %{
-            id: message.sender.identifier,
-            type: sender_type,
-            slug: sender_slug
+  def prompt(subject, prompt_context, _context, _options) do
+
+    slug_lookup = Enum.map(prompt_context.channel_members, fn(member) ->
+      case member do
+        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual agent"}}
+        %{user: %{slug: slug}} -> {member.identifier, %{slug: slug, type: "human operator"}}
+      end
+    end) |> Map.new()
+
+    messages = if prompt_context.agent do
+      Enum.map(subject.entities,
+        fn(message) ->
+          {sender_type, sender_slug, _sender_name} = case message.sender do
+            %Noizu.Intellect.Account.Member{user: user} -> {"human", user.slug, user.name}
+            %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
+            _ -> {"other", "other", "other"}
+          end
+          contents = message.brief && message.brief.body || message.contents.body
+          %{
+            id: message.identifier,
+            contents: contents,
+            created_on: message.time_stamp.created_on,
+            sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual agent"})",
+            processed?: !is_nil(message.read_on),
+            review?: is_nil(message.answered_by) && message.priority > 60 && is_nil(message.read_on) && true || false,
           }
-        }
-      end)
+        end)
+      else
+        Enum.map(subject.entities,
+          fn(message) ->
+            {sender_type, sender_slug, _sender_name} = case message.sender do
+              %Noizu.Intellect.Account.Member{user: user} -> {"human", user.slug, user.name}
+              %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
+              _ -> {"other", "other", "other"}
+            end
+            contents = message.brief && message.brief.body || message.contents.body
+            %{
+              id: message.identifier,
+              contents: contents,
+              created_on: message.time_stamp.created_on,
+              sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual agent"})",
+            }
+          end)
+    end
+
 
     prompt = Ymlr.document!({["Chat History"], %{messages: messages}}) |> String.trim_leading("---\n")
     {:ok, prompt}
   end
-  def minder(subject, prompt_context, context, options) do
+  def minder(_subject, _prompt_context, _context, _options) do
     prompt = nil
     {:ok, prompt}
   end
 end
 
 defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message] do
-  def encode!(message, context, options \\ nil) do
+  def encode!(message, _context, _options \\ nil) do
     {:ok, user_ref} = Noizu.EntityReference.Protocol.ref(message.sender)
     sender = case message.sender do
       %Noizu.Intellect.User{name: name} -> name

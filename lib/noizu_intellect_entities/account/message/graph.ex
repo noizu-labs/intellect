@@ -10,8 +10,8 @@ defmodule Noizu.Intellect.Account.Message.Graph do
     messages: nil
   ]
 
-  def to_graph([], channel_members, context, options), do: {:error, :empty}
-  def to_graph(messages, channel_members, context, options) do
+  def to_graph([], _channel_members, _context, _options), do: {:error, :empty}
+  def to_graph(messages, channel_members, _context, options) do
     recent_cut_off = (options[:current_time] || DateTime.utc_now()) |> Timex.shift(minutes: -5)
     messages = Enum.sort_by(messages, &(&1.time_stamp.created_on), {:desc, DateTime})
     node_list = Enum.map(messages, & &1.identifier)
@@ -63,9 +63,9 @@ defmodule Noizu.Intellect.Account.Message.Graph do
   end
 
   defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol do
-    def prompt(subject, prompt_context, context, options) do
+    def prompt(subject, _prompt_context, _context, _options) do
       {:ok, Ymlr.document!(subject)}
     end
-    def minder(subject, prompt_context, context, options), do: {:ok, nil}
+    def minder(_subject, _prompt_context, _context, _options), do: {:ok, nil}
   end
 end

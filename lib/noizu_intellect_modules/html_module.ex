@@ -162,9 +162,9 @@ defmodule Noizu.Intellect.HtmlModule do
     {_, html_tree} = Floki.parse_document(response)
     o = Enum.map(html_tree,
       fn
-        (x = {"nlp-chat_analysis", _, contents}) ->
+        (_x = {"nlp-chat_analysis", _, contents}) ->
           {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
-        (x = {"agent-response", _, contents}) ->
+        (_x = {"agent-response", _, contents}) ->
           text = Floki.text(contents)
           with {:ok, yaml} <- YamlElixir.read_from_string(text) do
             memories = (with s <- yaml["memories"],
@@ -217,9 +217,9 @@ defmodule Noizu.Intellect.HtmlModule do
   def extract_response_sections(response) do
     {_, html_tree} = Floki.parse_document(response)
     sections = Enum.map(html_tree, fn
-      (x = {"memories", _, contents}) ->
+      (_x = {"memories", _, contents}) ->
         {:memories, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
-      (x = {"nlp-intent", _, contents}) ->
+      (_x = {"nlp-intent", _, contents}) ->
         {:intent, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
       (x = {"mark-read", attrs, _}) ->
         ids = Enum.find_value(attrs, fn
@@ -251,7 +251,7 @@ defmodule Noizu.Intellect.HtmlModule do
         else
           {:error, {:malformed_section, x}}
         end
-      (x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+      (_x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
       (other = {_,_,_}) -> {:other, other}
       (other) when is_bitstring(other) ->
         case String.trim(other) do
@@ -288,7 +288,7 @@ defmodule Noizu.Intellect.HtmlModule do
     Floki.raw_html(replaced_html_tree, pretty: false, encode: false)
   end
 
-  defp replace_script_tags_in_tree({tag, attrs, children} = node) when tag == "script" do
+  defp replace_script_tags_in_tree({tag, attrs, children} = _node) when tag == "script" do
     # Extract the script content and escape it
     script_content = Floki.raw_html(children, pretty: false, encode: false)
     escaped_script_content = escape_script_content(script_content)

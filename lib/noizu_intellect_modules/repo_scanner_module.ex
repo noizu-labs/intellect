@@ -27,7 +27,7 @@ defmodule Noizu.Intellect.RepoScannerModule do
   defp process_entry(entry, folder_path, gitignore_stack) do
     full_path = Path.join(folder_path, entry)
     cond do
-      reason = ignored?(entry, full_path, gitignore_stack) ->
+      _reason = ignored?(entry, full_path, gitignore_stack) ->
         nil
       Noizu.Intellect.RepoScannerModule.is_file?(full_path) ->
         {:file, full_path}
@@ -186,8 +186,8 @@ defmodule Noizu.Intellect.RepoScannerModule do
     |> Enum.find_value(
       fn
         {:ignore_all, _} -> :ignore_all
-        {:ignore_subfolders, entries} -> Noizu.Intellect.RepoScannerModule.is_dir?(full_path) && :ignore_subfolders || nil
-        {:nested_glob, glob} -> false
+        {:ignore_subfolders, _entries} -> Noizu.Intellect.RepoScannerModule.is_dir?(full_path) && :ignore_subfolders || nil
+        {:nested_glob, _glob} -> false
         {:ignore_child, entries} -> Enum.find_value(entries, fn({:ignore_child, {:regex, reg}}) -> String.match?(entry, reg) && :ignore_child || nil  end)
         {:ignore_dir, entries} -> is_dir? && Enum.find_value(entries, fn({:ignore_dir, {:regex, reg}}) -> String.match?(entry, reg) && :ignore_child || nil  end)
         {:ignore_match, entries} -> Enum.find_value(entries, fn({:ignore_match, {:regex, reg}}) -> String.match?(full_path, reg) && :ignore_match || nil  end)

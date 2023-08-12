@@ -1,7 +1,6 @@
 defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   use Noizu.Entities
   require Noizu.Service.Types
-  import Ecto.Query
 
   require Noizu.Intellect.LiveEventModule
   import Noizu.Intellect.LiveEventModule
@@ -76,9 +75,9 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #---------------------
   def queue_heart_beat(state, context, options \\ nil, fuse \\ 5_000) do
     # Start HeartBeat
-    identifier = {self(), :os.system_time(:millisecond)}
-    settings = apply(__pool__(), :__cast_settings__, [])
-    timeout = 15_000
+    _identifier = {self(), :os.system_time(:millisecond)}
+    _settings = apply(__pool__(), :__cast_settings__, [])
+    _timeout = 15_000
 
     msg = M.s(call: M.call(handler: :heart_beat), context: context, options: options)
     timer = Process.send_after(self(), msg, fuse)
@@ -136,7 +135,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   end
 
 
-  def process_response_memories(response, messages, state, context, options) do
+  def process_response_memories(response, _messages, state, _context, _options) do
     # record responses
     if reply = response[:memories] do
       Enum.map(reply,
@@ -229,7 +228,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
       do
 
       try do
-        #IO.puts("[MESSAGE 1: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(0), :content]))
+        IO.puts("[MESSAGE 1: #{state.worker.agent.slug}] \n" <> get_in(api_response[:messages], [Access.at(0), :content]))
         #IO.puts("[MESSAGE 2: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(1), :content]))
         #IO.puts("[MESSAGE 3: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(2), :content]))
         #IO.puts("[MESSAGE 4: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(3), :content]))

@@ -81,19 +81,19 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
       end
     end
 
-    def prompt(subject, prompt_context, context, options) do
+    def prompt(subject, prompt_context, _context, _options) do
       expand_prompt(subject.prompt, prompt_context.assigns)
     end
-    def minder(subject, prompt_context, context, options) do
+    def minder(subject, prompt_context, _context, _options) do
       expand_prompt(subject.minder, prompt_context.assigns)
     end
     def assigns(subject, prompt_context, context, options) do
       cond do
         is_map(subject.assigns) -> {:ok, Map.merge(prompt_context.assigns || %{}, subject.assigns)}
-        Kernel.match?({m,f,a}, subject.assigns) ->
+        Kernel.match?({_m,_f,_a}, subject.assigns) ->
           {m,f,a} = subject.assigns
           apply(m,f, [subject, prompt_context] ++ (a || []) ++ [context, options])
-        Kernel.match?({m,f}, subject.assigns) ->
+        Kernel.match?({_m,_f}, subject.assigns) ->
           {m,f} = subject.assigns
           apply(m,f, [subject, prompt_context, context, options])
         is_function(subject.assigns, 4) -> subject.assigns.(subject, prompt_context, context, options)
@@ -102,10 +102,10 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     end
     def request(subject, request, context, options) do
       cond do
-        Kernel.match?({m,f,a}, subject.request) ->
+        Kernel.match?({_m,_f,_a}, subject.request) ->
           {m,f,a} = subject.request
           apply(m,f, [subject, request] ++ (a || []) ++ [context, options])
-        Kernel.match?({m,f}, subject.request) ->
+        Kernel.match?({_m,_f}, subject.request) ->
           {m,f} = subject.request
           apply(m,f, [subject, request, context, options])
         is_function(subject.request, 4) -> subject.request.(subject, request, context, options)

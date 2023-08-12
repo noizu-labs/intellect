@@ -7,7 +7,6 @@ defmodule Noizu.Intellect.Account.Channel do
   use Noizu.Entities
   use Noizu.Core
   alias Noizu.Intellect.Entity.Repo
-  alias Noizu.Entity.TimeStamp
   alias Noizu.Intellect.Prompt.DynamicContext
   alias Noizu.Intellect.Prompt.ContextWrapper
   require Noizu.Intellect.LiveEventModule
@@ -23,7 +22,7 @@ defmodule Noizu.Intellect.Account.Channel do
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
 
-  def summarize_message?(channel, message, context, options) do
+  def summarize_message?(_channel, message, _context, _options) do
     message.token_size > 1024
   end
   def summarize_message(this, message, context, options) do
@@ -46,7 +45,7 @@ defmodule Noizu.Intellect.Account.Channel do
   end
 
 
-  def agent_slugs(prompt_context, context, options \\ nil) do
+  def agent_slugs(prompt_context, _context, _options \\ nil) do
     slugs = Enum.map(prompt_context.channel_members || [], fn(member) ->
       case member do
         %{slug: slug} -> {member.identifier, Regex.compile!("(@#{slug} |@#{slug}$)", "i")}
@@ -124,7 +123,7 @@ defmodule Noizu.Intellect.Account.Channel do
         end
 
         details = Enum.group_by(extracted_details, &(elem(&1, 0)))
-
+                  |> IO.inspect(pretty: true, label: "ANALYSIS EXTRACTION")
         with [{:message_analysis, contents}|_] <- details[:message_analysis],
              {:ok, sref} <- Noizu.EntityReference.Protocol.sref(this) do
           # need a from message method.
@@ -179,9 +178,9 @@ defmodule Noizu.Intellect.Account.Channel do
           )
         end
 
-        audience = if audience = details[:audience] do
+        if audience = details[:audience] do
           Enum.map(audience, & Noizu.Intellect.Schema.Account.Message.Audience.record(&1, message, context, options))
-          included = Enum.map(audience, fn({:audience, {id, confidence, comment}}) -> id end) |> MapSet.new()
+          included = Enum.map(audience, fn({:audience, {id, _confidence, _comment}}) -> id end) |> MapSet.new()
           # Set non mentioned recipients to 0.
           additional = Enum.reject(prompt_context.channel_members, fn(member) -> Enum.member?(included, member.identifier) end)
           Enum.map(additional, & Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {&1.identifier, 0, nil}}, message, context, options))
@@ -204,14 +203,10 @@ defmodule Noizu.Intellect.Account.Channel do
 
   defmodule Repo do
     use Noizu.Repo
-    alias Noizu.Intellect.User.Credential
-    alias Noizu.Intellect.User.Credential.LoginPass
-    alias Noizu.Intellect.Entity.Repo, as: EntityRepo
-    alias Noizu.EntityReference.Protocol, as: ERP
     def_repo()
     import Ecto.Query
 
-    def members(channel, context, options \\ nil) do
+    def members(channel, _context, _options \\ nil) do
       {:ok, id} = Noizu.EntityReference.Protocol.id(channel)
       q = from cm in Noizu.Intellect.Schema.Account.Channel.Member,
                where: cm.channel == ^id,
@@ -305,8 +300,8 @@ defmodule Noizu.Intellect.Account.Channel do
 
 
     def messages_in_set_recipient(set, recipient, channel, context, options \\ nil)
-    def messages_in_set_recipient([], recipient, channel, context, options), do: {:ok, []}
-    def messages_in_set_recipient(set, recipient, channel, context, options) do
+    def messages_in_set_recipient([], _recipient, _channel, _context, _options), do: {:ok, []}
+    def messages_in_set_recipient(set, recipient, channel, context, _options) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
         responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
@@ -386,8 +381,8 @@ defmodule Noizu.Intellect.Account.Channel do
     end
 
     def messages_in_set(set, channel, context, options \\ nil)
-    def messages_in_set([], channel, context, options), do: {:ok, []}
-    def messages_in_set(set, channel, context, options) do
+    def messages_in_set([], _channel, _context, _options), do: {:ok, []}
+    def messages_in_set(set, channel, context, _options) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel) do
         Logger.error("Messages in Set: #{inspect set}")
 
@@ -548,7 +543,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     {:ok, prompt}
 
   end
-  def minder(subject, prompt_context, context, options) do
+  def minder(_subject, _prompt_context, _context, _options) do
     {:ok, nil}
   end
 end

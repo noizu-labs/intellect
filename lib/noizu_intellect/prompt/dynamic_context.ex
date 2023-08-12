@@ -156,8 +156,8 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
       session: session related prompts, minders
   """
   def prepare_prompt_context__process(prompt_context, section, context, options)
-  def prepare_prompt_context__process(prompt_context, :nlp, context, options) do
-    with %{agent: %{nlp: nlp}} <- prompt_context do
+  def prepare_prompt_context__process(prompt_context, :nlp, _context, options) do
+    with %{agent: %{nlp: _nlp}} <- prompt_context do
       unless options[:nlp] == :disabled do
         %__MODULE__{prompt_context| nlp_prompt_context: %Noizu.Intellect.Prompt.Lingua{nlp: prompt_context.agent.nlp}}
       else
@@ -167,33 +167,33 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
       _ -> prompt_context
     end
   end
-  def prepare_prompt_context__process(prompt_context, :agent, context, options) do
+  def prepare_prompt_context__process(prompt_context, :agent, _context, _options) do
     # TODO - merge features/flag tree
     prompt_context
   end
-  def prepare_prompt_context__process(prompt_context, :intuition_pumps, context, options) do
+  def prepare_prompt_context__process(prompt_context, :intuition_pumps, _context, _options) do
     # TODO - merge features/flag tree
     # Scan all entries (messages, etc.) to extract intuition pumps
     # Temporary - include all
     prompt_context
   end
-  def prepare_prompt_context__process(prompt_context, :services, context, options) do
+  def prepare_prompt_context__process(prompt_context, :services, _context, _options) do
     # TODO - merge features/flag tree
     # Scan all entries (messages, etc.) to extract
     # Temporary - include all
     prompt_context
   end
-  def prepare_prompt_context__process(prompt_context, :master, context, options) do
+  def prepare_prompt_context__process(prompt_context, :master, _context, _options) do
     # TODO - merge features/flag tree
     prompt_context
   end
-  def prepare_prompt_context__process(prompt_context, :synthetics, context, options) do
+  def prepare_prompt_context__process(prompt_context, :synthetics, _context, _options) do
     # TODO - merge features/flag tree
     # TODO - synthetic builder / query flow -> all messages have subjects/tags associated with them use these to scan synthetics on vdb.
     # For now we will actually load these from DB for channel and for agent, in the future these will be constructed.
     prompt_context
   end
-  def prepare_prompt_context__process(prompt_context, :session, context, options) do
+  def prepare_prompt_context__process(prompt_context, :session, _context, _options) do
     # TODO - merge features/flag tree
     # TODO - session load -> by agent, channel
     prompt_context
@@ -203,7 +203,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   A tree of effective flags is built broken into per message/prompt feature conditionals.
   A final pass tracks which nodes are actually active then prepares the effective flags at each layer. That is certain flags may disable the need to include certain other sections that themselves alter flags. Such as determining if features should be included.
   """
-  def prepare_prompt_context__process(prompt_context, :flags, context, options) do
+  def prepare_prompt_context__process(prompt_context, :flags, _context, _options) do
     # TODO - merge features/flag tree
     prompt_context
   end
@@ -217,7 +217,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   The finalize steps updates these flags to insure minimum final context size.
   It additionally sets model, flags, and final message set, and collapses/prunes synthetics
   """
-  def prepare_prompt_context__finalize(prompt_context, context, options) do
+  def prepare_prompt_context__finalize(prompt_context, _context, _options) do
     {:ok, prompt_context}
   end
 
@@ -249,7 +249,6 @@ end
 
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for:  Noizu.Intellect.Prompt.DynamicContext do
-  alias Noizu.EntityReference.Protocol, as: ERP
   alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
   alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
 
