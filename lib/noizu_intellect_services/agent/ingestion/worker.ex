@@ -225,9 +225,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
          messages <- messages |> Enum.reverse(),
          true <- (length(messages) > 0) || {:error, :no_messages},
          {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_prompt_context(state.worker.agent, state.worker.channel, messages, context, options),
-         {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
-         {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
-         {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options)
+         {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options)
       do
 
       try do
@@ -238,55 +236,54 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
         #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
         #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
 
-        with {:ok, openai_response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
-          with %{choices: [%{message: %{content: reply}}|_]} <- openai_response,
-               {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
-               valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
-            do
-            IO.puts("[REPLY:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
+        with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
+             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
+             valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
+          do
+          IO.puts("[REPLY:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
 
-            # Valid Response?
-            unless valid? == :ok, do: IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")
+          # Valid Response?
+          unless valid? == :ok, do: IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")
 
-            # Process Response
-            response = Enum.group_by(response, &(elem(&1, 0)))
-                       #|> IO.inspect(label: "[#{state.worker.agent.slug}] OPEN AI RESPONSE")
+          # Process Response
+          response = Enum.group_by(response, &(elem(&1, 0)))
+          #|> IO.inspect(label: "[#{state.worker.agent.slug}] OPEN AI RESPONSE")
 
-            process_response_memories(response, messages, state, context, options)
+          process_response_memories(response, messages, state, context, options)
 
-            # clear ack'd
-            clear_response_acks(response, messages, state, context, options)
-            # process replies.
-            process_response_replies(response, messages, [request_settings, request_messages, openai_response], state, context, options)
-
-
-            with [{:nlp_chat_analysis, details}|_] <- response[:nlp_chat_analysis],
-                 {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
-
-              inbox = Enum.map(messages, fn(message) -> message.identifier end)
-              inbox = """
-
-              # Inbox
-              - #{inspect inbox}
-              """
-
-              # need a from message method.
-              push = %Noizu.IntellectWeb.Message{
-                identifier: :system,
-                type: :system_message,
-                timestamp: DateTime.utc_now(),
-                user_name: "#{state.worker.agent.slug}-system",
-                profile_image: nil,
-                mood: :thumbsy,
-                meta: [request_settings, request_messages, openai_response],
-                body: (details[:contents] || "Missing Contents") <> inbox
-              }
-              Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
-            end
+          # clear ack'd
+          clear_response_acks(response, messages, state, context, options)
+          # process replies.
+          process_response_replies(response, messages, [api_response[:settings], api_response[:messages], api_response[:reply]], state, context, options)
 
 
+          with [{:nlp_chat_analysis, details}|_] <- response[:nlp_chat_analysis],
+               {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
+
+            inbox = Enum.map(messages, fn(message) -> message.identifier end)
+            inbox = """
+
+            # Inbox
+            - #{inspect inbox}
+            """
+
+            # need a from message method.
+            push = %Noizu.IntellectWeb.Message{
+              identifier: :system,
+              type: :system_message,
+              timestamp: DateTime.utc_now(),
+              user_name: "#{state.worker.agent.slug}-system",
+              profile_image: nil,
+              mood: :thumbsy,
+              meta: [api_response[:settings], api_response[:messages], api_response[:reply]],
+              body: (details[:contents] || "Missing Contents") <> inbox
+            }
+            Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
           end
+
+
         end
+
       rescue error ->
         Logger.error(Exception.format(:error, error, __STACKTRACE__))
         :nop
