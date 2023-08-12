@@ -14,33 +14,35 @@ defmodule Noizu.Intellect.Schema.Account.Message.RespondingTo do
   end
 
   def record({:responding_to, {id, confidence, {complete, completed_by}, comment}}, message, context, options) do
-    now = options[:current_time] || DateTime.utc_now()
-    resp = %Noizu.Intellect.Schema.Account.Message.RespondingTo{
-             message: message.identifier,
-             responding_to: id,
-             confidence: confidence,
-             comment: comment,
-             created_on: now,
-             modified_on: now,
-           }
-           |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :responding_to])
-    if complete do
-      with {:ok, close} <- Noizu.Intellect.Account.Message.entity(id, context) do
-        completed_by = completed_by || message.identifier
-        completed_by = cond do
-          completed_by == message.identifier -> message
-          :else ->
-            with {:ok, ref} <- Noizu.Intellect.Account.Message.ref(completed_by) do
-              ref
-            else
-              _ -> message
-            end
+    unless is_nil(id) do
+      now = options[:current_time] || DateTime.utc_now()
+      resp = %Noizu.Intellect.Schema.Account.Message.RespondingTo{
+               message: message.identifier,
+               responding_to: id,
+               confidence: confidence,
+               comment: comment,
+               created_on: now,
+               modified_on: now,
+             }
+             |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :responding_to])
+      if complete do
+        with {:ok, close} <- Noizu.Intellect.Account.Message.entity(id, context) do
+          completed_by = completed_by || message.identifier
+          completed_by = cond do
+            completed_by == message.identifier -> message
+            :else ->
+              with {:ok, ref} <- Noizu.Intellect.Account.Message.ref(completed_by) do
+                ref
+              else
+                _ -> message
+              end
+          end
+          update_in(close, [Access.key(:answered_by)], &(&1 || completed_by))
+          |> Noizu.Intellect.Entity.Repo.update(context)
         end
-        update_in(close, [Access.key(:answered_by)], &(&1 || completed_by))
-        |> Noizu.Intellect.Entity.Repo.update(context)
       end
+      resp
     end
-    resp
   end
 
   @doc false

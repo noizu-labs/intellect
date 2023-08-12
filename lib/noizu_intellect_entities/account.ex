@@ -11,13 +11,52 @@ defmodule Noizu.Intellect.Account do
 
   @vsn 1.0
   @sref "account"
+
+
+
+  @persistence redis_store(Noizu.Intellect.Account, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.Account, Noizu.Intellect.Repo)
+  @derive Noizu.Entity.Store.Redis.EntityProtocol
+
   def_entity do
     identifier :integer
     field :slug, nil
     field :profile_image, nil, Noizu.Entity.VersionedURI
     field :details, nil, Noizu.Entity.VersionedString
     field :time_stamp, nil, Noizu.Entity.TimeStamp
+  end
+
+  #---------------------------
+  #
+  #---------------------------
+  @_defimpl Noizu.Entity.Store.Redis.EntityProtocol
+  def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Account, store: Noizu.Intellect.Redis), context, options) do
+    with {:ok, redis_key} <- key(entity, settings, context, options) do
+      case Noizu.Intellect.Redis.get_binary(redis_key)  do
+        {:ok, v} ->
+          {:ok, v}
+        _ -> {:ok, nil}
+      end
+      |> case do
+           {:ok, nil} ->
+             ecto_settings = Noizu.Entity.Meta.persistence(entity) |> Enum.find_value(& Noizu.Entity.Meta.Persistence.persistence_settings(&1, :type) == Noizu.Entity.Store.Ecto && &1 || nil)
+             case Noizu.Entity.Store.Ecto.EntityProtocol.as_entity(entity,
+                    ecto_settings,
+                    context,
+                    options
+                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+               {:ok, nil} -> {:ok, nil}
+               {:ok, value} ->
+                 Noizu.Intellect.Redis.set_binary(redis_key, value)
+                 {:ok, value}
+               x -> x
+             end
+           v -> v
+         end
+    end
+  end
+  def as_entity(entity, settings, context, options) do
+    super(entity, settings, context, options)
   end
 
   def channels(this, context) do

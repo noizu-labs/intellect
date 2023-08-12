@@ -8,7 +8,12 @@ defmodule Noizu.Entity.VersionedString do
 
   @vsn 1.0
   @sref "versioned-string"
+
+
+  @persistence redis_store(Noizu.Entity.VersionedString, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.VersionedString, Noizu.Intellect.Repo)
+  @derive Noizu.Entity.Store.Redis.EntityProtocol
+
   def_entity do
     identifier :integer
     field :version
@@ -18,6 +23,40 @@ defmodule Noizu.Entity.VersionedString do
   end
   use Noizu.Entity.Field.Behaviour
   require Noizu.Entity.Meta.Persistence
+
+
+  #---------------------------
+  #
+  #---------------------------
+  @_defimpl Noizu.Entity.Store.Redis.EntityProtocol
+  def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Entity.VersionedString, store: Noizu.Intellect.Redis), context, options) do
+    with {:ok, redis_key} <- key(entity, settings, context, options) do
+      case Noizu.Intellect.Redis.get_binary(redis_key)  do
+        {:ok, v} ->
+          {:ok, v}
+        _ -> {:ok, nil}
+      end
+      |> case do
+           {:ok, nil} ->
+             ecto_settings = Noizu.Entity.Meta.persistence(entity) |> Enum.find_value(& Noizu.Entity.Meta.Persistence.persistence_settings(&1, :type) == Noizu.Entity.Store.Ecto && &1 || nil)
+             case Noizu.Entity.Store.Ecto.EntityProtocol.as_entity(entity,
+                    ecto_settings,
+                    context,
+                    options
+                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+               {:ok, nil} -> {:ok, nil}
+               {:ok, value} ->
+                 Noizu.Intellect.Redis.set_binary(redis_key, value)
+                 {:ok, value}
+               x -> x
+             end
+           v -> v
+         end
+    end
+  end
+  def as_entity(entity, settings, context, options) do
+    super(entity, settings, context, options)
+  end
 
   def type__before_update(%__MODULE__{} = this,_,context,options) do
     cond do
@@ -130,11 +169,11 @@ defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.Version
            with {:ok, entity} <- Noizu.Entity.VersionedString.entity(field_record, context) do
              {:ok, {name, entity}}
            end
-           v when is_integer(v) ->
-             with {:ok, entity} <- Noizu.Entity.VersionedString.entity(v, context) do
-               {:ok, {name, entity}}
-             end
-           _ -> {:error, :not_found}
+         v when is_integer(v) ->
+           with {:ok, entity} <- Noizu.Entity.VersionedString.entity(v, context) do
+             {:ok, {name, entity}}
+           end
+         _ -> {:error, :not_found}
        end
   end
 end

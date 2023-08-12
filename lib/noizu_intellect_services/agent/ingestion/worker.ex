@@ -172,7 +172,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
               sender: state.worker.agent,
               channel: state.worker.channel,
               depth: 0,
-              user_mood: attr[:mood],
+              user_mood: attr[:mood] && String.trim(attr[:mood]),
               event: :message,
               contents: %{body: response},
               meta: %{title: "Settings, Request Messages, Request Response", body: Ymlr.document!(meta_list)},
@@ -241,7 +241,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
              {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
              valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
           do
-          IO.puts("[REPLY:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
+          IO.puts("[REPLY:#{state.worker.agent.slug}] -------------------------------\nraw-reply:\n" <> reply <> "\n------------------------------------\n\n")
 
           # Valid Response?
           unless valid? == :ok, do: IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")

@@ -13,13 +13,51 @@ defmodule Noizu.Intellect.Account.Channel do
   import Noizu.Intellect.LiveEventModule
   @vsn 1.0
   @sref "account-channel"
+
+
+  @persistence redis_store(Noizu.Intellect.Account.Channel, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.Account.Channel, Noizu.Intellect.Repo)
+  @derive Noizu.Entity.Store.Redis.EntityProtocol
   def_entity do
     identifier :integer
     field :slug
     field :account, nil, Noizu.Entity.Reference
     field :details, nil, Noizu.Entity.VersionedString
     field :time_stamp, nil, Noizu.Entity.TimeStamp
+  end
+
+
+  #---------------------------
+  #
+  #---------------------------
+  @_defimpl Noizu.Entity.Store.Redis.EntityProtocol
+  def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Account.Channel, store: Noizu.Intellect.Redis), context, options) do
+    with {:ok, redis_key} <- key(entity, settings, context, options) do
+      case Noizu.Intellect.Redis.get_binary(redis_key)  do
+        {:ok, v} ->
+          {:ok, v}
+        _ -> {:ok, nil}
+      end
+      |> case do
+           {:ok, nil} ->
+             ecto_settings = Noizu.Entity.Meta.persistence(entity) |> Enum.find_value(& Noizu.Entity.Meta.Persistence.persistence_settings(&1, :type) == Noizu.Entity.Store.Ecto && &1 || nil)
+             case Noizu.Entity.Store.Ecto.EntityProtocol.as_entity(entity,
+                    ecto_settings,
+                    context,
+                    options
+                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+               {:ok, nil} -> {:ok, nil}
+               {:ok, value} ->
+                 Noizu.Intellect.Redis.set_binary(redis_key, value)
+                 {:ok, value}
+               x -> x
+             end
+           v -> v
+         end
+    end
+  end
+  def as_entity(entity, settings, context, options) do
+    super(entity, settings, context, options)
   end
 
   def summarize_message?(_channel, message, _context, _options) do
@@ -94,8 +132,8 @@ defmodule Noizu.Intellect.Account.Channel do
          {:ok, extracted_details} <- extract_message_delivery(response[:reply])
       do
 
-        # IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(request_messages, [Access.at(0), :content]))
-        with %{choices: [%{message: %{content: reply}}|_]} <- response do
+        #IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(response[:messages], [Access.at(0), :content]) <> "\n\n======================\n\n")
+        with %{choices: [%{message: %{content: reply}}|_]} <- response[:reply] do
           Logger.warn("[Delivery Response #{message.identifier}] \n #{reply}\n--------\n#{inspect extracted_details, pretty: true, limit: :infinity}\n------------\n\n")
         end
 
@@ -104,7 +142,8 @@ defmodule Noizu.Intellect.Account.Channel do
                {:ok, b_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(b_prompt_context, context, options),
                {:ok, b_extracted_details} <- extract_message_completion(b_response[:reply]) do
 
-            with %{choices: [%{message: %{content: b_reply}}|_]} <- b_response do
+            IO.inspect(b_response[:reply], label: "ANSWERED BY REPLY")
+            with %{choices: [%{message: %{content: b_reply}}|_]} <- b_response[:reply] do
               Logger.warn("[Answered Response #{message.identifier}] \n #{b_reply}\n--------\n#{inspect b_extracted_details, pretty: true, limit: :infinity}\n------------\n\n")
             end
 
@@ -136,7 +175,11 @@ defmodule Noizu.Intellect.Account.Channel do
             profile_image: nil,
             mood: :thumbsy,
             meta: [response[:settings], response[:messages], response[:reply]],
-            body: contents
+            body: """
+            ``````yaml
+            #{contents}
+            ``````
+            """
           }
           Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
         end
@@ -146,13 +189,17 @@ defmodule Noizu.Intellect.Account.Channel do
             fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
           )
           Enum.map(responding_to,
-            fn({:responding_to, {id, confidence, _, _}}) -> confidence > 0 && id end
+            fn({:responding_to, {id, confidence, _, _}}) -> confidence > 0 && id || nil end
           ) |> Enum.reject(&is_nil/1)
+          |> case do
+             [] -> nil
+             v -> v
+             end
         end
 
         audience = if audience = details[:audience] do
           Enum.map(audience,
-            fn({:audience, {id, confidence, _}}) -> confidence > 0 && id  end
+            fn({:audience, {id, confidence, _}}) -> confidence > 0 && id || nil  end
           ) |> Enum.reject(&is_nil/1)
         end
 
@@ -169,7 +216,10 @@ defmodule Noizu.Intellect.Account.Channel do
                        features: summary && summary.features || [],
                        audience: audience || [],
                        responding_to: responding_to || []
-                     } |> Noizu.Weaviate.Api.Objects.create()
+                     }
+                     #|> IO.inspect(label: "WEAVIATE")
+                     |> Noizu.Weaviate.Api.Objects.create()
+                     #|> IO.inspect(label: "WEAVIATE")
                      |> case do
                           {:ok, %{meta: %{id: weaviate}}} -> %{message| weaviate_object: weaviate}
                           _ -> message
@@ -366,6 +416,7 @@ defmodule Noizu.Intellect.Account.Channel do
     """
     def recent_graph(channel, context, options \\ nil)
     def recent_graph(channel, context, options) do
+      start = :os.system_time(:millisecond)
       with {:ok, messages} <- recent_messages(channel, context, options) do
         existing = Enum.map(messages, & &1.identifier)
         include = Enum.map(messages, fn(message) ->
@@ -377,6 +428,8 @@ defmodule Noizu.Intellect.Account.Channel do
           else
           _ -> messages
         end
+        stop = :os.system_time(:millisecond)
+        Logger.info("[RECENT GRAPH] #{stop - start} ms")
         {:ok, final}
       end
     end
@@ -537,7 +590,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     Your are currently processing messages in the following channel
     #{Ymlr.document!(a)}
 
-    ## Chanel Members
+    ## Channel Members
     #{Ymlr.document!(b)}
 
     """

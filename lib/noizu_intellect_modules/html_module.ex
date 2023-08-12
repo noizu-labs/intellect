@@ -1,5 +1,5 @@
 defmodule Noizu.Intellect.HtmlModule do
-
+  require Logger
   def to_yaml(value) do
     Ymlr.document!(value) |> String.trim_leading("---\n")
   end
@@ -57,16 +57,21 @@ defmodule Noizu.Intellect.HtmlModule do
                                      true <- is_list(s) do
                                   Enum.map(s, fn(message) ->
                                     id = message["id"]
-                                    Enum.map((message["answered"]),
-                                      fn(answer) ->
-                                        by = answer["by"]
-                                        by && {:answered_by, {id, by}}
-                                      end) |> Enum.reject(&is_nil/1)
+                                      Enum.map((message["answered"]),
+                                        fn(answer) ->
+                                          by = answer["by"]
+                                          if is_integer(by) do
+                                            by && {:answered_by, {id, by}}
+                                          end
+                                        end) |> Enum.reject(&is_nil/1)
                                   end)
                                 else
                                   _ -> []
                                 end) |> List.flatten()
             message_analysis
+          else
+            {:error, %YamlElixir.ParsingError{}} ->
+              Logger.error("[INVALID YAML]\n#{text}")
           end
         (_) -> nil
       end)
@@ -113,6 +118,9 @@ defmodule Noizu.Intellect.HtmlModule do
                                   _ -> []
                                 end)
             audience ++ responding_to ++ summary ++ message_analysis
+          else
+            {:error, %YamlElixir.ParsingError{}} ->
+              Logger.error("[INVALID YAML]\n#{text}")
           end
         (_) -> nil
       end)
@@ -180,7 +188,9 @@ defmodule Noizu.Intellect.HtmlModule do
                             true <- is_list(s) do
                          Enum.map(s, fn(x) ->
                            with %{"for" => [_|_], "response" => response} <- x do
-                             a = [{:ids, x["for"]}, {:response, response}, {:mood, x["mood"]}]
+                             mood = x["mood"]
+                             mood = mood && String.trim(mood)
+                             a = [{:ids, x["for"]}, {:response, response}, {:mood, mood}]
                              if i = x["nlp-intent"] do
                                {:reply, a ++ [{:intent, Ymlr.document!(i)}]}
                              else
@@ -206,61 +216,15 @@ defmodule Noizu.Intellect.HtmlModule do
                       _ -> []
                     end)
             memories ++ replies ++ mark
+            else
+            {:error, %YamlElixir.ParsingError{}} ->
+              Logger.error("[INVALID YAML]\n#{text}")
           end
         (_) -> nil
       end)
     |> Enum.reject(&is_nil/1)
     |> List.flatten()
     {:ok, o}
-  end
-
-  def extract_response_sections(response) do
-    {_, html_tree} = Floki.parse_document(response)
-    sections = Enum.map(html_tree, fn
-      (_x = {"memories", _, contents}) ->
-        {:memories, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
-      (_x = {"nlp-intent", _, contents}) ->
-        {:intent, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
-      (x = {"mark-read", attrs, _}) ->
-        ids = Enum.find_value(attrs, fn
-          ({"for", ids}) ->
-            ids
-            |> String.split(",")
-            |> Enum.map(&(String.trim(&1)))
-            |> Enum.map(&(String.to_integer(&1)))
-          (_) -> nil
-        end)
-        unless ids == [] do
-          {:ack, [ids: ids]}
-        else
-          {:error, {:malformed_section, x}}
-        end
-      (x = {"reply", attrs, contents}) ->
-        ids = Enum.find_value(attrs, fn
-          ({"for", ids}) ->
-            ids
-            |> String.split(",")
-            |> Enum.map(&(String.trim(&1)))
-            |> Enum.map(&(String.to_integer(&1)))
-          (_) -> nil
-        end)
-        unless ids == [] do
-          with {:ok, sections} <- extract_reply_meta(contents) do
-            {:reply, [{:ids, ids}|sections]}
-          end
-        else
-          {:error, {:malformed_section, x}}
-        end
-      (_x = {"nlp-chat-analysis",_,contents}) -> {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
-      (other = {_,_,_}) -> {:other, other}
-      (other) when is_bitstring(other) ->
-        case String.trim(other) do
-          "" -> nil
-          v -> {:text, v}
-        end
-    end)
-               |> Enum.filter(&(&1))
-    {:ok, sections}
   end
 
 

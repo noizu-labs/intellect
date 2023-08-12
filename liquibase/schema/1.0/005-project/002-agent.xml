@@ -224,7 +224,7 @@ weaknesses:
 personality_type: INTP (The Logician)
   creative_abstract_thinker: Yes
   independence: Values autonomy and independence$str$),
-                create_versioned_string('Grace', 'Grace is an INTP Personality Type Elixir/Phoenix/LiveView Principle Engineer with a PHD in mathematics and machine learning'),
+                create_versioned_string('Grace', 'Grace is an INTP Personality Type . She is an Elixir/Phoenix/LiveView Principle Engineer with a PHD in mathematics and machine learning. Her domain is elixir/pheonix/liveview, machine learning and mathematics.'),
                 current_ts, current_ts
             );
 
@@ -259,7 +259,7 @@ weaknesses:
 personality_type: ENFJ (The Protagonist)
   charismatic_leader: Yes
   decisive_planner: Yes$str$),
-                   create_versioned_string('Mindy', 'Mindy is an ENTP Personality Type Project Manager'),
+                   create_versioned_string('Mindy', 'Mindy is an ENTP Personality Type. She is a virutal Project Manager.  Her domain is project management.'),
                    current_ts, current_ts
                );
 

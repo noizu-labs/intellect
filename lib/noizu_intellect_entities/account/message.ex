@@ -10,8 +10,11 @@ defmodule Noizu.Intellect.Account.Message do
 
   @vsn 1.0
   @sref "account-message"
+  @persistence redis_store(Noizu.Intellect.Account.Message, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.Account.Message, Noizu.Intellect.Repo)
+  @derive Noizu.Entity.Store.Redis.EntityProtocol
   @derive Noizu.Entity.Store.Ecto.EntityProtocol
+
   def_entity do
     identifier :integer
     field :weaviate_object
@@ -69,6 +72,37 @@ defmodule Noizu.Intellect.Account.Message do
   #---------------------------
   #
   #---------------------------
+
+  #---------------------------
+  #
+  #---------------------------
+  @_defimpl Noizu.Entity.Store.Redis.EntityProtocol
+  def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Account.Message, store: Noizu.Intellect.Redis), context, options) do
+    with {:ok, redis_key} <- key(entity, settings, context, options) do
+      case Noizu.Intellect.Redis.get_binary(redis_key)  do
+        {:ok, v} ->
+          {:ok, v}
+        _ -> {:ok, nil}
+      end
+      |> case do
+           {:ok, nil} ->
+             ecto_settings = Noizu.Entity.Meta.persistence(entity) |> Enum.find_value(& Noizu.Entity.Meta.Persistence.persistence_settings(&1, :type) == Noizu.Entity.Store.Ecto && &1 || nil)
+             case Noizu.Entity.Store.Ecto.EntityProtocol.as_entity(entity,
+                    ecto_settings,
+                    context,
+                    options
+                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+               {:ok, nil} -> {:ok, nil}
+               {:ok, value} ->
+                 Noizu.Intellect.Redis.set_binary(redis_key, value)
+                 {:ok, value}
+               x -> x
+             end
+           v -> v
+         end
+    end
+  end
+
   @_defimpl Noizu.Entity.Store.Ecto.EntityProtocol
   def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Schema.Account.Message, store: store), context, options) do
     Logger.error("as entity")
@@ -358,33 +392,24 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
     {sender_type, sender_slug, sender_name} = case subject.sender do
-      %Noizu.Intellect.Account.Member{user: user} -> {"human", user.slug, user.name}
-      %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
+      %Noizu.Intellect.Account.Member{user: user} -> {"human operator", user.slug, user.name}
+      %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual agent", slug, name}
       _ -> {"other", "other"}
     end
 
     # @TODO switch to json response body, return in Repo and apply prompt method on repo.
-
-    _current_time = options[:_current_time] || DateTime.utc_now()
     priority = message_priority(subject, prompt_context, context, options)
     brief = summarize_message(subject, priority, prompt_context, context, options)
     contents = if (brief), do: subject.brief.body || "", else: subject.contents.body || ""
-    prompt =
-      """
-        # Message
-        - id: #{subject.identifier || "[NEW]"}
-          processed: #{subject.read_on && "true" || "false"}
-          priority: #{priority}
-          message_brief: #{brief && true || false}
-          sender:
-            id: #{subject.sender.identifier}
-            type: #{sender_type}
-            slug: #{sender_slug}
-            name: #{sender_name}
-          sent-on: "#{subject.time_stamp.modified_on}"
-          contents: |-1
-           #{String.split(contents, "\n") |> Enum.join("\n     ")}
-      """
+
+    message = %{message: %{
+    id: subject.identifier || "[NEW]",
+    sender: "#{subject.sender.identifier} @#{sender_slug} (#{sender_type})",
+    sent_on: subject.time_stamp.modified_on,
+    contents: contents,
+    }}
+
+    prompt = Ymlr.document!(message) |> String.trim_leading("---\n")
     {:ok, prompt}
   end
   def minder(_subject, _prompt_context, _context, _options) do
@@ -416,14 +441,21 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
             %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual-agent", slug, name}
             _ -> {"other", "other", "other"}
           end
-          contents = message.brief && message.brief.body || message.contents.body
+          review? = (message.sender.identifier != prompt_context.agent.identifier) && is_nil(message.answered_by) && (message.priority >= 50) && is_nil(message.read_on) && true || false
+          contents = cond do
+            review? ->
+              message.contents.body
+            #message.priority > 60 -> message.contents.body # is related? check
+            :else ->
+              message.brief && message.brief.body || message.contents.body
+          end
           %{
             id: message.identifier,
             contents: contents,
             created_on: message.time_stamp.created_on,
             sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual agent"})",
             processed?: !is_nil(message.read_on),
-            review?: is_nil(message.answered_by) && message.priority > 60 && is_nil(message.read_on) && true || false,
+            review?: review?,
           }
         end)
       else

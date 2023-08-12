@@ -40,14 +40,13 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
 
         # Output Format
         Given the previous conversation and following new message provide the requested markdown body for the message-analysis tag.
-
-        # New Message
         For each new message, continue this process of analysis, review the message, determine any previous messages new message has answered.
 
         ## Guidelines
         * Identify the messages that the new message is most likely responding to and discern the most suitable audience for this message.
           * For instance, a new message that elaborates on topics raised in a recent prior message is likely a response to that earlier message rather than the initiation of a new thread.
 
+        # New Message
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %>
         <%= prompt || "" %>
@@ -56,6 +55,7 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
 
         # Output Format
         Provide your final response in the following format, ensure the contents of monitor-response are properly formatted yaml.
+        When template instructs to us |-2 for text use it and properly format.
 
         <monitor-response>
         message_analysis:
@@ -64,7 +64,8 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
             - id: {previous_msg.id}
               answered:
                 - by: {message id that has answered this message}
-                  reasoning: {Provide a 1-sentence explanation for why this message has been answered}
+                  reasoning: |-2
+                    {Provide a 1-sentence explanation for why this message has been answered | properly apply yaml formatting}
             {/foreach}
         </monitor-response>
         """,
