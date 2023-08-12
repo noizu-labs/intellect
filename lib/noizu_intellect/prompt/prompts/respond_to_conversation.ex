@@ -106,7 +106,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
       following this pattern and simply mark-read.
 
       # Response Format
-      Note: in the nlp-chat-analysis and agent-response block embed valid yaml using the following guide.
+      Note: in the nlp-chat-analysis and agent-response block embed valid yaml using the following guide. If template users |-2 to block text then you should as well. properly indent yaml.
 
       <nlp-chat-analysis>
       messages:
@@ -128,7 +128,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
          - for: {message ids that will be processed together}
            action: {reply|mark-read only - do not list reference groups here}
            note: |-2
-             {a 1 sentence justification for choice of grouping and action}
+             [...|a 1 sentence justification for choice of grouping and action]
         {/for}
       </nlp-chat-analysis>
 
@@ -137,13 +137,14 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
         {for action-group in nlp-chat-analysis.summary where summary.action == mark-read}
         - for: {action-group.for}
           reason: |-2
-            {brief justification/reason for marking unread.}
+            [...|brief justification/reason for marking unread.]
         {/for}
       replies:
         {for action-group in nlp-chat-analysis.summary where summary.action == reply}
         - for: {action-group.for}
           nlp-intent:
-            overview: {discuss how you will approach responding to this request}
+            overview: |-2
+              [...|discuss how you will approach responding to this request]
             steps:
               - [...|nested list of steps and sub steps for responding to this request.]
           mood: {emoji showing agents current simulated mood}
@@ -152,7 +153,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
         {/for}
       memories:
         - memory: |-2
-            {memory to record | indent yaml correctly}
+            [...|memory to record | indent yaml correctly]
           messages: [list of processed and unprocessed messages this memory relates to]
           mood: {agents current simulated mood in the form of an emoji}
           features:

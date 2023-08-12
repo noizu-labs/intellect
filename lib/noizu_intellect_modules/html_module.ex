@@ -70,8 +70,9 @@ defmodule Noizu.Intellect.HtmlModule do
                                 end) |> List.flatten()
             message_analysis
           else
-            {:error, %YamlElixir.ParsingError{}} ->
+            x = {:error, %YamlElixir.ParsingError{}} ->
               Logger.error("[INVALID YAML]\n#{text}")
+              x
           end
         (_) -> nil
       end)
@@ -107,7 +108,7 @@ defmodule Noizu.Intellect.HtmlModule do
                              end)
             summary = (with s <- yaml["summary"] || yaml2["summary"],
                             false <- is_nil(s) do
-                         [{:summary, {s["content"], s["action"], s["features"]}}]
+                         [{:summary, {String.trim(s["content"], "'"), s["action"], s["features"]}}]
                        else
                          _ -> []
                        end)
@@ -119,8 +120,9 @@ defmodule Noizu.Intellect.HtmlModule do
                                 end)
             audience ++ responding_to ++ summary ++ message_analysis
           else
-            {:error, %YamlElixir.ParsingError{}} ->
+            x = {:error, %YamlElixir.ParsingError{}} ->
               Logger.error("[INVALID YAML]\n#{text}")
+              x
           end
         (_) -> nil
       end)
@@ -217,8 +219,9 @@ defmodule Noizu.Intellect.HtmlModule do
                     end)
             memories ++ replies ++ mark
             else
-            {:error, %YamlElixir.ParsingError{}} ->
+            x = {:error, %YamlElixir.ParsingError{}} ->
               Logger.error("[INVALID YAML]\n#{text}")
+              x
           end
         (_) -> nil
       end)

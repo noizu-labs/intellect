@@ -65,7 +65,7 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
               answered:
                 - by: {message id that has answered this message}
                   reasoning: |-2
-                    {Provide a 1-sentence explanation for why this message has been answered | properly apply yaml formatting}
+                    [...|Provide a 1-sentence explanation for why this message has been answered | properly apply yaml formatting]
             {/foreach}
         </monitor-response>
         """,
