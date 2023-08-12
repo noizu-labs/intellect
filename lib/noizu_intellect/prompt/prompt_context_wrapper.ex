@@ -5,6 +5,8 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     minder: nil,
     settings: nil,
     assigns: nil,
+    request: nil,
+    arguments: nil,
     vsn: @vsn
   ]
 
@@ -13,6 +15,9 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
                prompt: any,
                minder: any,
                settings: any,
+               assigns: any,
+               request: any,
+               arguments: any,
                vsn: any
              }
 
@@ -24,128 +29,89 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     Noizu.Intellect.Prompts.MessageAnswerStatus.prompt(:v2, options)
   end
 
-  def summarize_message_prompt() do
-    %__MODULE__{
-    prompt: [system: """
-    # Instruction Prompt
-    For every user provided message output a summary of it's contents and only a summary of it's contents. Do not output any comments
-    before or after the summary of the message contents. The summary should be around 1/3rd of the original message size but can be longer if important details are lost.
-    Code snippets should be reduced by replacing method bodies, etc with ellipse ("Code Here ...") comments.
-
-    """,
-    user: """
-    <%= for message <- @prompt_context.message_history do %>
-    <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, @prompt_context, @context, @options) do %>
-    <% {:ok, prompt} when is_bitstring(prompt)  -> %>
-    <%= String.trim_trailing(prompt) %><% _ -> %><%= "" %>
-    <% end  # end case %>
-    <% end  # end for %>
-    """
-    ],
-    settings: fn(request, prompt_context, context, options) ->
-      chars = Enum.map(request.messages, fn(message) ->
-        String.length(message.body)
-      end) |> Enum.sum()
-      approx_tokens = div(chars,3)
-
-      request = cond do
-        approx_tokens < 2048 ->
-          request
-          |> put_in([Access.key(:model)], "gpt-3.5-turbo")
-          |> put_in([Access.key(:model_settings), :max_tokens], 2048)
-        :else -> put_in(request, [Access.key(:model)], "gpt-3.5-turbo-16k")
-      end
-      |> put_in([Access.key(:model_settings), :temperature], 0.2)
-      {:ok, request} |> IO.inspect(label: "MODIFIED REQUEST SETTINGS")
-    end
-    }
+  def summarize_message_prompt(message, options \\ nil) do
+    options = put_in(options || [], [:current_message], message)
+    Noizu.Intellect.Prompts.SummarizeMessage.prompt(:default, options)
   end
 
   def relevancy_prompt(current_message, options \\ nil) do
     options = put_in(options || [], [:current_message], current_message)
-    Noizu.Intellect.Prompts.ChatMonitor.prompt(:v2, options)
+    Noizu.Intellect.Prompts.ChatMonitor.prompt(:default, options)
   end
 
   def respond_to_conversation(options \\ nil) do
-    Noizu.Intellect.Prompts.RespondToConversation.prompt(:v1, options)
+    Noizu.Intellect.Prompts.RespondToConversation.prompt(:default, options)
   end
 
   defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol do
-    def prompt(subject, prompt_context, context, options) do
+    defp expand_prompt(expand_prompt, assigns) do
       echo? = false
-      with {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
-        case subject.prompt do
-          prompt when is_bitstring(prompt) ->
-            prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-            echo? && IO.puts "-----------------------------------------"
-            echo? && IO.puts(prompt)
-            {:ok, {:user, prompt}}
-          {type, prompt} when is_bitstring(prompt) ->
-            prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-            echo? && IO.puts "-----------------------------------------"
-            echo? && IO.puts(prompt)
-            {:ok, {type, prompt}}
-          prompts when is_list(prompts) ->
-            prompts = Enum.map(prompts,
-              fn (prompt) ->
-                case prompt do
-                  prompt when is_bitstring(prompt) ->
-                    prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-                    echo? && IO.puts "-----------------------------------------"
-                    echo? && IO.puts(prompt)
-                    {:user, prompt}
-                  {type, prompt} when is_bitstring(prompt) ->
-                    prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-                    echo? && IO.puts "-----------------------------------------"
-                    echo? && IO.puts(prompt)
-                    {type, prompt}
-                  _ -> nil
-                end
+      case expand_prompt do
+        prompt when is_bitstring(prompt) ->
+          prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+          echo? && IO.puts "-----------------------------------------"
+          echo? && IO.puts(prompt)
+          {:ok, {:user, prompt}}
+        {type, prompt} when is_bitstring(prompt) ->
+          prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+          echo? && IO.puts "-----------------------------------------"
+          echo? && IO.puts(prompt)
+          {:ok, {type, prompt}}
+        prompts when is_list(prompts) ->
+          prompts = Enum.map(prompts,
+            fn (prompt) ->
+              case prompt do
+                prompt when is_bitstring(prompt) ->
+                  prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+                  echo? && IO.puts "-----------------------------------------"
+                  echo? && IO.puts(prompt)
+                  {:user, prompt}
+                {type, prompt} when is_bitstring(prompt) ->
+                  prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+                  echo? && IO.puts "-----------------------------------------"
+                  echo? && IO.puts(prompt)
+                  {type, prompt}
+                _ -> nil
               end
-            )
-            {:ok, prompts}
-          nil -> {:ok, []}
-          _ -> nil
-        end
+            end
+          )
+          {:ok, prompts}
+        nil -> {:ok, []}
+        _ -> {:ok, []}
       end
+    end
+
+    def prompt(subject, prompt_context, context, options) do
+      expand_prompt(subject.prompt, prompt_context.assigns)
     end
     def minder(subject, prompt_context, context, options) do
-      echo? = false
-      with {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
-        case subject.minder do
-          prompt when is_bitstring(prompt) ->
-            prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-            echo? && IO.puts "-----------------------------------------"
-            echo? && IO.puts(prompt)
-            {:ok, {:user, prompt}}
-          {type, prompt} when is_bitstring(prompt) ->
-            prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-            echo? && IO.puts "-----------------------------------------"
-            echo? && IO.puts(prompt)
-            {:ok, {type, prompt}}
-          prompts when is_list(prompts) ->
-            prompts = Enum.map(prompts,
-              fn (prompt) ->
-                case prompt do
-                  prompt when is_bitstring(prompt) ->
-                    prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-                    echo? && IO.puts "-----------------------------------------"
-                    echo? && IO.puts(prompt)
-                    {:user, prompt}
-                  {type, prompt} when is_bitstring(prompt) ->
-                    prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
-                    echo? && IO.puts "-----------------------------------------"
-                    echo? && IO.puts(prompt)
-                    {type, prompt}
-                  _ -> nil
-                end
-              end
-            )
-            {:ok, prompts}
-            nil -> {:ok, []}
-          _ -> nil
-        end
+      expand_prompt(subject.minder, prompt_context.assigns)
+    end
+    def assigns(subject, prompt_context, context, options) do
+      cond do
+        is_map(subject.assigns) -> {:ok, Map.merge(prompt_context.assigns || %{}, subject.assigns)}
+        Kernel.match?({m,f,a}, subject.assigns) ->
+          {m,f,a} = subject.assigns
+          apply(m,f, [subject, prompt_context] ++ (a || []) ++ [context, options])
+        Kernel.match?({m,f}, subject.assigns) ->
+          {m,f} = subject.assigns
+          apply(m,f, [subject, prompt_context, context, options])
+        is_function(subject.assigns, 4) -> subject.assigns.(subject, prompt_context, context, options)
+        :else -> {:ok, prompt_context.assigns}
       end
     end
+    def request(subject, request, context, options) do
+      cond do
+        Kernel.match?({m,f,a}, subject.request) ->
+          {m,f,a} = subject.request
+          apply(m,f, [subject, request] ++ (a || []) ++ [context, options])
+        Kernel.match?({m,f}, subject.request) ->
+          {m,f} = subject.request
+          apply(m,f, [subject, request, context, options])
+        is_function(subject.request, 4) -> subject.request.(subject, request, context, options)
+        :else -> {:ok, request}
+      end
+    end
+
   end
 end

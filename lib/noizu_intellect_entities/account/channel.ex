@@ -8,7 +8,8 @@ defmodule Noizu.Intellect.Account.Channel do
   use Noizu.Core
   alias Noizu.Intellect.Entity.Repo
   alias Noizu.Entity.TimeStamp
-
+  alias Noizu.Intellect.Prompt.DynamicContext
+  alias Noizu.Intellect.Prompt.ContextWrapper
   require Noizu.Intellect.LiveEventModule
   import Noizu.Intellect.LiveEventModule
   @vsn 1.0
@@ -23,22 +24,25 @@ defmodule Noizu.Intellect.Account.Channel do
   end
 
   def summarize_message?(channel, message, context, options) do
-    {:ok, message.token_size > 1024}
+    message.token_size > 1024
   end
-  def summarize_message(channel, message, context, options) do
-    with {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(channel, [message], Noizu.Intellect.Prompt.ContextWrapper.summarize_message_prompt(), context, put_in(options || [], [:nlp], :disabled)),
-         {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
-         {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
-         {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options),
-         {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) |> IO.inspect(label: "Summarize Response"),
-         %{choices: [%{message: %{content: reply}}|_]} <- response
+  def summarize_message(this, message, context, options) do
+    with true <- options[:summarize] || summarize_message?(this, message, context, options),
+         {:ok, prompt_context} <-
+           DynamicContext.prepare_meta_prompt_context(this, [], ContextWrapper.summarize_message_prompt(message), context, options),
+         {:ok, response} <- DynamicContext.execute(prompt_context, context, options),
+         %{choices: [%{message: %{content: reply}}|_]} <- response[:response]
       do
-      Logger.warn("----------------------------\n\n\n[SUMMARY]\n #{reply}")
       {:ok, put_in(message, [Access.key(:contents), Access.key(:body)], reply)}
-      else
-      error -> error
+    else
+      _ -> {:ok, message}
     end
 
+    if summarize_message?(this, message, context, options) do
+      1
+    else
+      {:ok, message}
+    end
   end
 
 
@@ -85,16 +89,10 @@ defmodule Noizu.Intellect.Account.Channel do
 
     with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent_graph(this, context, put_in(options || [], [:limit], 10)),
          messages <- Enum.reverse(messages),
-         {:ok, summarized_message?} <- summarize_message?(this, message, context, options),
-         {:ok, summarized_message} <- summarized_message? && summarize_message(this, message, context, options) || {:ok, message},
+         {:ok, summarized_message} <- summarize_message(this, message, context, options),
          {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(this, messages, Noizu.Intellect.Prompt.ContextWrapper.relevancy_prompt(summarized_message), context, options),
-         {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options),
-         {:ok, request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(request, context, options),
-         {:ok, request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(request, context, options),
-         {:ok, broadcast} <- broadcast(message, prompt_context, context, options),
-         {:ok, prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, prompt_context, context, options),
-         {:ok, response} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings),
-         {:ok, extracted_details} <- extract_message_delivery(response)
+         {:ok, response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
+         {:ok, extracted_details} <- extract_message_delivery(response[:reply])
       do
 
         # IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(request_messages, [Access.at(0), :content]))
@@ -104,12 +102,8 @@ defmodule Noizu.Intellect.Account.Channel do
 
         if length(messages) > 1 do
           with {:ok, b_prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(this, messages, Noizu.Intellect.Prompt.ContextWrapper.answered_prompt(summarized_message), context, options),
-               {:ok, b_request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(b_prompt_context, context, options),
-               {:ok, b_request_settings} <- Noizu.Intellect.Prompt.RequestWrapper.settings(b_request, context, options),
-               {:ok, b_request_messages} <- Noizu.Intellect.Prompt.RequestWrapper.messages(b_request, context, options),
-               {:ok, b_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(summarized_message, b_prompt_context, context, options),
-               {:ok, b_response} <- Noizu.OpenAI.Api.Chat.chat(b_request_messages ++ [%{role: :user, content: b_prompt}], request_settings),
-               {:ok, b_extracted_details} <- extract_message_completion(b_response) do
+               {:ok, b_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(b_prompt_context, context, options),
+               {:ok, b_extracted_details} <- extract_message_completion(b_response[:reply]) do
 
             with %{choices: [%{message: %{content: b_reply}}|_]} <- b_response do
               Logger.warn("[Answered Response #{message.identifier}] \n #{b_reply}\n--------\n#{inspect b_extracted_details, pretty: true, limit: :infinity}\n------------\n\n")
@@ -141,7 +135,7 @@ defmodule Noizu.Intellect.Account.Channel do
             user_name: "monitor-system",
             profile_image: nil,
             mood: :thumbsy,
-            meta: [request_settings, request_messages, response],
+            meta: [response[:settings], response[:messages], response[:reply]],
             body: contents
           }
           Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))

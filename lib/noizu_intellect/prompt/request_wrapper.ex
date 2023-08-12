@@ -3,6 +3,7 @@ defmodule Noizu.Intellect.Prompt.RequestWrapper do
   defstruct [
     model: "gpt-3.5-turbo-16k",
     model_settings: [temperature: 0.5, mak_tokens: 5000],
+    prompt_context: nil,
     messages: [],
     functions: [],
     vsn: @vsn
@@ -23,7 +24,7 @@ defmodule Noizu.Intellect.Prompt.RequestWrapper do
   def settings(this, _context, _options) do
     settings = this.model_settings
                |> put_in([:model], this.model)
-               |> update_in([:retry], &(is_nil(&1) && true || &1))
+               |> update_in([:retry], &(is_nil(&1) && 5 || &1))
                |> then(&(length(this.functions) > 0 && put_in(&1, [:functions], this.functions) || &1))
     {:ok, settings}
   end

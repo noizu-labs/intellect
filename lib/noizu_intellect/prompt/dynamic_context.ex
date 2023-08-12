@@ -42,6 +42,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   alias Noizu.EntityReference.Protocol, as: ERP
   alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
   alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
+  alias Noizu.Intellect.Prompt.DynamicContext.Protocol, as: PromptProtocol
   defstruct [
     # input
     agent: nil,
@@ -59,29 +60,6 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     assigns: %{nlp: true, message_graph: false, members: %{verbose: :brief}},
     vsn: @vsn
   ]
-
-  #----------------------------
-  #
-  #----------------------------
-  def assigns(subject, context, options) do
-    assigns = Map.merge(subject.assigns || %{}, %{prompt_context: subject, agent: subject.agent, channel: subject.channel, channel_members: subject.channel_members, channel_member_lookup: subject.channel_member_lookup, verbose: subject.verbose, format: subject.format, context: context, options: options})
-    assigns = cond do
-      subject.master_prompt_context ->
-        pa = subject.master_prompt_context.assigns
-        cond do
-          is_map(pa) -> Map.merge(assigns, pa)
-          is_function(pa, 3) ->
-            with {:ok, pa2 = %{}} <- pa.(subject, context, options) do
-              Map.merge(assigns, pa2)
-            else
-              _ -> assigns
-            end
-          :else -> assigns
-        end
-      :else -> assigns
-    end
-    {:ok, assigns}
-  end
 
   #----------------------------
   #
@@ -243,285 +221,111 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     {:ok, prompt_context}
   end
 
+  def call_openai_chat_api(request, _prompt_context, context, options) do
+    with {:ok, request_settings} <- request.__struct__.settings(request, context, options),
+         {:ok, request_messages} <- request.__struct__.messages(request, context, options),
+         {:ok, reply} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
+      {:ok, [reply: reply, request: request, settings: request_settings, messages: request_messages]}
+    end
+  end
 
+  def execute(prompt_context, context, options) do
+    with  {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options) do
+      call_openai_chat_api(request, prompt_context, context, options)
+    end
+  end
 
   def for_openai(prompt_context, context, options) do
-    with {:ok, assigns} <- assigns(prompt_context, context, options),
-         prompt_context <- %{prompt_context| assigns: assigns},
-         {:ok, master_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.master_prompt_context, prompt_context, context, options),
-         {:ok, master_minder_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.master_prompt_context, prompt_context, context, options)
+    with {:ok, assigns} <- PromptProtocol.assigns(prompt_context, prompt_context, context, options),
+         prompt_context <- %{prompt_context| assigns: assigns}
       do
-
-      messages = case master_prompt do
-                   v when is_bitstring(v) -> [%Message{type: :system, body: v}]
-                   {:system, v} when is_bitstring(v) -> [%Message{type: :system, body: v}]
-                   {:user, v} when is_bitstring(v) -> [%Message{type: :user, body: v}]
-                   {:assistant, v} when is_bitstring(v) -> [%Message{type: :assistant, body: v}]
-                   v when is_list(v) ->
-                     Enum.map(v,
-                       fn(x) ->
-                         case x do
-                           v when is_bitstring(v) -> %Message{type: :system, body: v}
-                           {:system, v} when is_bitstring(v) -> %Message{type: :system, body: v}
-                           {:user, v} when is_bitstring(v) -> %Message{type: :user, body: v}
-                           {:assistant, v} when is_bitstring(v) -> %Message{type: :assistant, body: v}
-                           _ -> nil
-                         end
-                       end)
-                   _ -> nil
-                 end
-                 |> List.flatten()
-                 |> Enum.filter(&(&1))
-
-
-      minders = case master_minder_prompt do
-                  v when is_bitstring(v) -> [%Message{type: :system, body: v}]
-                  {:system, v} when is_bitstring(v) -> [%Message{type: :system, body: v}]
-                  {:user, v} when is_bitstring(v) -> [%Message{type: :user, body: v}]
-                  {:assistant, v} when is_bitstring(v) -> [%Message{type: :assistant, body: v}]
-                  v when is_list(v) ->
-                    Enum.map(v,
-                      fn(x) ->
-                        case x do
-                          v when is_bitstring(v) -> %Message{type: :system, body: v}
-                          {:system, v} when is_bitstring(v) -> %Message{type: :system, body: v}
-                          {:user, v} when is_bitstring(v) -> %Message{type: :user, body: v}
-                          {:assistant, v} when is_bitstring(v) -> %Message{type: :assistant, body: v}
-                          _ -> nil
-                        end
-                      end)
-                  _ -> nil
-                end
-                |> List.flatten()
-                |> Enum.filter(&(&1))
-
-      request = %Request{
-        messages: messages ++ minders
-      }
-      request = cond do
-        is_nil(prompt_context.master_prompt_context) -> request
-        is_nil(prompt_context.master_prompt_context.settings) -> request
-        is_function(prompt_context.master_prompt_context.settings, 4) ->
-          with {:ok, request} <- prompt_context.master_prompt_context.settings.(request, prompt_context, context, options) do
-            request
-            else
-            _ -> request
-          end
-        :else -> request
-      end
-      {:ok, request}
+      PromptProtocol.request(prompt_context, %Request{}, context, options)
     else
       _ -> {:error, :malformed}
     end
   end
 
-
-  #------------------------------
-  #
-  #------------------------------
-  @doc """
-  Generate actual chat messages and functions to be sent to agent, and determine actual model
-  and model settings to apply based on context, context size, flags and options.
+end
 
 
-  # opening_prompt:
-  #   - nlp_prompt
-  #   - agent_prompt
-  #   - intuition_pump_prompts (agent specific)
-  #   - service_prompts (agent and request specific)
-  #   - master_prompt
-  #   - agent_context
-  #   - synthetic_memories
-  # messages_prompt:
-  #   - messages (recent + dynamic insertion), user system messages, collapsed messages, function call response messages (dynamic collapse)
-  # minders:
-  #   - intuition pump minders (dynamic)
-  #   - service_minders (dynamic)
-  #   - master_minder
-  #   - nlp_minder
-  #   - user_minders (user dynamic)
-  #   - agent_minder
-  #   - function_minder? -> or more detailed descriptions with future dynamic logic.
-  #   - system minders (dynamic)
-  #   - system flags (dynamic - constructed by prompt and message scanning)
+defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for:  Noizu.Intellect.Prompt.DynamicContext do
+  alias Noizu.EntityReference.Protocol, as: ERP
+  alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
+  alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
 
-  """
-  def for_openai_legacy(prompt_context, context, options) do
-    with {:ok, nlp_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.nlp_prompt_context, prompt_context, context, options),
-         {:ok, agent_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.agent, prompt_context, context, options),
-         {:ok, agent_minder} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.agent, prompt_context, context, options),
-         {:ok, {processed_messages, unprocessed_messages, message_minder}} <- openai__prep_message_history(prompt_context, context, options),
-         {:ok, nlp_minder} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.nlp_prompt_context, prompt_context, context, options)
-      do
-        master_prompt = """
-        # Master Prompt
-        Your are GPT-n (gpt for workgroups) your role is to emulate virtual agentas, services and tools defined below using nlp (noizu prompt lingua) service, tool and persona definitions.
+  def prompt(prompt_context, _, context, options) do
+    Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.master_prompt_context, prompt_context, context, options)
+  end
+  def minder(prompt_context, _, context, options) do
+    Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.master_prompt_context, prompt_context, context, options)
+  end
 
-        """
+  def assigns(prompt_context, _, context, options) do
+    prompt_context = prompt_context
+              |> put_in(
+                   [Access.key(:assigns)],
+                   Map.merge(prompt_context.assigns || %{}, %{
+                     prompt_context: prompt_context,
+                     agent: prompt_context.agent,
+                     channel: prompt_context.channel,
+                     message_history: %Noizu.Intellect.Account.Message.Repo{entities: prompt_context.message_history, length: length(prompt_context.message_history)},
+                     channel_members: prompt_context.channel_members,
+                     channel_member_lookup: prompt_context.channel_member_lookup,
+                     verbose: prompt_context.verbose,
+                     format: prompt_context.format,
+                     context: context,
+                     options: options
+                   })
+                 )
+    prompt_context = prompt_context
+                     |> then(& inject_assigns(prompt_context.master_prompt_context, &1, context, options))
+    {:ok, prompt_context.assigns}
+  end
 
-        master_minder = """
+  def request(prompt_context, _, context, options) do
+    with {:ok, master_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context, prompt_context, context, options),
+         {:ok, master_minder_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context, prompt_context, context, options) do
 
-        """
+      prompts = expand_prompts(master_prompt)
+      minders = expand_prompts(master_minder_prompt)
 
-        processed_messages_prompt = unless processed_messages == nil do
-          """
-          # Message Prompt
-          The following are messages in the channel ##{prompt_context.channel.slug} you have already processed to and should be not replied to or ack'd. They are included for context.
+      request = %Request{
+        prompt_context: prompt_context,
+        messages: prompts ++ minders
+      }
 
-          # Message History
-          #{processed_messages}
-
-          # Message Prompt
-          @#{prompt_context.agent.slug} Reply to or ack the unprocessed messages in the following user request based on the following criteria:
-
-          ## Response Criteria
-          Use the following `Response Criteria` table to help in determining which messages you should and shouldn't reply to.
-          ||-- processed --||-- sender_type --||-- Relevancy for Agent --||-- content --||-- chat history --||-- action --||
-          | --- | --- | --- | --- | --- | --- |
-          | true | any | any | any | any | do not reply or ack |
-          | false | any | any | an ongoing back and forth conversation between non human agents with no added value being added to conversation | ... | ack |
-          | false | human | >= .7 | question, comment, request | has not previously been answered | reply |
-          | false | human | >= .7 | question, comment, request| has previously been answered by my or someone else | do not reply |
-          | false | human | >= .7 | intro, greeting directed at you specifically | I have not recently previously answered similar from sender | reply |
-          | false | human | >= .7 | intro, greeting directed at you specifically | I have previously answered similar from sender | ack |
-          | false | not human | >= .9 | question, comment, request | has previously been answered | reply |
-          | false | not human | >= .9 | question, comment, request | has previously been answered or I have nothing to add | ack |
-          | false | not human | >= .9 | intro, greeting, statement | any | ack |
-          [...]
-
-          ## Reply Note
-          1. Your reply(s) should be based on the conversation so far in this channel including processed messages. Your reply should be part of a natural back and forth conversation with multiple other participants.
-           You should continue where you left off in replying to specific senders and the overall chat channel, you should not repeat messages that are similar/identical to messages you or other members have already provided.
-           You should not engage in back and forth dead-end conversations between other non human senders, or reply to a message you've already replied to unless more information has been requested or will be provided by your response.
-
-
-          """
-        else
-          nil
-        end
-
-        unprocessed_messages_prompt = """
-        # Unprocessed Messages
-        #{unprocessed_messages}
-        """
-
-
-
-        unprocessed_message_minder = """
-        # Response Prompt
-        Follow the below rules for your reply.
-
-        1. Do not ack or reply to previously processed messages.
-        2. Apply `Response Criteria` to determine which messages to reply to and which messages to simply ack.
-        3. Output reply sections first followed by ack sections.
-        4. Your response should include an opening nlp-chat-analysis block followed by only reply(s)/ack(s) blocks of the following formats.
-        5. You should reply to multiple messages at once rather than returning multiple separate replies unless their content is significantly different.
-            ## Chat Analysis Format
-            <nlp-chat-analysis>
-            {for all processed and unprocessed messages ordered by sent_on descending}
-            - ({'P' if processed 'U' if unprocessed} ) {message.id} -sender {message.sender_type} "{message.sender}" -weight {0.0-1.0 `Recipient Analysis` of how likely message was directed towards you.} {'reply', 'ack' or 'nop' based on `Response Criteria`} -decision {if reply or ack list reasoning behind `Recipient Analysis` weight selection and reply/ack `Response Criteria` decision.}
-            {/for}
-            </nlp-chat-analysis>
-
-            ## Reply Format
-            <reply for="{comma seperated list of unprocessed message ids this reply is for}">
-            <nlp-intent>
-            [...|nlp-intent output]
-            </nlp-intent>
-            <response>
-            [...| your reply]
-            </response>
-            <nlp-reflect>
-            [...|nlp-reflect output]
-            </nlp-reflect>
-            </reply>
-
-            ## Ack Format
-            <ack for="{comma seperated list of unprocessed message ids `ack`nowledged but not replied to}"/>
-        """
-
-        opening_prompt = %Message{type: :system, body: master_prompt <> nlp_prompt}
-        processed_prompt = processed_messages_prompt &&  %Message{type: :system, body: processed_messages_prompt}
-        message_prompt = %Message{type: :user, body: unprocessed_messages_prompt}
-
-
-        minders = [nlp_minder, agent_minder, message_minder, unprocessed_message_minder] |> Enum.filter(&(&1)) |> Enum.join("\n\n")
-        minder_prompt = %Message{type: :system, body: minders}
-
-        openai_messages = [opening_prompt, processed_prompt, message_prompt, minder_prompt]
-        #openai_messages = [opening_prompt, message_prompt, minder_prompt]
-                          |> Enum.filter(&(&1))
-
-        Enum.map(openai_messages, &(&1.body))
-        |> Enum.join("\n-------------------\n")
-        |> String.split("\n")
-        |> Enum.join("\n\t#{prompt_context.agent.slug}: ")
-        |> then(& IO.puts "\n\t#{prompt_context.agent.slug}: #{&1}")
-
-        request = %Request{
-          messages: openai_messages
-        }
-        {:ok, request}
+      Noizu.Intellect.Prompt.DynamicContext.Protocol.request(prompt_context.master_prompt_context, request, context, options)
     end
-
   end
 
-  def openai__prep_message_history(prompt_context, context, options) do
-    # Convert message history into single message
-    h = prompt_context.message_history
-        |> Enum.sort_by(&(&1.time_stamp.created_on), DateTime)
-        |> Enum.map(
-             fn (message) ->
-               if message.read_on do
-                 with {:ok, mp} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options)
-                   do
-                   {mp, nil, nil}
-                 else
-                   _ -> nil
-                 end
-               else
-                 with {:ok, mp} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(message, prompt_context, context, options),
-                      {:ok, mm} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(message, prompt_context, context, options)
-                   do
-                   {nil, mp, mm}
-                 else
-                   _ -> nil
-                 end
-               end
-             end
-           )
-        |> Enum.filter(&(&1))
 
-    processed = Enum.map(h, &(elem(&1, 0)))
-         |> Enum.filter(&(&1))
-         |> Enum.join("\n")
-    unprocessed = Enum.map(h, &(elem(&1, 1)))
-                |> Enum.filter(&(&1))
-                |> Enum.join("\n")
-    minders = Enum.map(h, &(elem(&1, 2)))
-         |> Enum.filter(&(&1))
-         |> Enum.join("\n")
-    {:ok, {processed, unprocessed, minders}}
+  defp expand_prompts(prompts) do
+    case prompts do
+      v when is_bitstring(v) -> [%Message{type: :system, body: v}]
+      {:system, v} when is_bitstring(v) -> [%Message{type: :system, body: v}]
+      {:user, v} when is_bitstring(v) -> [%Message{type: :user, body: v}]
+      {:assistant, v} when is_bitstring(v) -> [%Message{type: :assistant, body: v}]
+      v when is_list(v) ->
+        Enum.map(v,
+          fn(x) ->
+            case x do
+              v when is_bitstring(v) -> %Message{type: :system, body: v}
+              {:system, v} when is_bitstring(v) -> %Message{type: :system, body: v}
+              {:user, v} when is_bitstring(v) -> %Message{type: :user, body: v}
+              {:assistant, v} when is_bitstring(v) -> %Message{type: :assistant, body: v}
+              _ -> nil
+            end
+          end) |> Enum.reject(&is_nil/1)
+      _ -> []
+    end
+    |> List.flatten()
   end
 
-  #------------------------------
-  #
-  #------------------------------
-  @doc """
-  returns section related open ai chat completion message.
-  section:
-    open: opening system prompt
-    messages: compacted messages
-    close: closing minders and flags
-  """
-  def openai_chat_queue__section(section, prompt_context, context, options)
-  def openai_chat_queue__section(:open, prompt_context, context, options) do
-    nil
-  end
-  def openai_chat_queue__section(:messages, prompt_context, context, options) do
-    nil
-  end
-  def openai_chat_queue__section(:close, prompt_context, context, options) do
-    nil
+  defp inject_assigns(subject, prompt_context, context, options) do
+    with {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.assigns(subject, prompt_context, context, options) do
+      %{prompt_context| assigns: assigns}
+    else
+      _ -> prompt_context
+    end
   end
 end

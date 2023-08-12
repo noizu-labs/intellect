@@ -19,20 +19,26 @@ defmodule Noizu.Intellect.Prompt.Lingua do
 end
 
 defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Prompt.Lingua] do
-  def prompt(subject, prompt_context, context, options) do
-    with {:ok, file} <- Noizu.Intellect.Prompt.Lingua.prompt_file(subject),
-         {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
-       assigns = put_in(assigns, [:section], :prompt)
+  def prompt(subject, prompt_context, _context, _options) do
+    with {:ok, file} <- Noizu.Intellect.Prompt.Lingua.prompt_file(subject)
+      do
+       assigns = put_in(prompt_context.assigns, [:section], :prompt)
        prompt = EEx.eval_file(file, [assigns: assigns], trim: true)
        {:ok, prompt}
     end
   end
-  def minder(subject, prompt_context, context, options) do
-    with {:ok, file} <- Noizu.Intellect.Prompt.Lingua.minder_file(subject),
-         {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.assigns(prompt_context, context, options) do
-      assigns = put_in(assigns, [:section], :minder)
+  def minder(subject, prompt_context, _context, _options) do
+    with {:ok, file} <- Noizu.Intellect.Prompt.Lingua.minder_file(subject)
+      do
+      assigns = put_in(prompt_context.assigns, [:section], :minder)
       minder = EEx.eval_file(file, [assigns: assigns], trim: true)
       {:ok, minder}
     end
+  end
+  def assigns(_, prompt_context, _,_) do
+    {:ok, prompt_context.assigns}
+  end
+  def request(_,request,_,_) do
+    {:ok, request}
   end
 end

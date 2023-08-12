@@ -3,22 +3,24 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
   require Logger
   @impl true
 
+  def assigns(subject, prompt_context, context, options) do
+    assigns = Map.merge(
+                prompt_context.assigns,
+                %{
+                  nlp: false,
+                  members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :brief})
+                })
+              |> put_in([:current_message], subject.arguments[:current_message])
+    {:ok, assigns}
+  end
+
   def prompt(version, options \\ nil)
+  def prompt(:default, options), do: prompt(:v2, options)
   def prompt(:v2, options) do
     current_message = options[:current_message]
-
     %Noizu.Intellect.Prompt.ContextWrapper{
-      assigns: fn(prompt_context, context, options) ->
-                 assigns = Map.merge(
-                             prompt_context.assigns,
-                             %{
-                               message_history: %Noizu.Intellect.Account.Message.Repo{entities: prompt_context.message_history, length: length(prompt_context.message_history)},
-                               nlp: false,
-                               members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :brief})
-                             })
-                           |> put_in([:current_message], current_message)
-                  {:ok, assigns}
-               end,
+      arguments: %{current_message: current_message},
+      assigns: &__MODULE__.assigns/4,
       prompt: [user:
         """
         <%= if @message_history.length > 0 do %>

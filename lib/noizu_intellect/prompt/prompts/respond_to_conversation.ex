@@ -1,23 +1,26 @@
 defmodule Noizu.Intellect.Prompts.RespondToConversation do
   @behaviour Noizu.Intellect.Prompt.ContextWrapper
   require Logger
+
+  def assigns(_subject, prompt_context, _context, _options) do
+    #{:ok, graph} = Noizu.Intellect.Account.Message.Graph.to_graph(prompt_context.message_history, prompt_context.channel_members, context, options)
+    assigns = prompt_context.assigns
+              |> Map.merge(
+                   %{
+                     nlp: false,
+                     members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :detailed})
+                   })
+    {:ok, assigns}
+  end
+
   def prompt(version, options \\ nil)
+  def prompt(:default, options), do: prompt(:v1, options)
   def prompt(:v1, options) do
     current_message = options[:current_message]
 
     %Noizu.Intellect.Prompt.ContextWrapper{
-      assigns: fn(prompt_context, context, options) ->
-                 {:ok, graph} = Noizu.Intellect.Account.Message.Graph.to_graph(prompt_context.message_history, prompt_context.channel_members, context, options)
-                 assigns = prompt_context.assigns
-                           |> Map.merge(
-                             %{
-                               message_graph: graph,
-                               nlp: false,
-                               members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :detailed})
-                             })
-                           |> put_in([:message_graph], graph)
-                 {:ok, assigns}
-      end,
+      assigns: &__MODULE__.assigns/4,
+      arguments: %{current_message: current_message},
       prompt: [system:
       """
       # NLP Definition
