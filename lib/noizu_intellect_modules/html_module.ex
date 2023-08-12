@@ -180,7 +180,7 @@ defmodule Noizu.Intellect.HtmlModule do
                             true <- is_list(s) do
                          Enum.map(s, fn(x) ->
                            with %{"for" => [_|_], "response" => response} <- x do
-                             a = [{:ids, x["for"]}, {:response, response}]
+                             a = [{:ids, x["for"]}, {:response, response}, {:mood, x["mood"]}]
                              if i = x["nlp-intent"] do
                                {:reply, a ++ [{:intent, Ymlr.document!(i)}]}
                              else

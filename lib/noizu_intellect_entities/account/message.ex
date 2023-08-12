@@ -472,7 +472,7 @@ defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message]
       user_name: sender,
       user: user_ref,
       profile_image: nil,
-      mood: nil,
+      mood: message.user_mood,
       body: message.contents.body,
       state: :sent
     }

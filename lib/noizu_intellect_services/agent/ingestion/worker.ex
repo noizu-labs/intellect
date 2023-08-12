@@ -172,7 +172,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
               sender: state.worker.agent,
               channel: state.worker.channel,
               depth: 0,
-              user_mood: nil,
+              user_mood: attr[:mood],
               event: :message,
               contents: %{body: response},
               meta: %{title: "Settings, Request Messages, Request Response", body: Ymlr.document!(meta_list)},
@@ -182,11 +182,14 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
             # Block so we don't reload and resend.
             Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
 
-            Enum.map(attr[:ids] || [], fn(id) ->
-              message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
-              IO.inspect(message && {message.identifier, message.read_on}, label: "ACK")
-              message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+            Enum.map(attr[:ids], fn(id) ->
+              is_integer(id) && Noizu.Intellect.Schema.Account.Message.RespondingTo.record({:responding_to, {id, 100, {nil, nil}, "agent reply"}}, message, context, options)
             end)
+
+            if read = attr[:ids] do
+              read_messages = Enum.filter(messages, & &1.identifier in read && is_nil(&1.read_on))
+              Enum.map(read_messages, & Noizu.Intellect.Account.Message.mark_read(&1, state.worker.agent, context, options))
+            end
 
             with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
               # need a from message method.
@@ -196,22 +199,21 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
                 timestamp: message.time_stamp.created_on,
                 user_name: state.worker.agent.slug,
                 profile_image: state.worker.agent.profile_image,
-                mood: :nothing,
+                mood: attr[:mood],
                 body: message.contents.body
               }
               Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
             end
 
-
             Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
-          else
-            # clear ids regardless to avoid continuous loop.
-            if ids = attr[:ids] do
-              Enum.map(ids, fn(id) ->
-                message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
-                message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-              end)
-            end
+#          else
+#            # clear ids regardless to avoid continuous loop.
+#            if ids = attr[:ids] do
+#              Enum.map(ids, fn(id) ->
+#                message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
+#                message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+#              end)
+#            end
           end
         end
       )

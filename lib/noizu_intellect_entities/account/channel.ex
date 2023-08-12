@@ -109,12 +109,13 @@ defmodule Noizu.Intellect.Account.Channel do
             end
 
             Enum.map(b_extracted_details, fn (x = {:answered_by, {answered, answered_by}}) ->
-              IO.inspect(x)
-              with {:ok, close} <- Noizu.Intellect.Account.Message.entity(answered, context) do
-                unless close.answered_by do
-                  {:ok, answered_by} = Noizu.Intellect.Account.Message.ref(answered_by)
-                  %{close| answered_by: answered_by}
-                  |> Noizu.Intellect.Entity.Repo.update(context)
+              unless answered == answered_by do
+                with {:ok, close} <- Noizu.Intellect.Account.Message.entity(answered, context) do
+                  unless close.answered_by do
+                    {:ok, answered_by} = Noizu.Intellect.Account.Message.ref(answered_by)
+                    %{close| answered_by: answered_by}
+                    |> Noizu.Intellect.Entity.Repo.update(context)
+                  end
                 end
               end
             end)

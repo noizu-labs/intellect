@@ -10,7 +10,7 @@ defmodule Noizu.Intellect.Schema.Account.Message do
     field :channel, Noizu.Entity.Reference
     field :answered_by, Noizu.Entity.Reference
     field :depth, :integer
-    field :user_mood, :integer # atom
+    field :user_mood, :string # atom
     field :event, Ecto.Enum, values: [:online,:offline,:message,:function_call,:function_response]
     field :token_size, :integer
     field :contents, Noizu.Entity.Reference

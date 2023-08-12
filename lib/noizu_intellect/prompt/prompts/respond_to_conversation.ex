@@ -135,8 +135,9 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
             overview: {discuss how you will approach responding to this request}
             steps:
               - [...|nested list of steps and sub steps for responding to this request.]
+          mood: {emoji showing agents current simulated mood}
           response: |-2
-            [...| your response to these messages. remember to properly indent. end response with <nlp-mood>{emoji showing agents current simulated mood}</nlp-mood>]
+            [...| your response to these messages. remember to properly indent.]
         [...| more replies]
       mark-processed:
         - for: [...| list of unprocessed message ids you are marking as processed]

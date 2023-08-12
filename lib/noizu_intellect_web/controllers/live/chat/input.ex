@@ -7,12 +7,20 @@ defmodule Noizu.IntellectWeb.Chat.Input do
   #--------------------
   #
   #--------------------
-  def set_mood(selector, mood, socket) when mood in ["excited","loved","happy","sad","thumbsy","nothing"] do
+  def set_mood(selector, mood, socket) do
     js = JS.set_attribute({"aria-expanded", "false"}, to: "##{selector}-toggle")
-    socket = socket
-             |> assign(mood: %{selected: String.to_atom(mood)})
-             |> push_event("js_push", %{js: js.ops})
-    {:noreply, socket}
+    if mood == :nothing do
+      socket = socket
+               |> assign(mood: %{selected: nil, filter: nil})
+               |> push_event("js_push", %{js: js.ops})
+      {:noreply, socket}
+    else
+      socket = socket
+               |> assign(mood: %{selected: mood, filter: nil})
+               |> push_event("js_push", %{js: js.ops})
+      {:noreply, socket}
+    end
+
   end
 
 
@@ -21,12 +29,15 @@ defmodule Noizu.IntellectWeb.Chat.Input do
   #--------------------
   def user_input(form, socket) do
 
-
+    mood = cond do
+      socket.assigns[:mood].selected == :nothing -> nil
+      :else -> socket.assigns[:mood].selected
+    end
     message = %Noizu.Intellect.Account.Message{
       sender: socket.assigns[:member],
       channel: socket.assigns[:channel],
       depth: 0,
-      user_mood: nil,
+      user_mood: mood,
       event: :message,
       contents: %{body: String.trim(form["comment"])},
       time_stamp: Noizu.Entity.TimeStamp.now()
@@ -54,7 +65,7 @@ defmodule Noizu.IntellectWeb.Chat.Input do
     js = JS.dispatch("value:clear", to: "#chat-input-comment")
          |> JS.dispatch("height:clear", to: "#chat-input-comment")
     socket = socket
-             |> assign(mood: %{selected: nil})
+             |> assign(mood: %{selected: nil, filter: nil})
              |> push_event("js_push", %{js: js.ops})
     {:noreply, socket}
   end
@@ -70,9 +81,15 @@ defmodule Noizu.IntellectWeb.Chat.Input do
     set_mood(id, mood, socket)
   end
 
+  def handle_event("filter-update", %{"filter" => filter}, socket) do
+    mood = socket.assigns[:mood]
+           |> put_in([:filter], filter && String.downcase(filter))
+    {:noreply, assign(socket, mood: mood)}
+  end
+
   def mount(socket) do
     socket = socket
-             |> assign(mood: %{selected: nil})
+             |> assign(mood: %{selected: nil, filter: nil})
     {:ok, socket}
   end
 

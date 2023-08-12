@@ -19,6 +19,110 @@ defmodule Noizu.IntellectWeb.CoreComponents do
   import Noizu.IntellectWeb.Gettext
 
 
+  def emojis(), do: [
+    %{emoji: "😀", description: "Grinning Face", categories: [:mood]},
+    %{emoji: "😃", description: "Grinning Face with Big Eyes", categories: [:mood]},
+    %{emoji: "😄", description: "Grinning Face with Smiling Eyes", categories: [:mood]},
+    %{emoji: "😁", description: "Beaming Face with Smiling Eyes", categories: [:mood]},
+    %{emoji: "😆", description: "Grinning Squinting Face", categories: [:mood]},
+    %{emoji: "😅", description: "Grinning Face with Sweat", categories: [:mood]},
+    %{emoji: "🤣", description: "Rolling on the Floor Laughing", categories: [:mood]},
+    %{emoji: "😂", description: "Face with Tears of Joy", categories: [:mood]},
+    %{emoji: "🙂", description: "Slightly Smiling Face", categories: [:mood]},
+    %{emoji: "🙃", description: "Upside-Down Face", categories: [:mood]},
+    %{emoji: "😉", description: "Winking Face", categories: [:mood]},
+    %{emoji: "😊", description: "Smiling Face with Smiling Eyes", categories: [:mood]},
+    %{emoji: "😇", description: "Smiling Face with Halo", categories: [:mood]},
+    %{emoji: "😍", description: "Smiling Face with Heart-Eyes", categories: [:mood]},
+    %{emoji: "🥰", description: "Smiling Face with Hearts", categories: [:mood]},
+    %{emoji: "😘", description: "Face Blowing a Kiss", categories: [:mood]},
+    %{emoji: "😗", description: "Kissing Face", categories: [:mood]},
+    %{emoji: "😚", description: "Kissing Face with Closed Eyes", categories: [:mood]},
+    %{emoji: "😙", description: "Kissing Face with Smiling Eyes", categories: [:mood]},
+    %{emoji: "😋", description: "Face Savoring Food", categories: [:mood]},
+    %{emoji: "😛", description: "Face with Tongue", categories: [:mood]},
+    %{emoji: "😜", description: "Winking Face with Tongue", categories: [:mood]},
+    %{emoji: "🤪", description: "Zany Face", categories: [:mood]},
+    %{emoji: "😝", description: "Squinting Face with Tongue", categories: [:mood]},
+    %{emoji: "🤑", description: "Money-Mouth Face", categories: [:mood]},
+    %{emoji: "🤗", description: "Hugging Face", categories: [:mood]},
+    %{emoji: "🤭", description: "Face with Hand Over Mouth", categories: [:mood]},
+    %{emoji: "🤫", description: "Shushing Face", categories: [:mood]},
+    %{emoji: "🤔", description: "Thinking Face", categories: [:mood]},
+    %{emoji: "🤨", description: "Face with Raised Eyebrow", categories: [:mood]},
+    %{emoji: "😐", description: "Neutral Face", categories: [:mood]},
+    %{emoji: "😑", description: "Expressionless Face", categories: [:mood]},
+    %{emoji: "😶", description: "Face Without Mouth", categories: [:mood]},
+    %{emoji: "😏", description: "Smirking Face", categories: [:mood]},
+    %{emoji: "😒", description: "Unamused Face", categories: [:mood]},
+    %{emoji: "🙄", description: "Face with Rolling Eyes", categories: [:mood]},
+    %{emoji: "😬", description: "Grimacing Face", categories: [:mood]},
+    %{emoji: "🤥", description: "Lying Face", categories: [:mood]},
+    %{emoji: "😌", description: "Relieved Face", categories: [:mood]},
+    %{emoji: "😔", description: "Pensive Face", categories: [:mood]},
+    %{emoji: "😪", description: "Sleepy Face", categories: [:mood]},
+    %{emoji: "🤤", description: "Drooling Face", categories: [:mood]},
+    %{emoji: "😴", description: "Sleeping Face", categories: [:mood]},
+    %{emoji: "😷", description: "Face with Medical Mask", categories: [:mood]},
+    %{emoji: "🤒", description: "Face with Thermometer", categories: [:mood]},
+    %{emoji: "🤕", description: "Face with Head-Bandage", categories: [:mood]},
+    %{emoji: "🤢", description: "Nauseated Face", categories: [:mood]},
+    %{emoji: "🤮", description: "Face Vomiting", categories: [:mood]},
+    %{emoji: "🤧", description: "Sneezing Face", categories: [:mood]},
+    %{emoji: "🥵", description: "Hot Face", categories: [:mood]},
+    %{emoji: "🥶", description: "Cold Face", categories: [:mood]},
+    %{emoji: "🥴", description: "Woozy Face", categories: [:mood]},
+    %{emoji: "😵", description: "Dizzy Face", categories: [:mood]},
+    %{emoji: "🤯", description: "Exploding Head", categories: [:mood]},
+    %{emoji: "🤠", description: "Cowboy Hat Face", categories: [:mood]},
+    %{emoji: "🥳", description: "Partying Face", categories: [:mood]},
+    %{emoji: "😎", description: "Smiling Face with Sunglasses", categories: [:mood]},
+    %{emoji: "🤓", description: "Nerd Face", categories: [:mood]},
+    %{emoji: "🧐", description: "Face with Monocle", categories: [:mood]},
+    %{emoji: "😕", description: "Confused Face", categories: [:mood]},
+    %{emoji: "😟", description: "Worried Face", categories: [:mood]},
+    %{emoji: "🙁", description: "Slightly Frowning Face", categories: [:mood]},
+    %{emoji: "😮", description: "Face with Open Mouth", categories: [:mood]},
+    %{emoji: "😯", description: "Hushed Face", categories: [:mood]},
+    %{emoji: "😲", description: "Astonished Face", categories: [:mood]},
+    %{emoji: "😳", description: "Flushed Face", categories: [:mood]},
+    %{emoji: "🥺", description: "Pleading Face", categories: [:mood]},
+    %{emoji: "😦", description: "Frowning Face with Open Mouth", categories: [:mood]},
+    %{emoji: "😧", description: "Anguished Face", categories: [:mood]},
+    %{emoji: "😨", description: "Fearful Face", categories: [:mood]},
+    %{emoji: "😰", description: "Anxious Face with Sweat", categories: [:mood]},
+    %{emoji: "😥", description: "Sad but Relieved Face", categories: [:mood]},
+    %{emoji: "😢", description: "Crying Face", categories: [:mood]},
+    %{emoji: "😭", description: "Loudly Crying Face", categories: [:mood]},
+    %{emoji: "😱", description: "Face Screaming in Fear", categories: [:mood]},
+    %{emoji: "😖", description: "Confounded Face", categories: [:mood]},
+    %{emoji: "😣", description: "Persevering Face", categories: [:mood]},
+    %{emoji: "😞", description: "Disappointed Face", categories: [:mood]},
+    %{emoji: "😓", description: "Downcast Face with Sweat", categories: [:mood]},
+    %{emoji: "😩", description: "Weary Face", categories: [:mood]},
+    %{emoji: "😫", description: "Tired Face", categories: [:mood]},
+    %{emoji: "🥱", description: "Yawning Face", categories: [:mood]},
+    %{emoji: "😤", description: "Face with Steam From Nose", categories: [:mood]},
+    %{emoji: "😡", description: "Pouting Face", categories: [:mood]},
+    %{emoji: "😠", description: "Angry Face", categories: [:mood]},
+    %{emoji: "🤬", description: "Face with Symbols on Mouth", categories: [:mood]},
+    %{emoji: "😈", description: "Smiling Face with Horns", categories: [:mood]},
+    %{emoji: "👿", description: "Angry Face with Horns", categories: [:mood]},
+    %{emoji: "💀", description: "Skull", categories: [:mood]},
+    %{emoji: "☠️", description: "Skull and Crossbones", categories: [:mood]},
+    %{emoji: "💩", description: "Pile of Poo", categories: [:mood]},
+    %{emoji: "🤡", description: "Clown Face", categories: [:mood]},
+    %{emoji: "👽", description: "Alien", categories: [:mood]},
+    %{emoji: "👻", description: "Ghost", categories: [:mood]},
+    %{emoji: "👺", description: "Ogre", categories: [:mood]},
+    %{emoji: "👹", description: "Japanese Ogre", categories: [:mood]},
+    %{emoji: "👿", description: "Japanese Goblin", categories: [:mood]},
+    %{emoji: "💋", description: "Kiss Mark", categories: [:mood]},
+    %{emoji: "❤️", description: "Red Heart", categories: [:mood]},
+    %{emoji: "🔥", description: "Fire", categories: [:mood]},
+    %{emoji: "👍", description: "Thumbs Up", categories: [:mood]}
+  ]
+
 
   # from https://github.com/phoenixframework/phoenix_live_view/pull/2004/files
   def toggle_attribute({attr, val}), do: toggle_attribute(%JS{}, {attr, val}, [])
@@ -74,6 +178,7 @@ defmodule Noizu.IntellectWeb.CoreComponents do
       <% @mood == :nothing -> %>
       I feel nothing
       <% :else -> %>
+      <%= Enum.find_value(emojis(), & &1.emoji == @mood && &1.description) %>
     <% end %>
     """
   end
@@ -121,6 +226,9 @@ defmodule Noizu.IntellectWeb.CoreComponents do
               </svg>
           </span>
         <% :else -> %>
+          <span class="bg-transparent flex h-8 w-8 items-center justify-center rounded-full">
+            <%= @mood %>
+          </span>
       <% end %>
     <% else %>
     <%= cond do %>
@@ -161,6 +269,9 @@ defmodule Noizu.IntellectWeb.CoreComponents do
               </svg>
           </span>
         <% :else -> %>
+           <span class="bg-transparent flex h-4 w-4 items-center justify-center rounded-full">
+            <%= @mood %>
+          </span>
       <% end %>
     <% end %>
     """
@@ -421,7 +532,7 @@ defmodule Noizu.IntellectWeb.CoreComponents do
         >
                   <span class="flex items-center justify-center">
                     <!-- Placeholder label, show/hide based on listbox state. -->
-                    <%= if @mood.selected && @mood.selected != :nothing do %>
+                    <%= if @mood.selected && @mood.selected not in [nil,  :nothing] do %>
                       <span class="noizu-chat-input-current-mood">
                         <span class="flex items-center">
                           <.mood_glyph mood={@mood.selected} />
@@ -446,8 +557,28 @@ defmodule Noizu.IntellectWeb.CoreComponents do
           phx-key="escape"
           phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
         >
-          <%= for for_mood <- [:excited, :loved, :happy, :sad, :thumbsy, :nothing] do %>
-            <li phx-click="set-mood" phx-target={@target} phx-value-id={@id} phx-value-mood={for_mood} class="bg-white hover:bg-gray-100  relative cursor-default select-none px-3 py-2" id="listbox-option-0" role="option">
+
+
+          <li class="bg-white relative cursor-default select-none px-3 py-2"> Input: <input phx-change="filter-update" phx-target={@target}  type="text" name="filter" placeholder="search"/> </li>
+
+          <li class="bg-white relative cursor-default select-none px-3 py-2">
+          <%= if @mood.filter  do %>
+            <%= for emoji <- emojis() do %>
+              <%= if String.downcase(emoji.description) =~ @mood.filter do %>
+                <span phx-click="set-mood" phx-target={@target}  phx-value-id={@id} phx-value-mood={emoji.emoji} title={emoji.description}><%= emoji.emoji %></span>
+              <% end %>
+            <% end %>
+          <% else %>
+            <%= for emoji <- emojis() do %>
+              <span phx-click="set-mood" phx-target={@target}  phx-value-id={@id} phx-value-mood={emoji.emoji} title={emoji.description}><%= emoji.emoji %></span>
+            <% end %>
+          <% end %>
+
+          </li>
+
+          <%= for for_mood <- [:nothing] do %>
+            <li phx-click="set-mood" phx-target={@target} phx-value-id={@id} phx-value-mood={for_mood}
+              class="bg-white hover:bg-gray-100  relative cursor-default select-none px-3 py-2" id="listbox-option-0" role="option">
               <div class="flex items-center">
                 <.mood_glyph mood={for_mood} />
                 <span class="ml-3 block truncate font-medium"><.mood_label mood={for_mood} /></span>
