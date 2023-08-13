@@ -459,23 +459,25 @@ defmodule Noizu.IntellectWeb.CoreComponents do
           <div class={"sidebar-bg #{@background}"}></div>
         <% end %>
 
-        <div class="sidebar-pull close">
+
+
+
+        <div class="sidebar-pull close pointer-events-none">
           <div class="fixed ml-3 z-20 top-[50%]">
             <div
               phx-click={JS.set_attribute({"aria-expanded", "false"}, to: "##{@id}")}
-              class="sidebar-pull-anchor">
-
+              class="sidebar-pull-anchor pointer-events-auto">
             </div>
           </div>
         </div>
         <div
           id={"#{@id}-pull"}
-          class="sidebar-pull open"
+          class="sidebar-pull open pointer-events-none"
         >
           <div class="fixed ml-3 z-20 top-[50%]">
             <div
               phx-click={JS.set_attribute({"aria-expanded", "true"}, to: "##{@id}")}
-              class="sidebar-pull-anchor">
+              class="sidebar-pull-anchor pointer-events-auto">
 
             </div>
           </div>
@@ -490,6 +492,10 @@ defmodule Noizu.IntellectWeb.CoreComponents do
 
 
             <div class="mt-6 flex-1 px-4 sm:px-6 z-20">
+
+
+
+
                     <%= render_slot(@inner_block) %>
             </div>
 

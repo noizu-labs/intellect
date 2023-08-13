@@ -23,7 +23,10 @@ import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
-import {Hover_Hook, ExpandingTextArea_Hook, UpdateElapsedTime_Hook, JS_FORWARD_Hook} from "./hooks";
+import {
+    Hover_Hook, ExpandingTextArea_Hook, UpdateElapsedTime_Hook, JS_FORWARD_Hook,
+    ScrollableContent_Hook, ToggleAriaExpanded_Hook
+} from "./hooks";
 import {SubmitChatInput_Hook} from "./hooks";
 import {NoizuEventHandlers} from "./utilities";
 
@@ -38,6 +41,8 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 //----------------------------------
 let Hooks = {}
 Hooks.JS_FORWARD = JS_FORWARD_Hook;
+Hooks.ScrollableContent = ScrollableContent_Hook;
+Hooks.ToggleAriaExpanded = ToggleAriaExpanded_Hook;
 Hooks.ExpandingTextArea = ExpandingTextArea_Hook;
 Hooks.SubmitChatInput = SubmitChatInput_Hook;
 Hooks.UpdateElapsedTime = UpdateElapsedTime_Hook;

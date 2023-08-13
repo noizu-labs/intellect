@@ -12,6 +12,32 @@
     #user-menu
     */
 
+
+    .page-top-arrow svg {
+        @apply html-scrollable-content-top:opacity-100 opacity-0 transition-opacity duration-1000 pointer-events-auto;
+    }
+
+    .page-bottom-arrow svg {
+        @apply html-scrollable-content:opacity-100 opacity-0 transition-opacity duration-1000 pointer-events-auto;
+    }
+
+
+    .collapsible[aria-expanded="false"] .chat-message-body  {
+        @apply max-h-16 overflow-clip;
+    }
+
+    .collapsible[aria-expanded="false"] .chat-message-block  {
+        @apply ring-2;
+    }
+
+    .system-message[aria-expanded="false"] .chat-message-block  {
+        @apply ring-red-600;
+    }
+
+    .system-message[aria-expanded="true"] .chat-message-block  {
+        @apply ring-red-300;
+    }
+
     message-link {
         @apply text-blue-800;
     }
@@ -106,10 +132,6 @@
     .markdown-body {
         @apply overflow-x-auto w-fit h-fit max-w-[100%] ;
         pointer-events: auto !important;
-    }
-
-    .system-message .markdown-body {
-        @apply ring-2 ring-red-600;
     }
 
     .markdown-body ul {

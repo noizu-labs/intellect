@@ -7,6 +7,17 @@
     <!-- ========================================================== -->
     <!-- ========================================================== -->
 
+
+    <!-- ========================================================== -->
+    <!-- MESSAGE_READ_STATUS_ENUM                                   -->
+    <!-- ========================================================== -->
+    <changeSet author="you" id="MESSAGE_READ_STATUS_ENUM enum">
+        <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
+            <param name="enum" value="MESSAGE_READ_STATUS_ENUM"/>
+            <param name="values" value="read,unread,error,processing"/>
+        </customChange>
+    </changeSet>
+
     <!-- ========================================================== -->
     <!-- USER_CREDENTIAL_TYPE                                       -->
     <!-- ========================================================== -->

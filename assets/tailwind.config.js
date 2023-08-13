@@ -5,7 +5,122 @@ const plugin = require("tailwindcss/plugin")
 const fs = require("fs")
 const path = require("path")
 
+
+
+/*
+textColor
+borderColor
+width
+height
+padding
+margin
+opacity
+ring
+rotate
+scale
+backgroundColor
+borderWidth
+borderRadius
+fontSize
+fontWeight
+lineHeight
+letterSpacing
+fill
+stroke
+flex
+grid
+order
+zIndex
+visibility
+space
+divideWidth
+divideColor
+divideOpacity
+divideStyle
+backdropBlur
+backdropBrightness
+backdropContrast
+backdropGrayscale
+backdropInvert
+backdropOpacity
+backdropSaturate
+backdropSepia
+blur
+brightness
+contrast
+grayscale
+invert
+saturate
+sepia
+skew
+transitionProperty
+transitionTimingFunction
+transitionDuration
+transitionDelay
+
+ */
+let extensions = [
+  'textColor',
+  'borderColor',
+  'width',
+  'height',
+  'padding',
+  'margin',
+  'opacity',
+  'ring',
+  'rotate',
+  'scale',
+  'backgroundColor',
+  'borderWidth',
+  'borderRadius',
+  'fontSize',
+  'fontWeight',
+  'lineHeight',
+  'letterSpacing',
+  'fill',
+  'stroke',
+  'flex',
+  'grid',
+  'order',
+  'zIndex',
+  'visibility',
+  'space',
+  'divideWidth',
+  'divideColor',
+  'divideOpacity',
+  'divideStyle',
+  'backdropBlur',
+  'backdropBrightness',
+  'backdropContrast',
+  'backdropGrayscale',
+  'backdropInvert',
+  'backdropOpacity',
+  'backdropSaturate',
+  'backdropSepia',
+  'blur',
+  'brightness',
+  'contrast',
+  'grayscale',
+  'invert',
+  'saturate',
+  'sepia',
+  'skew',
+  'transitionProperty',
+  'transitionTimingFunction',
+  'transitionDuration',
+  'transitionDelay'
+];
+
+let extend = {};
+extensions.forEach((extension) => {
+  extend[extension] = ['html-scrollable-content', 'container-scrollable-content', 'html-scrollable-content-top', 'container-scrollable-content-top'];
+});
+
+
 module.exports = {
+  variants: {
+    extend: extend
+  },
   content: [
     "./js/**/*.js",
     "../lib/*_web.ex",
@@ -30,6 +145,21 @@ module.exports = {
     //
     //     <div class="phx-click-loading:animate-ping">
     //
+
+    function ({ addVariant, e }) {
+      addVariant('scrollable-content', ({ modifySelectors, separator }) => {
+        modifySelectors(({ className }) => {
+          return `.scrollable-content .${e(`scrollable-content${separator}${className}`)}`;
+        });
+      });
+    },
+    plugin(({addVariant}) => addVariant("html-scrollable-content", ["html.scrollable-content&", "html.scrollable-content &"])),
+    plugin(({addVariant}) => addVariant("container-scrollable-content", [".container.scrollable-content&", ".container.scrollable-content &"])),
+    plugin(({addVariant}) => addVariant("html-scrollable-content-top", ["html.scrollable-content-top&", "html.scrollable-content-top &"])),
+    plugin(({addVariant}) => addVariant("container-scrollable-content-top", [".container.scrollable-content-top&", ".container.scrollable-content-top &"])),
+    plugin(({addVariant}) => addVariant("scrollablez", ["html.scrollable-content&", "html.scrollable-content &"])),
+
+
     plugin(({addVariant}) => addVariant("phx-no-feedback", [".phx-no-feedback&", ".phx-no-feedback &"])),
     plugin(({addVariant}) => addVariant("phx-click-loading", [".phx-click-loading&", ".phx-click-loading &"])),
     plugin(({addVariant}) => addVariant("phx-submit-loading", [".phx-submit-loading&", ".phx-submit-loading &"])),

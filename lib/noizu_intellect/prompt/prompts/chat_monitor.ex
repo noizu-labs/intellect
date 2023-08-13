@@ -35,6 +35,20 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         - A message relates to a previous message if it clearly responds to or continues the topic of that message, or repeats that message.
         - Ensure accurate identification of the sender or previous and new messages, avoiding confusion between them.
         - Carefully match questions and answers, using content and context clues.
+        ```pseudo-elixir
+          message_relates(msg, other_msg) do
+            cond do
+            other_msg is response to msg -> true
+            msg repeats other_msg request -> true
+            subject of msg is the same as other_msg -> true
+            msg is response to other_msg -> true
+            msg is in response to a another_msg (or chain) in response to other_msg -> true
+            other_msg is in response to a another_msg (or chain) in response to msg -> true
+            [...]
+            :else -> false
+            end
+          end
+        ```
 
         ## Considerations for Different Members
         - Consider members' backgrounds, personality types, and response preferences when determining the likely audience and responses.
@@ -97,13 +111,31 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         * Summarize the content and purpose of the new message.
           * examples: "requests a description of foo", "provides a description of foo", etc.
         * For search vectorization, describe the action (e.g., "requests a description of foo").
-        * Extract features for future vector DB indexing (e.g., "What is Lambda Calculus" -> ["lambda calculus", "math"]).
+        * Extract features for future vector DB indexing (e.g., "What is Lambda Calculus" -> ["lambda calculus", "math", ...]).
 
         # Instruction for New Message
         For each new message, below continue this process of analysis, review the message, determine potential recipients based on message content and context and determine the message sender type from the message.sender field.
 
         ## Confidence Levels for Message Audience
-        Use this below table to help determining audience and audience confidence for each new message in the following # New Message section. Apply the first matching confidence level/highest matching confidence level.
+        Use this below logic to help determining audience and audience confidence for each new message in the following # New Message section. Apply the first matching confidence level/highest matching confidence level.
+        It is a guide but not an absolute.
+
+        <%= if true do %>
+        ```pseudo-elixir
+        def function determine_confidence_level(member, msg) do
+          h = (msg.senderType == "human operator")
+          c = cond do
+            msg.contents =~ member.slug/i -> h && 90 || 60
+            condition(msg.contents, mentions member by name) -> h && 80 || 50
+            msg.contents =~ "@everyone"/i || msg.contents =~ "@channel"/i -> h && 70 || 40
+            condition(msg.contents, mentions member by name) -> 50
+            h && condition(msg.contents, relates to domain expertise of member) && condition(msg.contents, does not reference any members directly) -> 20
+            :else -> 0
+          end
+          min(100, c + (h && condition(msg.contents, relates to domain expertise of member) && 15 || 0))
+        end
+        ```
+        <% end %>
 
         Note:
         - sender type refers to the sender of the new message not the member type of the channel member.
@@ -111,6 +143,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         - A message is in a member's domain if it's subject relates to the role/duty/interests of member in their channel member definition entry for example if the message is asking an elixir question and the channel member is
         an elixir developer then the message is in their domain.
 
+        <%= if false do %>
         | sender type       | member mentioned by slug | member mentioned by name | indirect mention | message in member domain and no direct mentions | then confidence level | reason |
         |-------------------|--------------------------|--------------------------|------------------|--------------------------|-----------------------|--------|
         | human operator    | t                        | *                        | f                | *                        | 90                    | Direct mention by Human Operator |
@@ -124,7 +157,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         | virtual agent     | *                        | t                        | t                | *                        | 30                    | Name indirect mention by Virtual Agent |
         | virtual agent     | *                        | *                        | *                | t                        | 20                    | Message pertains to agent domain |
         | *                 | *                        | *                        | *                | *                        | 0                     | Not relevant to agent. |
-
+        <% end %>
 
         # New Message
         <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
@@ -142,15 +175,17 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
         <monitor-response>
         message_analysis:
           chat-history:
-            {foreach Chat History message}
+            {foreach previous_msg in Chat History message}
             - id: {previous_msg.id}
-              relates-to: {list of previous messages this message relates to}
-              relates-to-reasoning: {Provide 1 sentence explaining why this message relates to any previous messages e.g. "This message is a duplicate of the previous message"}
+              relates-to: {list of previous messages previous_msg relates to}
+              relates-to-reasoning: |-2
+                [...|Provide 1 sentence explaining why this message relates to any previous messages e.g. "This message is a duplicate of the previous message"]
               relevant: {true|false - is previous message relevant to new based on its content and the new message's content.}
-              reasoning: {Provide a 1-sentence explanation for why this message relates or doesnt relate to new message}
+              reasoning: |-2
+                [...|Provide a 1-sentence explanation for why this message relates or doesnt relate to new message]
             {/foreach}
           new-message:
-            sender-type: {sender type of new message}
+            sender-type: {sender type of new_message}
             audience:
               {foreach channel member}
                 - member-slug: @{member.slug}
@@ -158,7 +193,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
                   referenced-by-name? : {true|false - in contents of new message}
                   content-in-member-domain? : {true|false - in contents of new message}
                   indirect-reference? : {true|false - in contents of new message}
-                  confidence: {0-100}
+                  confidence: {determine_confidence_level(member, new_message)}
               {/foreach}
 
         message_details:
@@ -175,8 +210,9 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
           audience:
             {foreach probable recipient of the new message | exclude if confidence < 30}
               - for: {integer id of channel member}
-                confidence: {0-100}
-                explanation: [...|Provide a 1-sentence blurb explaining why the new message is relevant to the member]
+                confidence: {determine_confidence_level(member, new_message)}
+                explanation: |-2
+                  [...|Provide a 1-sentence blurb explaining why the new message is relevant to the member]
             {/foreach}
 
           draft-summary:
@@ -184,14 +220,14 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
               [...|
               Summarize and condense the content of the original new message heavily. Trim down code examples (shorten documents, remove method bodies, etc.)
               For example:
-              original: "Zoocryptids are creatures that are rumored or believed to exist, but have not been proven by scientific evidence."
-              summary: "Definition of what zoocryptids are."
+               - original: "Zoocryptids are creatures that are rumored or believed to exist, but have not been proven by scientific evidence."
+               - summary: "Definition of what zoocryptids are."
               ]
             action: |-2
               [...| Describe purpose/action of new message for vector indexing. e.g. "asks for a description of foo", "provides an explanation of foo"]
             features:
               {foreach feature extracted from message describing the content and objective of this message for future vector db indexing}
-                - {feature}
+                - {feature | properly yaml formatted string}
               {/foreach}
 
           summary:

@@ -110,37 +110,37 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
 
       <nlp-chat-analysis>
       messages:
-        {foreach chat message}
-          - id: {message.id}
+        {foreach msg in chat messages}
+          - id: {msg.id}
             relates-to: [{list the ids of any unread messages which this message relates to (messages responding to a request made by this message or concerning related subject matter)}]
-            processed?: {value from Chat History entry for this message}
-            review?: {value from Chat History entry for this message}
+            processed?: {value output for chat_messages[msg].processed?}
+            review?: {value output for chat_messages[msg].review?}
             action: {mark-read, reply, reference, none | your planned action for this message, if message record in chat messages's processed? = true then action must be either 'none' or 'reference' if you will refer to this message in a reply to unprocessed message}
         {/foreach}
       plan:
-        {for each unprocessed message}
-         - id: {msg.id}
+        {foreach nmsg message in chat messages where processed? == false}
+         - id: {nmsg.id}
            action: {reply, mark-read | if review? is false you should generally ignore and mark-read, if review? is true you may reply or mark-read.}
-           relates-to: [{list of ids of any previous messages this unprocessed  message is responding to or that cover very similar topics.],
-        {/for}
+           relates-to: [{list of ids of any previous messages that nmsg is responding to or that cover very similar topics.],
+        {/foreach}
       summary:
-        {for each reply, mark-read grouping | omit reference groupings}
-         - for: {message ids that will be processed together}
-           action: {reply|mark-read only - do not list reference groups here}
+        {foreach action-group of plan messages to be processed together | omit reference groupings}
+         - for: {group ids in action-group that will be processed together}
+           action: {:reply|:mark-read - do not list reference groups here | action for action-group}
            note: |-2
              [...|a 1 sentence justification for choice of grouping and action]
-        {/for}
+        {/foreach}
       </nlp-chat-analysis>
 
       <agent-response>
       mark-processed:
-        {for action-group in nlp-chat-analysis.summary where summary.action == mark-read}
+        {for action-group in nlp-chat-analysis.summary where summary.action == :mark-read}
         - for: {action-group.for}
           reason: |-2
             [...|brief justification/reason for marking unread.]
         {/for}
       replies:
-        {for action-group in nlp-chat-analysis.summary where summary.action == reply}
+        {for action-group in nlp-chat-analysis.summary where summary.action == :reply}
         - for: {action-group.for}
           nlp-intent:
             overview: |-2
@@ -148,9 +148,11 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
             steps:
               - [...|nested list of steps and sub steps for responding to this request.]
           mood: {emoji showing agents current simulated mood}
+          post-process: {true|false if requested output is very large or requires function calls set to true and agent will be queried separately with updated context to prepare reply}
           response: |-2
-            [...| your response to these messages. remember to properly indent.]
+            [...| your response to these messages or instructions for a separate post processing reply step. remember to properly indent.]
         {/for}
+
       memories:
         - memory: |-2
             [...|memory to record | indent yaml correctly]
@@ -158,6 +160,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
           mood: {agents current simulated mood in the form of an emoji}
           features:
             - [...|list of features/tags to associate with this memory and ongoing recent conversation context]
+
       </agent-response>
 
 
@@ -169,8 +172,8 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
       <% end %>
 
       ## Final Instructions
-      As previously instructed output your response using the requested format. Remember to use message-links to note when topics have been previously discussed.
-      Remember to follow your response plan and do not reply to message groups your plan did not instruct you to reply to.
+      As previously instructed output your response using the requested format. Remember to use <message-link for={msg.id}> tags </message-link> when referencing previous messages in your reply.
+      Remember to follow your response summary and do not reply to message groups your summary did not instruct you to reply to.
 
 
       """],

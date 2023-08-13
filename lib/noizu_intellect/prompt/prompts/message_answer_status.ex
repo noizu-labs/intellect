@@ -60,10 +60,10 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
         <monitor-response>
         message_analysis:
           chat-history:
-            {foreach Chat History message}
-            - id: {previous_msg.id}
+            {foreach msg in Chat History message}
+            - id: {msg.id}
               answered:
-                - by: {message id that has answered this message}
+                - by: {message.id that has answered this message}
                   reasoning: |-2
                     [...|Provide a 1-sentence explanation for why this message has been answered | properly apply yaml formatting]
             {/foreach}
