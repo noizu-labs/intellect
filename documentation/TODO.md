@@ -1,3 +1,4 @@
+## Prompts
 - [x] Simplify prompts to use Yaml like structures rather than harder to parse json.
 - [x] Simplify output format to use Yaml as it's easier for agents.
 - [x] Improve Message Graph 
@@ -6,6 +7,9 @@
   - [x] Then list node contents. Simplify/reduce data structure.
 - [x] Rephrase multi message parser to focus on outputting memories. Produce mark read, reply as a secondary feature
       to reduce the likelihood of agents incorrectly responding.
+- [ ] Setup dedicated flow -> take chat history and digest it in 3.5 then send to 3.5 or 4
+ 
+## Externals & Functions
 - [ ] Hook up functions and function responses handling.
   - [ ] Prepare message digest
   - [ ] Hook up github project
@@ -13,9 +17,21 @@
   - [ ] Jira
   - [ ] JetBrains
   - [ ] Code Interpreter
-- [p] Hook up message feature extraction and VDB. (in progress)
+
+## Tools Services & Agents
+ - [ ] Hook services/tools back up. 
+
+## Synthetics 
+- [x] Hook up message feature extraction and VDB. (in progress)
 - [ ] Hook up synthetics.
 - [ ] Tweak prompts to let agent scan messages, record memories and ack with out reply.
+
+## UX
+- [ ] show markdown
+- [ ] show meta data 
+- [ ] show synthetics.
+- [ ] book mark 
+- [ ] nested comment (nested comments forget about outer scope and use a revised digest of chat to date.)
 
 
 https://towardsdatascience.com/qlora-fine-tune-a-large-language-model-on-your-gpu-27bed5a03e2b
