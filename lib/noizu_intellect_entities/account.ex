@@ -66,6 +66,7 @@ defmodule Noizu.Intellect.Account do
                on: account.identifier == channel.account,
                where: is_nil(account.deleted_on),
                where: is_nil(channel.deleted_on),
+               where: channel.type == :channel,
                select: channel
       case Noizu.Intellect.Repo.all(q) do
         channels when is_list(channels) ->

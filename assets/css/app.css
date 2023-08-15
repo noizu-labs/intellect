@@ -66,7 +66,7 @@
 
 
     .collapsible[aria-expanded="false"] .chat-message-body  {
-        @apply max-h-16 overflow-clip;
+        @apply max-h-32 overflow-clip;
     }
 
     .collapsible[aria-expanded="false"] .chat-message-block  {

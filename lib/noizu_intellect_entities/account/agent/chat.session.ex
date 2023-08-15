@@ -13,14 +13,14 @@ defmodule Noizu.Intellect.Account.Agent.Chat.Session do
   @persistence redis_store(Noizu.Intellect.Account.Agent.Chat.Session, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.Account.Agent.Chat.Session, Noizu.Intellect.Repo)
   @derive Noizu.Entity.Store.Redis.EntityProtocol
-  @derive Noizu.Entity.Store.Ecto.EntityProtocol
+  #@derive Noizu.Entity.Store.Ecto.EntityProtocol
 
   def_entity do
     identifier :integer
     field :agent, nil, Noizu.Entity.Reference
     field :member, nil, Noizu.Entity.Reference
-    #field :channel, nil, Noizu.Entity.Reference
-    field :details, nil, Noizu.Entity.VersionedString
+    field :channel, nil, Noizu.Entity.Reference
+    #field :details, nil, Noizu.Entity.VersionedString
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
   import Ecto.Query
@@ -34,7 +34,7 @@ defmodule Noizu.Intellect.Account.Agent.Chat.Session do
   #
   #---------------------------
   @_defimpl Noizu.Entity.Store.Redis.EntityProtocol
-  def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Account.Message, store: Noizu.Intellect.Redis), context, options) do
+  def as_entity(entity, settings = Noizu.Entity.Meta.Persistence.persistence_settings(table: Noizu.Intellect.Account.Agent.Chat.Session, store: Noizu.Intellect.Redis), context, options) do
     with {:ok, redis_key} <- key(entity, settings, context, options) do
       case Noizu.Intellect.Redis.get_binary(redis_key)  do
         {:ok, v} ->
@@ -77,12 +77,10 @@ defmodule Noizu.Intellect.Account.Agent.Chat.Session do
            {:ok, member_id} <- Noizu.EntityReference.Protocol.id(member)
         do
         q = from s in Noizu.Intellect.Schema.Account.Agent.Chat.Session,
-                 join: d in Noizu.Intellect.Schema.VersionedString,
-                 on: d.identifier == s.details,
                  where: s.agent == ^agent_id,
                  where: s.member == ^member_id,
                  where: is_nil(s.deleted_on),
-                 select: %{s| __loader__: %{details: d}}
+                 select: s
         case Noizu.Intellect.Repo.all(q) do
           v when is_list(v) ->
             Enum.map(v, fn(s) ->

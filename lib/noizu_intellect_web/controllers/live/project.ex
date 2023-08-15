@@ -9,7 +9,6 @@ defmodule Noizu.IntellectWeb.Project do
 
 
 
-
     <div class="fixed inset-0 w-32 right-0 h-[100%] pointer-events-none z-30">
     <div class="pointer-events-auto fixed right-3 top-16 pt-2 page-top-arrow z-50">
       <svg
@@ -54,24 +53,25 @@ defmodule Noizu.IntellectWeb.Project do
 
 
 
-
-
-    <div class="flex flex-row w-full min-h-[90vh] items-end content-center justify-self-center justify-center justify-items-center z-10">
-      <!-- center -->
-      <div class="w-10/12 z-10">
-      <%= live_render(
-      @socket,
-      Noizu.IntellectWeb.Chat,
-      id: "project-chat",
-      session: %{
-        "mood" => %{selected: nil},
-        "active_user" => @active_user,
-        "active_project" => @active_project,
-        "active_channel" => @active_channel,
-        "active_member" => @active_member }
-      ) %>
+      <div class="flex flex-row w-full min-h-[90vh] items-end content-center justify-self-center justify-center justify-items-center z-10">
+        <!-- center -->
+        <div class="w-10/12 z-10">
+        <%= live_render(
+        @socket,
+        Noizu.IntellectWeb.Chat,
+        id: "project-chat",
+        session: %{
+          "mood" => %{selected: nil},
+          "view" => @view,
+          "active_user" => @active_user,
+          "active_project" => @active_project,
+          "active_channel" => @active_channel,
+          "active_member" => @active_member }
+        ) %>
+        </div>
       </div>
-    </div>
+
+
 
 
 
@@ -79,14 +79,12 @@ defmodule Noizu.IntellectWeb.Project do
     """
   end
 
-
   # collapse_sidebar
 
   def handle_event("collapse-sidebar", _, socket) do
     Noizu.IntellectWeb.Layouts.close_sidebar()
     {:noreply, socket}
   end
-
 
   def handle_event(event, params, socket) do
     IO.puts """
@@ -113,6 +111,7 @@ defmodule Noizu.IntellectWeb.Project do
                 |> assign(active_channel: session["active_channel"])
                 |> assign(active_member: session["active_member"])
                 |> assign(context: session["context"])
+                |> assign(view: :channel)
                 |> assign(error: nil)
        {:ok, socket}
      else

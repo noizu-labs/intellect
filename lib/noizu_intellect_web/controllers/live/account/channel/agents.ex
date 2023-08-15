@@ -44,25 +44,6 @@ defmodule Noizu.IntellectWeb.Account.Channel.Agents do
     end
   end
 
-  def create_chat_session(agent, socket) do
-    with agents <- socket.assigns[:agents],
-         {:ok, agent} <- Enum.find_value(agents, &(&1.identifier == agent && {:ok, &1})),
-         {:ok, agent_ref} <- Noizu.EntityReference.Protocol.ref(agent)
-      do
-      {:ok, session} = %Noizu.Intellect.Account.Agent.Chat.Session{
-        member: socket.assigns[:member],
-        agent: agent_ref,
-        details: %{title: "Chat Session", body: "Chat Session"},
-        time_stamp: Noizu.Entity.TimeStamp.now()
-      }  |> Noizu.Intellect.Entity.Repo.create(socket.assigns[:context])
-      socket
-    else
-      _ -> socket
-    end
-
-    {:noreply, socket}
-  end
-
   #=========================
   #
   #=========================
@@ -74,9 +55,6 @@ defmodule Noizu.IntellectWeb.Account.Channel.Agents do
     show_agent_chat_session(String.to_integer(agent), socket)
   end
 
-  def handle_event("create:session", %{"agent" => agent}, socket) do
-    create_chat_session(String.to_integer(agent), socket)
-  end
 
   #=========================
   #

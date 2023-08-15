@@ -85,6 +85,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   end
 
   def unread_messages?(state,context,options) do
+    # TODO - logic depends on channel type
     # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
     with {:ok, o} <- message_history(state, context, options) do
       unless Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority > 0.5 && true || nil)) do
@@ -101,6 +102,8 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   end
 
   def message_history(state,context,options) do
+    # TODO - logic depends on channel type
+
     # We'll actually pull agent digest messages, etc. here.
 
     # 1. get unprocessed
@@ -221,6 +224,9 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   end
 
   def process_message_queue(state, context, options) do
+    # TODO - logic depends on channel type, if session we get all unread messages and filter others by nearby object
+    # weaviate search. Prompt returns a list of messages not a composite message and expects a single return.
+
     with true <- unread_messages?(state, context, options),
          {:ok, messages} <- message_history(state, context, options),
          messages <- messages |> Enum.reverse(),

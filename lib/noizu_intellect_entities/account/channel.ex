@@ -23,6 +23,7 @@ defmodule Noizu.Intellect.Account.Channel do
     field :slug
     field :account, nil, Noizu.Entity.Reference
     field :details, nil, Noizu.Entity.VersionedString
+    field :type
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
 
@@ -120,6 +121,19 @@ defmodule Noizu.Intellect.Account.Channel do
   end
 
   def deliver(this, message, context, options \\ nil) do
+    cond do
+      this.type == :session ->
+        IO.puts """
+        Instead of channel deliver we should extract features and summary and return.
+        Ingestion Worker for session channels should scan all messages and ignore recipient confidence.
+        """
+        channel_deliver(this, message, context, options)
+      :else ->
+        channel_deliver(this, message, context, options)
+    end
+  end
+
+  def channel_deliver(this, message, context, options \\ nil) do
     # Retrieve related message history for this message (this will eventually be based on who is sending and previous weightings for now we simply pull recent history)
 
     # IO.inspect(message, label: "CURRENT_MESSAGE")
@@ -174,7 +188,7 @@ defmodule Noizu.Intellect.Account.Channel do
             user_name: "monitor-system",
             profile_image: nil,
             mood: :thumbsy,
-            meta: [response[:settings], response[:messages], response[:reply]],
+            meta: %{settings: response[:settings], messages: response[:messages], reply: response[:reply]} |> Ymlr.document!(),
             body: """
             ``````yaml
             #{contents}

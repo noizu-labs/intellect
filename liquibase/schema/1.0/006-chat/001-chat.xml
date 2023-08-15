@@ -67,6 +67,9 @@
             </column>
             <column name="slug" type="CITEXT"/>
             <column name="account" type="BIGINT"/>
+            <column name="type" type="CHANNEL_TYPE_ENUM" defaultValue="channel">
+                <constraints nullable="false"/>
+            </column>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -104,7 +107,7 @@
             <column name="member" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="details" type="BIGINT">
+            <column name="channel" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
 

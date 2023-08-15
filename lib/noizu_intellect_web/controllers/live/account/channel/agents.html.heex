@@ -37,11 +37,23 @@
     <h1 class="prose prose-xl">Select Session</h1>
     <div class="card">
         <div class="card-body">
-            <ol>
+            <ol class="divide-y">
                 <%= for session <- @sessions do %>
-                <li><%= session.details.title %></li>
+                <li
+                        phx-target="#project-chat"
+                        phx-click="show:session"
+                        phx-value-session={session.identifier}
+                        phx-value-modal={"#{@id}-select-agent-chat"}
+                        class="py-1"
+                ><%= session.channel.details.title %></li>
                 <% end %>
-                <li phx-click="create:session" phx-target={@myself} phx-value-agent={@selected && @selected.identifier}>New</li>
+                <li
+                        phx-target="#project-chat"
+                        phx-click="create:session"
+                        phx-value-agent={@selected && @selected.identifier}
+                        phx-value-modal={"#{@id}-select-agent-chat"}
+                        class="py-1"
+                >New</li>
             </ol>
         </div>
     </div>

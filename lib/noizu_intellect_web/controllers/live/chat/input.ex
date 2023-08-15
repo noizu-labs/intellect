@@ -28,7 +28,7 @@ defmodule Noizu.IntellectWeb.Chat.Input do
   #
   #--------------------
   def user_input(form, socket) do
-
+    channel = socket.assigns[:channel]
     mood = cond do
       socket.assigns[:mood].selected == :nothing -> nil
       :else -> socket.assigns[:mood].selected
