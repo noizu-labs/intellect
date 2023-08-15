@@ -92,6 +92,44 @@
     </changeSet>
 
 
+
+    <changeSet author="kebrings" id="agent_chat_session table">
+        <createTable tableName="agent_chat_session">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" />
+            </column>
+            <column name="agent" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="member" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="details" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_on" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_on" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="kebrings" id="agent_chat_session uid sequencer">
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            SELECT create_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Chat.Session.Repo') , 'Elixir.Noizu.Intellect.Account.Agent.Chat.Session.Repo');
+        </sql>
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                SELECT drop_uid_sequence(uuid_generate_v3(uuid_ns_dns(), 'Elixir.Noizu.Intellect.Account.Agent.Chat.Session.Repo'));
+            </sql>
+        </rollback>
+    </changeSet>
+
+
     <changeSet author="kebrings" id="channel_agent table">
         <createTable tableName="channel_agent">
             <column name="channel" type="BIGINT">
@@ -334,7 +372,7 @@
             </column>
 
 
-            <column name="status" type="MESSAGE_READ_STATUS_ENUM" defaultValue="'read'">
+            <column name="status" type="MESSAGE_READ_STATUS_ENUM" defaultValue="read">
                 <constraints nullable="false"/>
             </column>
 

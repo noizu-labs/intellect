@@ -27,10 +27,10 @@
 - [ ] Tweak prompts to let agent scan messages, record memories and ack with out reply.
 
 ## UX
-- [ ] show markdown
-- [ ] show meta data 
+- [x] show markdown
+- [x] show meta data 
 - [ ] show synthetics.
-- [ ] book mark 
+- [ ] bookmarks 
 - [ ] nested comment (nested comments forget about outer scope and use a revised digest of chat to date.)
 
 

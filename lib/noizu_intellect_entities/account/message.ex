@@ -506,6 +506,7 @@ defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message]
       profile_image: nil,
       mood: message.user_mood,
       body: message.contents.body,
+      meta: message.meta && message.meta.body,
       state: :sent
     }
   end

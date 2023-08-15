@@ -40,6 +40,7 @@ defmodule Noizu.IntellectWeb.Project do
           id="project-channel-agents"
           project={@active_project_ref}
           channel={@active_channel_ref}
+          member={@active_member_ref}
           context={@context}
         />
         <.live_component module={Noizu.IntellectWeb.Account.Channels},

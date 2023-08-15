@@ -18,6 +18,6 @@ defmodule Noizu.Intellect.Schema.Account.Channel do
   def changeset(user, attrs) do
     user
     |> cast(attrs, [:slug, :account, :details, :created_on, :modified_on, :deleted_on])
-    |> validate_required([:slug, :account, :details, :created_on, :modified_on])
+    |> validate_required([:account, :details, :created_on, :modified_on])
   end
 end

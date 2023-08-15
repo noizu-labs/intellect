@@ -9,7 +9,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   alias Noizu.Service.Types, as: M
 
   @vsn 1.0
-  @sref "worker-agent"
+  @sref "worker-ingest-agent"
   @persistence redis_store(Noizu.Intellect.Service.Agent.Ingestion.Worker, Noizu.Intellect.Redis)
   def_entity do
     identifier :dual_ref

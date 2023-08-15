@@ -11,6 +11,7 @@ defmodule Noizu.IntellectWeb.Message do
     mood: nil,
     body: nil,
     meta: nil,
+    bookmark: false,
     state: :sent,
   ]
 end
@@ -23,6 +24,11 @@ defmodule Noizu.IntellectWeb.Chat do
   def render(assigns) do
     ~H"""
     <%= unless @error do %>
+
+    <div class="w-full p-1 mt-2 text-center">
+        <div class="prose-xl"><%= @active_channel.details.title %></div>
+    </div>
+
     <div class="bg-white shadow-md rounded h-full p-2 mt-4 flex flex-col">
       <div id="project-chat-history-container" class="m-0 p-0 pr-4 min-h-[60vh] flex flex-col  ">
         <.live_component module={Noizu.IntellectWeb.Chat.History}, id="project-chat-history" unique="main" messages={@messages} />

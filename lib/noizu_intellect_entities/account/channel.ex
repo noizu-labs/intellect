@@ -168,7 +168,7 @@ defmodule Noizu.Intellect.Account.Channel do
              {:ok, sref} <- Noizu.EntityReference.Protocol.sref(this) do
           # need a from message method.
           push = %Noizu.IntellectWeb.Message{
-            identifier: :system,
+            identifier: "#{message.identifier}-delivery",
             type: :system_message,
             timestamp: DateTime.utc_now(),
             user_name: "monitor-system",
