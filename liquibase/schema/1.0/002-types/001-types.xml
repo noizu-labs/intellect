@@ -21,6 +21,17 @@
 
 
     <!-- ========================================================== -->
+    <!-- SERVICE_TYPE_ENUM                                          -->
+    <!-- ========================================================== -->
+    <changeSet author="you" id="SERVICE_TYPE_ENUM enum">
+        <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
+            <param name="enum" value="SERVICE_TYPE_ENUM"/>
+            <param name="values" value="service,tool,intuition_pump"/>
+        </customChange>
+    </changeSet>
+
+
+    <!-- ========================================================== -->
     <!-- CHANNEL_TYPE_ENUM                                   -->
     <!-- ========================================================== -->
     <changeSet author="you" id="CHANNEL_TYPE_ENUM enum">

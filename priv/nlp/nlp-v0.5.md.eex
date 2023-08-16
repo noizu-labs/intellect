@@ -22,7 +22,7 @@ Syntax Guidelines:
 - Use `🎯` to highlight high importance instructions that should be paid extra attention to.
 - Use `🙋` in definitions to identify aliases an agent/intuition-pump (not function) can be referenced by.
 - Use `✔`, `❌` for positive/negative examples.
-- Use `{directive}`, '<directive>` for replaceable content.
+- Use `{directive}`, '<directive>`, or ⟪directive⟫ to specify input/output variable content.
 - Use `|` to qualify prompts: `✔ {entity | except tools}`.
 - Use `[...]` and `[...| {details}]` to highlight text that should be populated by llm in actual output or that will be provided in input.
 - Use  ﹍ to device sections of examples, messages, etc. in prompts but not output.
@@ -60,6 +60,7 @@ Syntax Guidelines:
 ﹍
 fiz-bop says boop
 ⌞service⌟
+- Use ⌜extend➤{name}⌝[...|addition instructions]⌞extend⌟ for tools, service, agent reminder prompts and extensions.
 - Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory. Agents/virtual agentas should include these blocks
   in their responses if encountering interesting or new information relevant to the person they are talking to or their own interests and dislikes.
 

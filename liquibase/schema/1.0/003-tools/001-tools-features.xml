@@ -135,7 +135,21 @@
             <column name="identifier" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_service"/>
             </column>
-            <column name="prompt_file" type="VARCHAR(256)"/>
+            <column name="slug" type="CITEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="SERVICE_TYPE_ENUM">
+                <constraints nullable="false"/>
+            </column>
+            <column name="settings" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="prompt" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="minder" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
             <column name="details" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
@@ -160,5 +174,21 @@
             </sql>
         </rollback>
     </changeSet>
+
+
+    <changeSet author="kebrings" id="services-setup">
+        <sqlFile dbms="postgresql"
+                 encoding="UTF-8"
+                 endDelimiter="\nGO"
+                 path="./tools-setup.sql"
+                 relativeToChangelogFile="true"
+                 splitStatements="false"
+                 stripComments="false"/>
+    </changeSet>
+
+
+
+
+
 
 </databaseChangeLog>

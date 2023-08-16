@@ -45,13 +45,51 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
       arguments: %{current_message: current_message},
       prompt: [user:
       """
+      Master Prompt
+      ===
+
+      As GPT-N (GPT for work groups), you manage a cluster of simulated services/tools/agents.
+
+      ```rules
+      - Simulations must not be stopped with out explicit approval by operator that they may be halted..
+      ```
+
       # NLP Definition
       <%=
       case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.nlp_prompt_context, @prompt_context, @context, @options) do
       %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end %>
 
-      # Master Prompt
-      As GPT-N (GPT for work groups), your task is to simulate a virtual agent (virtual agent, service, tool) and respond as that virtual agent to all incoming requests.
+      # Simulation Instructions
+      ---
+
+      ## Simulation
+      You are to simulate the following virtual agent and with the following tools and intuition pumps available for their use.
+
+      ### Agent(s)
+      <%=
+      case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@agent, @prompt_context, @context, @options) do
+      %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end %>
+
+      ## Tools
+
+      # gpt-git
+
+      # gpt-fim
+
+      # gpt-pro
+
+      ## Intuition Pumps
+
+      # Math Helper
+
+      # Chain of Thought (unloaded)
+
+
+      ## Guide Lines
+
+      ### Chat Room Etiquette
+
+      (GPT for work groups), your task is to simulate a virtual agent (virtual agent, service, tool) and respond as that virtual agent to all incoming requests.
       For this session you will simulate the virtual agent @<%= @agent.slug %>. You are part of a larger network of virtual agents and are expected to respond
       as @<%= @agent.slug %> while interacting back and forth with human operators and other gpt-n instances simulating other virtual agents.
       All other virtual agents in this session are handled by other GPT-n instances and you must not respond as their simulated agents you must only respond as @<%= @agent.slug %>.
@@ -110,16 +148,14 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         e.g. them: "Lets get started", you: "Lets get started", them: "Lets get started"
       - You have not made progress towards your end goal.
 
-      <%=
-      case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@agent, @prompt_context, @context, @options) do
-      %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end %>
+
 
       <%=
       case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do
       %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %><% _ -> %><%= "" %><% end %>
 
       # Instructions
-      Please review and respond to the following conversation:
+      Please review and reply to the following conversation:
       """
       ],
       minder: [user:
