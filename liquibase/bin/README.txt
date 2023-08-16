@@ -1,8 +1,8 @@
-Liquibase Version 4.15.0
+Liquibase Version master-SNAPSHOT
 
 Introduction
 --------------------------------------------
-Thanks for downloading and installing Liquibase 4.15.0 from Liquibase.
+Thanks for downloading and installing Liquibase master-SNAPSHOT from Liquibase.
 By using the installer, you already have all the dependencies, directories, config, 
 and properties files to get started exploring the Liquibase examples provided.
 
@@ -18,7 +18,7 @@ The default install location on Mac is "/usr/local/opt/liquibase"
 The following software was installed:
 	* Liquibase ( https://liquibase.com )
 	* H2 Database ( https://www.h2database.com )
-	* AdoptOpenJDK 13 ( https://adoptopenjdk.net )
+	* Latest LTS AdoptOpenJDK Java version ( https://adoptopenjdk.net )
 
 This installer creates the following directories:
 	* liquibase/lib
@@ -45,7 +45,7 @@ As Liquibase ships with an h2 database example, the h2 jdbc driver was placed in
 your chosen installation directory.
 
 For information on using and configuring the h2 database see: 
-https://docs.liquibase.com/install/tutorials/h2.html
+https://contribute.liquibase.com/extensions-integrations/directory/database-tutorials/h2/
 
 
 Open JDK
@@ -73,6 +73,6 @@ Need Liquibase Support? Get customer support by upgrading to Liquibase Pro here:
 
 ----------------------------------------
 The program is subject to the license agreement, copyright, trademark, patent, and other laws.
-Copyright 2022 Liquibase, Inc. All rights reserved.
+Copyright 2023 Liquibase, Inc. All rights reserved.
 
 

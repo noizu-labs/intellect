@@ -1,2 +1,2 @@
 #!/bin/bash
-JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=ISO-8859-1" bin/liquibase --defaultsFile=liquibase.properties update
+JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=UTF-8" bin/liquibase --defaultsFile=liquibase.properties update

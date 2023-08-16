@@ -1,5 +1,5 @@
 Liquibase License Information (Used by Liquibase Commercial)
-Version: 4.15.0
+Version: master-SNAPSHOT
 
 Liquibase ships with 3rd party components using the following licenses:
 
