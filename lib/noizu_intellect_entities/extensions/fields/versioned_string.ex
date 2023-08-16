@@ -13,6 +13,7 @@ defmodule Noizu.Entity.VersionedString do
   @persistence redis_store(Noizu.Entity.VersionedString, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.VersionedString, Noizu.Intellect.Repo)
   @derive Noizu.Entity.Store.Redis.EntityProtocol
+  @derive Ymlr.Encoder
 
   def_entity do
     identifier :integer
@@ -175,5 +176,13 @@ defimpl Noizu.Entity.Store.Ecto.Entity.FieldProtocol, for: [Noizu.Entity.Version
            end
          _ -> {:error, :not_found}
        end
+  end
+end
+
+
+defimpl Ymlr.Encoder, for: [Noizu.Entity.TimeStamp] do
+  def encode(subject, indent, opts) do
+    Map.from_struct(subject)
+    |> Ymlr.Encoder.Map.encode(indent, opts)
   end
 end

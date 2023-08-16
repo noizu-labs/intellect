@@ -43,6 +43,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
   alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
   alias Noizu.Intellect.Prompt.DynamicContext.Protocol, as: PromptProtocol
+  @derive Ymlr.Encoder
   defstruct [
     # input
     agent: nil,
@@ -65,6 +66,20 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   #
   #----------------------------
   def prepare_prompt_context(agent, channel, messages, context, options) do
+    prepare_custom_prompt_context(
+      agent,
+      channel,
+      messages,
+      Noizu.Intellect.Prompt.ContextWrapper.respond_to_conversation(),
+      context,
+      options
+    )
+  end
+
+  #----------------------------
+  #
+  #----------------------------
+  def prepare_custom_prompt_context(agent, channel, messages, master_prompt_context, context, options) do
     verbose = case options[:verbose] do
       nil -> true
       v -> v
@@ -92,7 +107,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
         agent: agent,
         message_history: messages,
         channel: channel,
-        master_prompt_context: Noizu.Intellect.Prompt.ContextWrapper.respond_to_conversation(),
+        master_prompt_context: master_prompt_context,
         verbose: verbose
       }
       |> prepare_prompt_context__process(:nlp, context, options)
@@ -106,7 +121,6 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
       |> prepare_prompt_context__finalize(context, options)
     end
   end
-
 
   #----------------------------
   #

@@ -9,6 +9,8 @@ defmodule Noizu.Entity.VersionedURI do
   @vsn 1.0
   @sref "versioned-uri"
   @persistence ecto_store(Noizu.Intellect.Schema.VersionedURI, Noizu.Intellect.Repo)
+  @derive Ymlr.Encoder
+
   def_entity do
     identifier :integer
     field :version

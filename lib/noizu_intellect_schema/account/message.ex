@@ -15,7 +15,7 @@ defmodule Noizu.Intellect.Schema.Account.Message do
     field :token_size, :integer
     field :contents, Noizu.Entity.Reference
     field :brief, Noizu.Entity.Reference
-    field :meta, Noizu.Entity.Reference
+    field :meta, :string
     field :created_on, :utc_datetime_usec
     field :modified_on, :utc_datetime_usec
     field :deleted_on, :utc_datetime_usec

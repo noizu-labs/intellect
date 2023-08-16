@@ -23,15 +23,24 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
 
   @callback prompt(version :: any, options :: any) :: {:ok, __MODULE__.t}
 
+  def session_response_prompt(options \\ nil) do
+    Noizu.Intellect.Prompts.SessionResponse.prompt(:default, options)
+  end
 
   def answered_prompt(current_message, options \\ nil) do
     options = put_in(options || [], [:current_message], current_message)
-    Noizu.Intellect.Prompts.MessageAnswerStatus.prompt(:v2, options)
+    Noizu.Intellect.Prompts.MessageAnswerStatus.prompt(:default, options)
   end
 
   def summarize_message_prompt(message, options \\ nil) do
     options = put_in(options || [], [:current_message], message)
     Noizu.Intellect.Prompts.SummarizeMessage.prompt(:default, options)
+  end
+
+
+  def session_monitor_prompt(current_message, options \\ nil) do
+    options = put_in(options || [], [:current_message], current_message)
+    Noizu.Intellect.Prompts.SessionMonitor.prompt(:default, options)
   end
 
   def relevancy_prompt(current_message, options \\ nil) do
@@ -82,9 +91,11 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     end
 
     def prompt(subject, prompt_context, _context, _options) do
+      # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt
       expand_prompt(subject.prompt, prompt_context.assigns)
     end
     def minder(subject, prompt_context, _context, _options) do
+      # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt
       expand_prompt(subject.minder, prompt_context.assigns)
     end
     def assigns(subject, prompt_context, context, options) do

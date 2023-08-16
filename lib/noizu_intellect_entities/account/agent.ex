@@ -13,7 +13,7 @@ defmodule Noizu.Intellect.Account.Agent do
   @persistence redis_store(Noizu.Intellect.Account.Agent, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.Account.Agent, Noizu.Intellect.Repo)
   @derive Noizu.Entity.Store.Redis.EntityProtocol
-
+  @derive Ymlr.Encoder
   def_entity do
     identifier :integer
     field :slug

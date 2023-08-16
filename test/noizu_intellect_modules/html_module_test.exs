@@ -3,6 +3,46 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   @moduletag lib: :noizu_intellect_module
   import Noizu.Intellect.HtmlModule
 
+  def session_response_message() do
+  """
+  <nlp-agent for="@grace">
+  <nlp-intent>
+    overview: |-2
+      I will provide an overview of what zoocryptids are and their significance in cryptozoology.
+    steps:
+      - Provide a definition of zoocryptids.
+      - Explain the field of cryptozoology and its focus on the study of zoocryptids.
+      - Discuss some famous examples of zoocryptids.
+  </nlp-intent>
+
+  <nlp-function-call function="bizbop">
+  name: hero
+  arg: 5
+  </nlp-function-call>
+
+  <nlp-reply mood="😄">
+    Zoocryptids are creatures or animals that are rumored or believed to exist based on anecdotal evidence, folklore, or eyewitness accounts. The term "zoocryptid" is derived from the words "zoo" (referring to animals) and "cryptid" (referring to hidden or unknown creatures).
+
+    Cryptozoology is the field of study that focuses on the investigation and search for zoocryptids. It is considered a pseudoscience as it deals with creatures that have not been proven to exist by mainstream science. Cryptozoologists aim to gather evidence, such as eyewitness testimonies, photographs, footprints, and other traces, to support the existence of these creatures.
+
+    Some famous examples of zoocryptids include the Loch Ness Monster, Bigfoot, Yeti, Chupacabra, and Mothman. These creatures have captured the public's imagination and have become subjects of folklore and popular culture.
+
+    It is important to note that while cryptozoology explores the possibility of unknown creatures, the scientific community generally does not recognize the existence of zoocryptids due to the lack of verifiable evidence. However, the study of zoocryptids continues to intrigue and fascinate many people around the world.
+  </nlp-reply>
+
+  <nlp-memory>
+    - memory: |-2
+        Zoocryptids are creatures or animals that are rumored or believed to exist based on anecdotal evidence, folklore, or eyewitness accounts. Cryptozoology is the field of study that focuses on investigating and searching for these creatures. Some famous examples of zoocryptids include the Loch Ness Monster, Bigfoot, Yeti, Chupacabra, and Mothman.
+      messages: [13028]
+      mood: 🤔
+      mood-description: I am curious about Keith's interest in zoocryptids.
+      features:
+        - zoocryptids
+  </nlp-memory>
+  </nlp-agent>
+  """
+  end
+
   def delivery_details_happy_path() do
     """
     <monitor-response>
@@ -38,9 +78,6 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
     </monitor-response>
     """
   end
-
-
-
 
   def valid_response() do
     """
@@ -165,8 +202,34 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
     end
   end
 
-  describe "Handle Message Delivery Response" do
+  describe "Handle Session Channel Response" do
     @tag :wip
+    test "happy path" do
+      sut = Noizu.Intellect.HtmlModule.extract_session_response_details(session_response_message())
+      IO.inspect sut
+      [agent: [sender: sender, sections: sections]] = sut
+
+      assert sender == "@grace"
+
+      sections = Enum.group_by(sections, & elem(&1, 0))
+
+      [{:reply, reply}] = sections[:reply]
+      assert reply[:mood] == "😄"
+      assert reply[:response] =~ "subjects of folklore and popular culture"
+
+      [{:intent, intent}] = sections[:intent]
+      assert intent =~ "I will provide an overview of what"
+
+      [{:memory, memory}] = sections[:memory]
+      assert memory["features"] == ["zoocryptids"]
+
+      [{:function_call, call}] = sections[:function_call]
+      assert call[:function] == "bizbop"
+      assert call[:args]["arg"] == 5
+    end
+  end
+
+  describe "Handle Message Delivery Response" do
     test "happy path" do
       sut = Noizu.Intellect.HtmlModule.extract_message_delivery_details(delivery_details_happy_path)
       assert sut == [

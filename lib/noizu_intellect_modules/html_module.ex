@@ -80,6 +80,57 @@ defmodule Noizu.Intellect.HtmlModule do
     |> List.flatten()
   end
 
+  def extract_session_response_details(response) do
+    {_, xml_tree} = Floki.parse_document(response)
+    Enum.map(xml_tree,
+      fn
+        ({"nlp-agent", attrs, contents}) ->
+          sender = Enum.find_value(attrs, & elem(&1, 0) == "for" && elem(&1, 1) || nil)
+          inner = extract_nlp_agent_response(contents)
+          {:agent, [sender: sender, sections: inner]}
+        (_) -> nil
+      end
+    )
+    |> Enum.reject(&is_nil/1)
+    |> List.flatten()
+  end
+
+  def extract_nlp_agent_response(contents) do
+    Enum.map(contents,
+      fn
+        ({"nlp-intent", _, contents}) ->
+          text = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+          {:intent, text}
+        ({"nlp-reply", attrs, contents}) ->
+          mood = Enum.find_value(attrs, & elem(&1, 0) == "mood" && elem(&1, 1) || nil)
+          {:reply, [mood: mood, response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+        ({"nlp-memory", _, contents}) ->
+          text = Floki.raw_html(contents)
+          with {:ok, memories} <- YamlElixir.read_from_string(text),
+               true <- is_list(memories) do
+            Enum.map(memories, & {:memory, &1})
+          else
+            _ ->
+              {:error, {:malformed, {:memories, text}}}
+          end
+        ({"nlp-function-call", attrs, contents}) ->
+          function = Enum.find_value(attrs, & elem(&1, 0) == "function" && elem(&1, 1) || nil)
+          if function do
+            text = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+            with {:ok, payload} <- YamlElixir.read_from_string(text) do
+              {:function_call, [function: function, args: payload]}
+            else
+              _ ->
+                # log error
+                {:error, {:malformed, {:function_call, {function, text}}}}
+            end
+          end
+        (_) -> nil
+      end
+    )
+    |> Enum.reject(&is_nil/1)
+    |> List.flatten()
+  end
 
   def extract_message_delivery_details(response) do
     {_, xml_tree} = Floki.parse_document(response)

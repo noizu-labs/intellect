@@ -2,13 +2,14 @@
 # Author: Keith Brings
 # Copyright (C) 2023 Noizu Labs, Inc. All rights reserved.
 #-------------------------------------------------------------------------------
-
 defmodule Noizu.Entity.VersionedName do
   use Noizu.Entities
 
   @vsn 1.0
   @sref "versioned-name"
   @persistence ecto_store(Noizu.Intellect.Schema.VersionedName, Noizu.Intellect.Repo)
+  @derive Ymlr.Encoder
+
   def_entity do
     identifier :integer
     field :version

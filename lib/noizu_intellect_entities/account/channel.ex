@@ -18,6 +18,7 @@ defmodule Noizu.Intellect.Account.Channel do
   @persistence redis_store(Noizu.Intellect.Account.Channel, Noizu.Intellect.Redis)
   @persistence ecto_store(Noizu.Intellect.Schema.Account.Channel, Noizu.Intellect.Repo)
   @derive Noizu.Entity.Store.Redis.EntityProtocol
+  @derive Ymlr.Encoder
   def_entity do
     identifier :integer
     field :slug
@@ -101,6 +102,10 @@ defmodule Noizu.Intellect.Account.Channel do
     end
   end
 
+  def extract_session_message_delivery(response) do
+    extract_message_delivery(response)
+  end
+
   def extract_message_delivery(response) do
     with %{choices: [%{message: %{content: reply}}|_]} <- response do
       extract = Noizu.Intellect.HtmlModule.extract_message_delivery_details(reply)
@@ -123,15 +128,87 @@ defmodule Noizu.Intellect.Account.Channel do
   def deliver(this, message, context, options \\ nil) do
     cond do
       this.type == :session ->
-        IO.puts """
-        Instead of channel deliver we should extract features and summary and return.
-        Ingestion Worker for session channels should scan all messages and ignore recipient confidence.
-        """
-        channel_deliver(this, message, context, options)
+        session_deliver(this, message, context, options)
       :else ->
         channel_deliver(this, message, context, options)
     end
   end
+
+  def session_deliver(this, message, context, options \\ nil) do
+    with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent_graph(this, context, put_in(options || [], [:limit], 10)),
+         messages <- Enum.reverse(messages),
+         {:ok, summarized_message} <- summarize_message(this, message, context, options),
+         {:ok, prompt_context} <-
+           Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(
+             this,
+             messages,
+             Noizu.Intellect.Prompt.ContextWrapper.session_monitor_prompt(summarized_message),
+             context,
+             options),
+         {:ok, response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
+         {:ok, extracted_details} <- extract_session_message_delivery(response[:reply])
+      do
+
+      #IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(response[:messages], [Access.at(0), :content]) <> "\n\n======================\n\n")
+      with %{choices: [%{message: %{content: reply}}|_]} <- response[:reply] do
+        Logger.warn("[Session Delivery Response #{message.identifier}] \n #{reply}\n--------\n#{inspect extracted_details, pretty: true, limit: :infinity}\n------------\n\n")
+      end
+
+      details = Enum.group_by(extracted_details, &(elem(&1, 0)))
+                |> IO.inspect(pretty: true, label: "ANALYSIS EXTRACTION")
+
+      responding_to = if responding_to = details[:responding_to] do
+        Enum.map(responding_to,
+          fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
+        )
+        Enum.map(responding_to,
+          fn({:responding_to, {id, confidence, _, _}}) -> confidence > 0 && id || nil end
+        ) |> Enum.reject(&is_nil/1)
+        |> case do
+             [] -> nil
+             v -> v
+           end
+      end
+
+      audience = if audience = details[:audience] do
+        Enum.map(audience,
+          fn({:audience, {id, confidence, _}}) -> confidence > 0 && id || nil  end
+        ) |> Enum.reject(&is_nil/1)
+      end
+
+      IO.inspect(details[:summary], pretty: true, label: "SUMMARY")
+      with [{:summary, {summary, action, features}}|_] <- details[:summary] do
+        summary = %{summary: summary, action: action, features: features || []}
+        {:ok, sender} = Noizu.EntityReference.Protocol.sref(message.sender)
+        message =  %Noizu.Intellect.Weaviate.Message{
+                     identifier: message.identifier,
+                     content: message.contents.body,
+                     action: summary.action,
+                     sender: sender,
+                     created_on: message.time_stamp.created_on,
+                     features: summary && summary.features || [],
+                     audience: audience || [],
+                     responding_to: responding_to || []
+                   }
+                   #|> IO.inspect(label: "WEAVIATE")
+                   |> Noizu.Weaviate.Api.Objects.create()
+          #|> IO.inspect(label: "WEAVIATE")
+                   |> case do
+                        {:ok, %{meta: %{id: weaviate}}} -> %{message| weaviate_object: weaviate}
+                        _ -> message
+                      end
+        Enum.map(details[:summary],
+          fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
+        )
+      end
+
+      Enum.map(prompt_context.channel_members,
+        fn(member) ->
+          Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {member.identifier, 100, "Session Response"}}, message, context, options)
+      end)
+    end
+  end
+
 
   def channel_deliver(this, message, context, options \\ nil) do
     # Retrieve related message history for this message (this will eventually be based on who is sending and previous weightings for now we simply pull recent history)
@@ -325,8 +402,6 @@ defmodule Noizu.Intellect.Account.Channel do
                  on: contents.identifier == msg.contents,
                  left_join: brief in Noizu.Intellect.Schema.VersionedString,
                  on: brief.identifier == msg.brief,
-                 left_join: meta in Noizu.Intellect.Schema.VersionedString,
-                 on: meta.identifier == msg.meta,
                  left_join: read_status in Noizu.Intellect.Schema.Account.Message.Read,
                  on: read_status.message == msg.identifier and read_status.recipient == aud.recipient,
                  left_join: resp_list in subquery(responding_to),
@@ -342,7 +417,6 @@ defmodule Noizu.Intellect.Account.Channel do
                    __loader__: %{
                      contents: contents,
                      brief: brief,
-                     meta: meta,
                      audience_list: aud_list,
                      responding_to_list: resp_list,
                      audience: aud,

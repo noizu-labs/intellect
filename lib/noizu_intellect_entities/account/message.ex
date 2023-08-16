@@ -14,7 +14,7 @@ defmodule Noizu.Intellect.Account.Message do
   @persistence ecto_store(Noizu.Intellect.Schema.Account.Message, Noizu.Intellect.Repo)
   @derive Noizu.Entity.Store.Redis.EntityProtocol
   @derive Noizu.Entity.Store.Ecto.EntityProtocol
-
+  @derive Ymlr.Encoder
   def_entity do
     identifier :integer
     field :weaviate_object
@@ -38,7 +38,7 @@ defmodule Noizu.Intellect.Account.Message do
     field :token_size
     field :contents, nil, Noizu.Entity.VersionedString
     field :brief, nil, Noizu.Entity.VersionedString
-    field :meta, nil, Noizu.Entity.VersionedString
+    field :meta
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
   import Ecto.Query
@@ -137,7 +137,7 @@ defmodule Noizu.Intellect.Account.Message do
                on: msg.identifier == aud_list.message,
                where: msg.identifier == ^identifier,
                limit: 1,
-               select: %{msg| __loader__: %{contents: content, brief: brief, meta: meta, responding_to_list: resp, audience_list: aud_list, audience: aud, read_status: read_status}}
+               select: %{msg| __loader__: %{contents: content, brief: brief, responding_to_list: resp, audience_list: aud_list, audience: aud, read_status: read_status}}
 
       case apply(store, :one, [q]) |> IO.inspect("MESSAGE LOADER") do
         record = %Noizu.Intellect.Schema.Account.Message{} -> from_record(record, settings, context, options)
@@ -506,7 +506,7 @@ defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message]
       profile_image: nil,
       mood: message.user_mood,
       body: message.contents.body,
-      meta: message.meta && message.meta.body,
+      meta: message.meta,
       state: :sent
     }
   end

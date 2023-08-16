@@ -7,7 +7,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
     assigns = prompt_context.assigns
               |> Map.merge(
                    %{
-                     nlp: false,
+                     nlp: true,
                      members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :detailed})
                    })
     {:ok, assigns}

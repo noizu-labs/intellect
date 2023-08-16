@@ -241,14 +241,14 @@
             <column name="channel" type="BIGINT"/>
             <column name="depth" type="SMALLINT"/>
             <column name="answered_by" type="BIGINT"/>
-            <column name="user_mood" remarks="Emoji of Mood type" type="NVARCHAR(1)"/>
+            <column name="user_mood" remarks="Emoji of Mood type" type="NVARCHAR(8)"/>
             <column name="event" type="MESSAGE_EVENT_TYPE" >
                 <constraints nullable="false"/>
             </column>
             <column name="token_size" type="BIGINT"/>
             <column name="contents" type="BIGINT"/>
             <column name="brief" type="BIGINT"/>
-            <column name="meta" type="BIGINT"/>
+            <column name="meta" type="TEXT"/>
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
                 <constraints nullable="false"/>
             </column>

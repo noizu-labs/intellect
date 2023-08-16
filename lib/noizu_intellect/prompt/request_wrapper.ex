@@ -1,5 +1,6 @@
 defmodule Noizu.Intellect.Prompt.RequestWrapper do
   @vsn 1.0
+  @derive Ymlr.Encoder
   defstruct [
     model: "gpt-3.5-turbo-16k",
     model_settings: [temperature: 0.5, mak_tokens: 5000],

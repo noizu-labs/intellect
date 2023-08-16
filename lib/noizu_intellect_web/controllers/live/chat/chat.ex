@@ -51,7 +51,7 @@ defmodule Noizu.IntellectWeb.Chat do
         module={Noizu.IntellectWeb.Chat.Input},
         id="project-chat-input"
         user={@active_user}
-        channel={@active_channel_ref}
+        channel={@active_channel}
         project={@active_project_ref}
         member={@active_member}
 
@@ -124,6 +124,13 @@ defmodule Noizu.IntellectWeb.Chat do
       %Noizu.Intellect.Schema.Account.Channel.Member{
         channel: channel_ref,
         member: agent_ref,
+        created_on: current_time,
+        modified_on: current_time
+      } |> Noizu.Intellect.Repo.insert() |> IO.inspect()
+
+      %Noizu.Intellect.Schema.Account.Channel.Member{
+        channel: channel_ref,
+        member: socket.assigns[:active_member_ref],
         created_on: current_time,
         modified_on: current_time
       } |> Noizu.Intellect.Repo.insert() |> IO.inspect()

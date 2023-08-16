@@ -10,6 +10,7 @@ defmodule Noizu.Intellect.User do
   @vsn 1.0
   @sref "user"
   @persistence ecto_store(Noizu.Intellect.Schema.User, Noizu.Intellect.Repo)
+  @derive Ymlr.Encoder
   def_entity do
     identifier :integer
     field :slug
