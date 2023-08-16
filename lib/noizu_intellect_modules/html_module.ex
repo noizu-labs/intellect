@@ -103,7 +103,8 @@ defmodule Noizu.Intellect.HtmlModule do
           {:intent, text}
         ({"nlp-reply", attrs, contents}) ->
           mood = Enum.find_value(attrs, & elem(&1, 0) == "mood" && elem(&1, 1) || nil)
-          {:reply, [mood: mood, response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+          at = Enum.find_value(attrs, & elem(&1, 0) == "at" && elem(&1, 1) || nil)
+          {:reply, [mood: mood, at: at, response: "#{at || ""}" <> Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
         ({"nlp-memory", _, contents}) ->
           text = Floki.raw_html(contents)
           with {:ok, memories} <- YamlElixir.read_from_string(text),

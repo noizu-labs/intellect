@@ -185,6 +185,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
                 [...|Provide a 1-sentence explanation for why this message relates or doesnt relate to new message]
             {/foreach}
           new-message:
+            sender: {sender slug}
             sender-type: {sender type of new_message}
             audience:
               {foreach channel member}
@@ -198,6 +199,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
 
         message_details:
           for: {id of the new message}
+          sender: {sender slug}
           sender-type: {sender type of new message}
 
           relates-to:

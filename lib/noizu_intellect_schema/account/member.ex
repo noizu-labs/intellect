@@ -11,6 +11,7 @@ defmodule Noizu.Intellect.Schema.Account.Member do
     field :created_on, :utc_datetime_usec
     field :modified_on, :utc_datetime_usec
     field :deleted_on, :utc_datetime_usec
+    field :slug, :string, virtual: true
   end
 
   use Noizu.Entity.Meta.IntegerIdentifier

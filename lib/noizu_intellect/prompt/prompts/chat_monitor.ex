@@ -185,9 +185,10 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
                 [...|Provide a 1-sentence explanation for why this message relates or doesnt relate to new message]
             {/foreach}
           new-message:
+            sender: {sender slug}
             sender-type: {sender type of new_message}
             audience:
-              {foreach channel member}
+              {foreach channel member listed in channel section}
                 - member-slug: @{member.slug}
                   referenced-by-slug? : {true|false - in contents of new message}
                   referenced-by-name? : {true|false - in contents of new message}
@@ -198,6 +199,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
 
         message_details:
           for: {id of the new message}
+          sender: {sender slug}
           sender-type: {sender type of new message}
 
           relates-to:
@@ -208,7 +210,7 @@ defmodule Noizu.Intellect.Prompts.ChatMonitor do
             {/foreach}
 
           audience:
-            {foreach probable recipient of the new message | exclude if confidence < 30}
+            {foreach channel member who is a recipient of the new message | skip member if if audience confidence < 30}
               - for: {integer id of channel member}
                 confidence: {determine_confidence_level(member, new_message)}
                 explanation: |-2

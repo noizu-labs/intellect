@@ -33,6 +33,14 @@ defmodule Noizu.IntellectWeb.Chat do
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
           </svg>
         </span>
+
+
+        <span class="pl-2 my-auto text-small" phx-click={show_modal("channel-#{@active_channel.identifier}-add-user")}>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+          </svg>
+        </span>
+
         <% end %>
     </div>
 
@@ -66,6 +74,19 @@ defmodule Noizu.IntellectWeb.Chat do
     <% end %>
 
 
+     <.modal show={false} title="Edit Channel Name" class="fixed" id={"channel-#{@active_channel.identifier}-add-user"}>
+          <input class="rounded" phx-change="member:filter"  name="search" type="text" placeholder="search" />
+          <%= if @filter_members do %>
+          <ol class="divide-y rounded mt-4 py-2 ring-2 ring-slate-500 bg-slate-100">
+            <%= for member <- @filter_members do %>
+              <li
+                  phx-click="member:add" phx-value-member={member.identifier} phx-value-modal={"channel-#{@active_channel.identifier}-add-user"}
+                  class="py-2">@<%= member.slug %> | <%= member.details.title %></li>
+            <% end %>
+          </ol>
+          <% end %>
+    </.modal>
+
 
     <.modal show={false} title="Edit Channel Name" class="fixed" id={"channel-#{@active_channel.identifier}-edit"}>
         <form
@@ -73,7 +94,7 @@ defmodule Noizu.IntellectWeb.Chat do
            phx-value-channel={@active_channel.identifier}
            phx-value-modal={"channel-#{@active_channel.identifier}-edit"}
        >
-          <input name="title" type="text" value={@active_channel.details.title} />
+           <input name="title" type="text" value={@active_channel.details.title} />
            <button type="submit" class="rounded-md bg-red-200 px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-red-300" aria-label="Save">save</button>
         </form>
     </.modal>
@@ -96,10 +117,80 @@ defmodule Noizu.IntellectWeb.Chat do
                |> assign(active_channel: channel)
                |> assign(view: :session)
                |> push_event("js_push", %{js: js.ops})
-      Noizu.Intellect.Service.Agent.Ingestion.fetch({agent_ref, channel_ref}, :state, context)  |> IO.inspect()
+
+      {:ok, members} = Noizu.Intellect.Account.Channel.Repo.members(channel_ref, context)
+      Enum.map(members, fn(member) ->
+        Noizu.Intellect.Service.Agent.Ingestion.fetch({member, channel_ref}, :state, context)
+      end)
+
       channel_switch(channel, socket)
     else
       _ -> {:noreply, socket}
+    end
+  end
+
+  def member_add(member_id, modal, socket) do
+    context = socket.assigns[:context]
+    current_time = DateTime.utc_now()
+    IO.puts "ADD MEMBER TO CHANNEL SESSION"
+    with agents <- socket.assigns[:agents],
+         {:ok, agent} <- Enum.find_value(agents, &(&1.identifier == member_id && {:ok, &1})),
+         {:ok, agent_ref} <- Noizu.EntityReference.Protocol.ref(agent)
+      do
+
+      # Verify member not already in channel.
+      {:ok, members} = Noizu.Intellect.Account.Channel.Repo.members(socket.assigns[:active_channel], context)
+      unless Enum.find_value(members,
+               fn(member) ->
+                 with {:ok, id} <- Noizu.EntityReference.Protocol.id(member) do
+                   id == agent.identifier
+                 end
+               end) do
+        %Noizu.Intellect.Schema.Account.Channel.Member{
+          channel: socket.assigns[:active_channel_ref],
+          member: agent_ref,
+          created_on: current_time,
+          modified_on: current_time
+        } |> Noizu.Intellect.Repo.insert()
+
+
+        if socket.assigns[:active_channel].type == :session do
+          # update channel to a chat.
+          with {:ok, channel} <-
+                 %{socket.assigns[:active_channel]|
+                   type: :chat
+                 } |> Noizu.Intellect.Entity.Repo.update(context),
+               [member|_] <- members
+            do
+            Noizu.Intellect.Service.Agent.Ingestion.reload!({member, socket.assigns[:active_channel_ref]}, context)
+            Noizu.Intellect.Service.Agent.Ingestion.fetch({agent_ref, socket.assigns[:active_channel_ref]}, :state, context)
+            js = hide_modal("#{modal}")
+            socket = socket
+                     |> assign(active_channel: channel)
+                     |> push_event("js_push", %{js: js.ops})
+            {:noreply, socket}
+          else
+            _ ->
+              {:noreply, socket}
+          end
+        else
+          Noizu.Intellect.Service.Agent.Ingestion.fetch({agent_ref, socket.assigns[:active_channel_ref]}, :state, context)
+          js = hide_modal("#{modal}")
+          socket = socket
+                   |> push_event("js_push", %{js: js.ops})
+          {:noreply, socket}
+        end
+
+      else
+        # already a member
+        js = hide_modal("#{modal}")
+        socket = socket
+                 |> push_event("js_push", %{js: js.ops})
+        {:noreply, socket}
+      end
+    else
+      error ->
+        {:noreply, socket}
     end
   end
 
@@ -207,6 +298,22 @@ defmodule Noizu.IntellectWeb.Chat do
     end
   end
 
+  def member_filter(term, socket) do
+    IO.puts "Filter Agents: #{term}"
+    unless term == [] do
+      filter = socket.assigns[:agents]
+               |> Enum.filter(& &1.slug =~ term || &1.details.title =~ term)
+               |> IO.inspect()
+      socket = socket
+               |> assign(filter_members: filter)
+      {:noreply, socket}
+    else
+      socket = socket
+               |> assign(filter_members: socket.assigns[:agents])
+      {:noreply, socket}
+    end
+  end
+
   #===========================
   #
   #===========================
@@ -236,6 +343,15 @@ defmodule Noizu.IntellectWeb.Chat do
     end
   end
 
+
+  def handle_event("member:filter", %{"search" => term}, socket) do
+    member_filter(term, socket)
+  end
+
+  def handle_event("member:add", %{"modal" => modal, "member" => member}, socket) do
+    member_add(String.to_integer(member), modal, socket)
+  end
+
   def handle_event(event, params, socket) do
     IO.puts """
     uncaught #{__MODULE__}.handle_event
@@ -250,11 +366,11 @@ defmodule Noizu.IntellectWeb.Chat do
   #===========================
   #
   #===========================
-#  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "typing", payload: message, options: options), socket) do
-#    socket = socket
-#             |> assign(messages: socket.assigns[:messages] ++ [message])
-#    {:noreply, socket}
-#  end
+  #  def handle_info(info = event(subject: "chat", instance: _channel_sref, event: "typing", payload: message, options: options), socket) do
+  #    socket = socket
+  #             |> assign(messages: socket.assigns[:messages] ++ [message])
+  #    {:noreply, socket}
+  #  end
   def handle_info(_info = event(subject: "chat", instance: _channel_sref, event: "sent", payload: message, options: options), socket) do
     messages = socket.assigns[:messages] ++ [message]
     socket = socket
@@ -264,8 +380,8 @@ defmodule Noizu.IntellectWeb.Chat do
                     cond do
                       options[:scroll] ->
                         js = JS.dispatch("scroll:bottom", to: "html")
-                             socket
-                             |> push_event("js_push", %{js: js.ops})
+                        socket
+                        |> push_event("js_push", %{js: js.ops})
                       :else -> socket
                     end
                   end)
@@ -295,27 +411,29 @@ defmodule Noizu.IntellectWeb.Chat do
                   |> Noizu.Intellect.LiveView.Encoder.encode!(context)
                   |> Enum.reverse()
 
-#       error = try do
-#         raise ArgumentError, "Example Error Raise"
-#         rescue e ->
-#           %Noizu.IntellectWeb.LiveViewError{
-#              title: Noizu.IntellectWeb.Gettext.gettext("Argument Error"),
-#              body: Noizu.IntellectWeb.Gettext.gettext("Demo of Error Functionality"),
-#              error: e,
-#              trace: __STACKTRACE__,
-#              time_stamp: DateTime.utc_now(),
-#              context: context
-#           }
-#       end
+       #       error = try do
+       #         raise ArgumentError, "Example Error Raise"
+       #         rescue e ->
+       #           %Noizu.IntellectWeb.LiveViewError{
+       #              title: Noizu.IntellectWeb.Gettext.gettext("Argument Error"),
+       #              body: Noizu.IntellectWeb.Gettext.gettext("Demo of Error Functionality"),
+       #              error: e,
+       #              trace: __STACKTRACE__,
+       #              time_stamp: DateTime.utc_now(),
+       #              context: context
+       #           }
+       #       end
        socket = with {:ok, agents} <- Noizu.IntellectApi.Agents.by_project(session["active_project"], context) do
-         socket
-         |> assign(agents: agents)
-       else
-         _ ->
-           # Error
-           socket
-           |> assign(agents: [])
-       end
+                  socket
+                  |> assign(agents: agents)
+                  |> assign(filter_members: agents)
+                else
+                  _ ->
+                    # Error
+                    socket
+                    |> assign(agents: [])
+                    |> assign(filter_members: [])
+                end
                 |> assign(active_project_ref: active_project_ref)
                 |> assign(active_channel_ref: active_channel_ref)
                 |> assign(active_channel_sref: sref)
@@ -331,16 +449,17 @@ defmodule Noizu.IntellectWeb.Chat do
        {:ok, socket}
      else
        error ->
-     error = %Noizu.IntellectWeb.LiveViewError{
-                    title: Noizu.IntellectWeb.Gettext.gettext("Ref Failure"),
-                    body: Noizu.IntellectWeb.Gettext.gettext("Required Account Details Not Found."),
-                    error: error,
-                    trace: nil,
-                    time_stamp: DateTime.utc_now(),
-                    context: context
-                 }
+         error = %Noizu.IntellectWeb.LiveViewError{
+           title: Noizu.IntellectWeb.Gettext.gettext("Ref Failure"),
+           body: Noizu.IntellectWeb.Gettext.gettext("Required Account Details Not Found."),
+           error: error,
+           trace: nil,
+           time_stamp: DateTime.utc_now(),
+           context: context
+         }
 
          socket = socket
+                  |> assign(filter_members: [])
                   |> assign(error: error)
          {:ok, socket}
      end)

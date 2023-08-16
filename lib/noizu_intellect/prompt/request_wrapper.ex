@@ -3,7 +3,7 @@ defmodule Noizu.Intellect.Prompt.RequestWrapper do
   @derive Ymlr.Encoder
   defstruct [
     model: "gpt-3.5-turbo-16k",
-    model_settings: [temperature: 0.5, mak_tokens: 5000],
+    model_settings: [temperature: 0.5, mak_tokens: 5000, frequency_penalty: 0.5],
     prompt_context: nil,
     messages: [],
     functions: [],

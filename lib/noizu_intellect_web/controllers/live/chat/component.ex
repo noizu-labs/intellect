@@ -121,12 +121,12 @@ defmodule Noizu.IntellectWeb.Chat.Component do
               <div class="tab-page tab-1 markdown-body">
                 <%=  raw(Earmark.as_html!(@message.body, smartypants: false) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %>
               </div>
-              <pre class="tab-page tab-2 align-top"><%=  raw(@message.body |> Noizu.Intellect.HtmlModule.replace_script_tags()) %></pre>
+              <pre class="tab-page tab-2 align-top"><%=  @message.body %></pre>
               <div class="tab-page tab-3 align-top">
                  <%= if @message.meta do %>
                 <div class="meta-details">
                     <pre>
-                    <%= raw(@message.meta) %>
+                    <%= @message.meta %>
                     </pre>
                 </div>
                 <% else %>

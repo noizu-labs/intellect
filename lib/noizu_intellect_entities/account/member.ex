@@ -21,9 +21,9 @@ defmodule Noizu.Intellect.Account.Member do
     field :account, nil, Noizu.Entity.Reference
     field :user, nil, Noizu.Entity.Reference
     field :details, nil, Noizu.Entity.VersionedString
+    field :slug
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
-
 
   #---------------------------
   #
@@ -67,6 +67,13 @@ defmodule Noizu.Intellect.Account.Member do
   defmodule Repo do
     use Noizu.Repo
     def_repo()
+
+    def __after_get__(entity, context, options) do
+      with {:ok, entity} <- super(entity, context, options) do
+        {:ok, %{entity| slug: entity.user && entity.user.slug}}
+      end
+    end
+
   end
 end
 

@@ -20,7 +20,20 @@
 
 ## Tools Services & Agents
  - [ ] Hook services/tools back up. 
-
+ - [ ] Interactive Sessions
+   - [x] Special chat flow
+   - [ ] Edit/Delete Session Messages.
+   - [ ] Multi Party Session using strict @slug checks for response rules. 
+     - [x] Stop message queue at last unread message that @ats the agent. 
+     - [x] Special unread check logic. 
+     - [x] list any messages after the last @at message as system pending messages to ignore processing.
+     - [ ] Revamp audience logic to strictly scan for @channel, @everyone, @slug 
+     - [ ] Call revamped delivery from session response.
+     - [ ] List any messages where agent is not recipient as system messages so they are not replied to. 
+     - [ ] use this logic for channels.
+     - update channel flow to us this logic. Relying on audience.level > 60 rather than strict @atting.
+       to determine cut off.
+     - Update UI to show group chats. 
 ## Synthetics 
 - [x] Hook up message feature extraction and VDB. (in progress)
 - [ ] Hook up synthetics.

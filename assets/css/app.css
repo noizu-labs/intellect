@@ -12,6 +12,14 @@
     #user-menu
     */
 
+    .nlp-step {
+        @apply py-3 ring-1 ring-slate-500 bg-slate-100;
+    }
+
+    .nlp-objective {
+        @apply py-3 ring-1 ring-slate-500 bg-slate-100;
+    }
+
     .tab-page {
         @apply hidden;
     }

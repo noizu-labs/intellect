@@ -87,19 +87,30 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   def unread_messages?(state,context,options) do
     cond do
       state.worker.channel.type == :session -> session_unread_messages?(state, context, options)
+      state.worker.channel.type == :chat -> session_unread_messages?(state, context, options)
       :else -> channel_unread_messages?(state,context,options)
     end
   end
 
   def session_unread_messages?(state, context, options) do
-    channel_unread_messages?(state,context,options)
+    # TODO - logic depends on channel type
+    # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
+    with {:ok, o} <- message_history(state, context, options)  do
+      unless unread = Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority >= 50 && true || nil)) do
+        false
+      else
+        true
+      end
+    else
+      _ -> false
+    end
   end
 
   def channel_unread_messages?(state,context,options) do
     # TODO - logic depends on channel type
     # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
     with {:ok, o} <- message_history(state, context, options)  do
-      unless unread = Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority > 0.5 && true || nil)) |> IO.inspect(label: "UNREAD") do
+      unless unread = Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority >= 50 && true || nil)) do
         inbox = Enum.filter(o, &(is_nil(&1.read_on)))
                 |> length()
         inbox > 20
@@ -115,6 +126,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   def message_history(state,context,options) do
     cond do
       state.worker.channel.type == :session -> session_message_history(state, context, options)
+      state.worker.channel.type == :chat -> session_message_history(state, context, options)
       :else -> channel_message_history(state,context,options)
     end
   end
@@ -249,6 +261,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   def process_message_queue(state, context, options) do
     cond do
       state.worker.channel.type == :session -> session_process_message_queue(state, context, options)
+      state.worker.channel.type == :chat -> session_process_message_queue(state, context, options)
       :else -> channel_process_message_queue(state,context,options)
     end
   end
@@ -331,6 +344,11 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
               }
               Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
             end
+
+            spawn fn ->
+              Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
+            end
+
           end
         end
 
