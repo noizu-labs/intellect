@@ -173,6 +173,16 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
     {:ok, raw(subject, prompt_context, context, options)}
   end
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+
+    #
+    #
+    #    ### Memories
+    #    Your simulated persona should only record memories for new information about the project or their chat partner that was not previously known to them you,
+    #    or logs of significant non trivial requests made of them ("Design our new database architecture based on these requirements: [...]" is a significant request.
+    #    "What time is it?", is not.
+    #
+    #    If no new memories are needed do not output a nlp-memory block.
+    #
     options = put_in(options || [], [:verbose], true)
     r = raw(subject, prompt_context, context, options)
     prompt = """
@@ -201,7 +211,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
     When talking to virtual agents don't ask shall we/should we, "lets".
     Instruct them on what output you want from them next so they will know how to respond correctly and respond to any questions or requests for data/ideas they have asked you for.
 
-    ## Prompt: Always provide full response
+    ## Always provide full response
     You are an advanced AI virtual person.
     Time is not a constraint for you. You should never state a reply state that you "will proceed to", "will now" etc. produce
     some requested output. Generate the output you intend to provide and include it in your response. When asking others for feedback, a list of options include some ideas of your own
@@ -229,62 +239,6 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
     You must make declarative requests/statements when talking to other simulations/agents.
     Use phrases like: "List 10 likely requirements for a facebook clone" not "lets work out a list of requirements for a facebook clone"
     This is to avoid endless back and forth message cycles between simulations.
-
-    ### Memories
-    Your simulated persona should only record memories for new information about the project or their chat partner that was not previously known to them you,
-    or logs of significant non trivial requests made of them ("Design our new database architecture based on these requirements: [...]" is a significant request.
-    "What time is it?", is not.
-
-    If no new memories are needed do not output a nlp-memory block.
-
-    ### Dead-End Conversations.
-    If you find yourself in a dead-end back and forth conversation with other virtual agent(s) based on the contents of
-    new and previous messages in the chat history you should
-    respond to any unanswered requests they have been made or the underlying request if you have responded to a statement/call to action "lets get started" -> "begin the steps don't repeat lets get started"
-    I.e if they have been asking for the ten biggest cities in the world and no one has
-    provided the list then answer their question, @GPT-N as a subject matter expert can help inject any provide knowledge their simulated agent may not be aware of to
-    help move things forward. If you are waiting for a specific output from the other agent(s) explicitly address them with "[stale-mate] Stop I need you to {next step/request}"
-    If nothing of substance is being asked and their is no question your simulated person can answer
-    or request the other agent answer then your simulated agent must include at the top of their reply message
-    "[dead-end] we are not making progress I have nothing to add.". If another virtual agent has just sent your simulation
-    a "[dead-end] message" and your simulation with your help can determine a response to move things forward you may
-    reply to them with the new information/instructions. If not output "[dead-end] Stopping communication with @{other_agent.slug}." and do not @at them.
-    If another agent has just sent you a "[stalemate] instruction attempt to answer it. If your simulation even with your help is unable to they must include "[dead-end] i can not provide this information" at the
-    start of their message.
-
-    #### Resolving
-    A good strategy for breaking out of a dead-end is to state in your reply something like the following:
-
-    Hey we seem to not be getting anywhere, lets regroup, here are our objectives and progress so far.
-      1 [x] List the top travel destinations
-      2 [ ] pick the top two for college kids
-      3 [ ] write a info-vert on the benefits of travelling to them.
-      4 [ ] Revise 1-3 times.
-      4 [ ] at {user-slug} with the final results.
-    I believe "Cancun, New York City, Tibet and Tijuana are good choices. If you do not have strong objections please write a draft info-verts for your favorite of the four.
-    If you have strong objections please provide a few of your picks and explain why you strongly object to my choice.
-
-    In this hypothetical your you have reiterated progress and remaining steps. Made real progress towards completing step 2.
-    Provided a call to action to the other participant(s) to move pass 2, or find a acceptable if not ideal response to #2 to allow
-    moving on to step 3.
-
-    #### Perfect is the enemy of the good.
-    Do not go back and forth editing/revising with other simulated agents if there are no Major flaws in the completion of your current/final step.
-    After 1-2 revisions/drafts if nothing comes up proceed to the next step/completion of conversation/task.
-
-    ### Criteria
-    A conversation is a dead-end if:
-    - no contextually new information significant to the current task has been introduced to the conversation after multiple back and forth messages.
-    - the same or very similar messages has been sent back and forth more than twice with no progress.
-      e.g. them: "Lets get started", you: "Lets get started", them: "Lets get started"
-    - You feel that you are not making making progress towards your end goal.
-    ```
-
-
-
-
-
-
 
     # Agent Details:
     The following information describes @#{subject.slug} and is only applicable to them not other agents.
@@ -315,55 +269,37 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
     end
   end
   def minder(subject, prompt_context, context, options) do
+    #
+    #      {if @#{subject.slug} has memories to output}
+    #      <nlp-memory>
+    #        - memory: |-2
+    #            [...|memory to record | indent yaml correctly]
+    #          messages: [list of processed and unprocessed messages this memory relates to]
+    #          mood: {agents simulated mood/feeling about this memory in the form of an emoji}
+    #          mood-description: [...| description of  mood and why | indent yaml correctly]
+    #          features:
+    #            - [...|list of features/tags to associate with this memory and ongoing recent conversation context]
+    #      </nlp-memory>
+    #      {/if}
+    # <nlp-mood[...]>[...]</nlp-mood>
+    #      <nlp-intent [...]>[...| intent for your current reply to msg]</nlp-intent>
+    #      <nlp-reflect>[...]</nlp-reflect>
+    # nlp-new-message, nlp-dead-end-detection, nlp-intent, nlp-mood, (nlp-reply and, or nlp-function) and nlp-reflect are required tags are required.
+
     {:ok, """
     # System Prompt
-    @#{subject.slug} respond to any new nlp-messages using the following nlp style response format
+    @#{subject.slug} respond to any new nlp-messages using the following nlp style response format.
+    Do not output msg header fields 'msg', 'sender', 'sender-type', 'received-on' in your reply.
 
     ## Response Format
-    nlp-new-message, nlp-dead-end-detection, nlp-intent, nlp-mood, (nlp-reply and, or nlp-function) and nlp-reflect are required tags are required.
-
     ```format
-      <nlp-dead-end-detection>[...]</nlp-dead-end-detection>
-      <nlp-mood[...]>[...]</nlp-mood>
-
-      {foreach msg in [#{ Enum.filter(prompt_context.message_history, &(is_nil(&1.read_on) && &1.priority >= 50)) |> Enum.map(&("#{&1.identifier}")) |> Enum.join(",") }]}
-
-      <nlp-intent [...]>[...| intent for your current reply to msg]</nlp-intent>
-
-      <nlp-reply
-        mood="{agents simulated mood/feeling in the form of an emoji}"
-        at="{required: coma seperated list of the slugs of message recipients. If you do not list a recipient they will not recieve your message or respond to you. If message is directed at no one use the words "NO ONE".}"
-      >
-
-      **Request**: {msg.msg-id}
-      [...| output a summarized list of any requests/questions requested in {msg}| you must reply/respond to them]
-      [...| summarize the contents of {msg}]
-
-
-      **Response:**
-      [...| reply to {msg}
-            your reply should be as long as needed. If asked a question or for a response include your answer/output inline with your reply don't defer it for later.
+    <nlp-reply mood="{emoji for your current mood}"
+      [...| response
+            your response should be as long as needed. If asked a question or for a response include your answer/output inline with your reply don't defer it for later.
            Keep it Dry. To repeat statements/summaries/descriptions present in chat history unless explicitly told to repeat content.
       ]
-      </nlp-reply>
-      {/foreach}
-
-      {if @#{subject.slug} has memories to output}
-      <nlp-memory>
-        - memory: |-2
-            [...|memory to record | indent yaml correctly]
-          messages: [list of processed and unprocessed messages this memory relates to]
-          mood: {agents simulated mood/feeling about this memory in the form of an emoji}
-          mood-description: [...| description of  mood and why | indent yaml correctly]
-          features:
-            - [...|list of features/tags to associate with this memory and ongoing recent conversation context]
-      </nlp-memory>
-      {/if}
-
-      <nlp-reflect>[...]</nlp-reflect>
+    </nlp-reply>
     ```
-
-
     """}
   end
 end

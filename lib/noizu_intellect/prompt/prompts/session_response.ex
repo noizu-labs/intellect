@@ -94,9 +94,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
       <%# Channel Definition %>
       <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, @prompt_context, @context, @options) %>
 
-      # Instructions
-      Below are recent and relevant messages from your current channel's chat history. Your simulated agent should review and
-      and respond as instructed.
+      # Chat History
       """
       ],
       minder: [user:
@@ -110,6 +108,16 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
 
 
   defimpl Noizu.Intellect.DynamicPrompt do
+
+    def split_messages(messages, agent) do
+      # Extract Read, New, and Indirect messages.
+      processed = Enum.filter(messages, & &1.read_on || &1.sender.identifier == agent.identifier)
+      x = Enum.reject(messages, & &1.read_on || &1.sender.identifier == agent.identifier)
+      new = Enum.filter(x, & &1.priority >= 50)
+      indirect = Enum.reject(x, & &1.priority >= 50)
+      {processed, indirect, new}
+    end
+
     defp expand_prompt(expand_prompt, assigns) do
       echo? = false
       case expand_prompt do
@@ -153,131 +161,40 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         _ -> ""
       end
     end
-    def prompt(subject, prompt_context, _context, _options) do
-      # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt
+    def prompt(subject, prompt_context, context, options) do
       with {:ok, prompts} <- expand_prompt(subject.prompt, prompt_context.assigns) do
-        # @todo logic to filter/pick briefs.
+        {processed, indirect, new} = prompt_context.assigns.message_history.entities
+                                     |> split_messages(prompt_context.agent)
+        messages = (processed ++ indirect)
+                   |> Enum.map(
+                        fn(message) ->
+                          {slug, type} = Noizu.Intellect.Account.Message.sender_details(message, context, options)
+                            """
+                            msg: #{message.identifier}
+                            sender: @#{slug}
+                            sender-type: #{type}
+                            received-on: #{message.time_stamp.created_on |> DateTime.to_iso8601}
 
-        # walk backwards until we find a message where our priority > 60 indicating an at message.
-        # Then split the map and put the non at messages in a special system prompt to avoid the agent responding to them.
-        messages = prompt_context.assigns.message_history.entities
-        r = Enum.reverse(messages)
-            |> Enum.find_value(& &1.priority >= 50 && &1.identifier || nil)
-        {messages, pending} = if r do
-          index = Enum.find_index(messages, & &1.identifier == r)
-          Enum.split(messages, index + 1)
-        else
-          {[], messages}
-        end
+                            #{message.contents.body}
+                            """
+                        end
+                      ) |> Enum.join("\n﹍\n")
+        messages = [{:system, messages}]
+        new = new |> Enum.map(
+                       fn(message) ->
+                         {slug, type} = Noizu.Intellect.Account.Message.sender_details(message, context, options)
+                         """
+                         msg: #{message.identifier}
+                         sender: @#{slug}
+                         sender-type: #{type}
+                         received-on: #{message.time_stamp.created_on |> DateTime.to_iso8601}
 
-        messages = Enum.map(messages, fn(message) ->
-          {role, action, type, slug} = case message.sender do
-            %Noizu.Intellect.Account.Member{user: user} ->
-              cond do
-                message.read_on ->
-                  {:user, :history, "human operator", user.slug}
-                :else ->
-                  {:user, :reply, "human operator", user.slug}
-              end
-            %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} ->
-              cond do
-                message.read_on ->
-                  cond do
-                    message.sender.identifier == prompt_context.agent.identifier -> {:assistant, :self, "virtual agent", slug}
-                    message.priority >= 50 -> {:user, :history, "virtual agent", slug}
-                    :else -> {:system, :ignore, "virtual agent", slug}
-                  end
-                :else ->
-                  cond do
-                    message.sender.identifier == prompt_context.agent.identifier -> {:assistant, :self, "virtual agent", slug}
-                    message.priority >= 50 -> {:user, :reply, "virtual agent", slug}
-                    :else -> {:system, :ignore, "virtual agent", slug}
-                  end
-              end
-            # Support for Services/Tools
-            _ -> {nil, nil, nil, nil}
-          end
-          cond do
-            is_nil(role) -> nil
-            action == :ignore ->
-              {role,
-                """
-                This is a indirect-message sent to another party. Consider it in your response but do not respond to it.
-                ------
-                <nlp-message status="ignore" msg-id="#{message.identifier}" sender="@#{slug}" sender-type="#{type}" sent-on="#{message.time_stamp.created_on |> DateTime.to_iso8601}">
-                #{message.contents.body}
-                </nlp-message>
-                """
-              }
-            action == :self ->
-              {role,
-                """
-                <nlp-message status="old" msg-id="#{message.identifier}" sender="@#{slug}" sender-type="#{type}" sent-on="#{message.time_stamp.created_on |> DateTime.to_iso8601}">
-                #{message.contents.body}
-                </nlp-message>
-                """
-              }
-            action == :history ->
-              {role,
-                """
-                <nlp-message status="old" msg-id="#{message.identifier}" sender="@#{slug}" sender-type="#{type}" sent-on="#{message.time_stamp.created_on |> DateTime.to_iso8601}">
-                #{message.contents.body}
-                </nlp-message>
-                """
-              }
-
-            action == :reply ->
-              [
-                #{:assistant, ""},
-                {role,
-                """
-                <nlp-message status="new" msg-id="#{message.identifier}" sender="@#{slug}" sender-type="#{type}" sent-on="#{message.time_stamp.created_on |> DateTime.to_iso8601}">
-                @#{prompt_context.agent.slug}
-
-                #{message.contents.body}
-                </nlp-message>
-                """
-               },
-              ]
-
-            :else ->
-              {role,
-                """
-                <nlp-message status="ignore" msg-id="#{message.identifier}" sender="@#{slug}" sender-type="#{type}" sent-on="#{message.time_stamp.created_on |> DateTime.to_iso8601}">
-                #{message.contents.body}
-                </nlp-message>
-                """
-              }
-          end
-        end) |> Enum.reject(&is_nil/1) |> List.flatten()
-
-        dont_respond = Enum.map(pending, fn(message) ->
-          {role, action, type, slug} = case message.sender do
-            %Noizu.Intellect.Account.Member{user: user} -> {:system, :ignore, "human operator", user.slug}
-            %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} ->
-              role = :system
-              {role, :ignore, "virtual agent", slug}
-            # Support for Services/Tools
-            _ -> {nil, nil, nil, nil}
-          end
-          if role do
-            {role,
-              """
-              This is a pending-message. Consider it in your response but to not respond to it.
-              ----
-              <nlp-message status="ignore" msg-id="#{message.identifier}" sender="@#{slug}" sender-type="#{type}" sent-on="#{message.time_stamp.created_on |> DateTime.to_iso8601}">
-              #{message.contents.body}
-              </nlp-message>
-              """
-            }
-          end
-        end) |> Enum.reject(&is_nil/1)
-        prompts = prompts ++ dont_respond ++ messages
-        Enum.map(prompts,
-          fn({type, body}) ->
-          IO.puts("[#{prompt_context.agent.slug}] #{type}\n#{body}\n---------------------\n\n\n")
-          end)
-        {:ok, prompts}
+                         #{message.contents.body}
+                         """
+                       end
+                     ) |> Enum.join("\n﹍\n")
+        new = [{:user, new}]
+        {:ok, prompts ++ messages ++ new}
       end
     end
     def minder!(subject, prompt_context, context, options) do

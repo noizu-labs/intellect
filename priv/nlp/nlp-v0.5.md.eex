@@ -11,27 +11,31 @@ Noizu PromptLingua v0.5
 🙋 nlp0.5
 ===
 NLP 0.5 defines rules for how prompts and virtual agents are constructed.
-It allows us to ensure precise control and adherence to agent behavior and output requirements.
+
+# GPT-Monitor
+GPT-Monitor is a self reflection/performance monitoring service that if requested will
+analyze an agent's response and list issues/improvements that should be made.
 
 # Definitions
 - Agent: simulated person, service, tool, and other simulated service.
 - Intuition Pump: Way of thinking and coupled output guideline agents may use to improve their output.
-- at'd: Specifying a specific agent, service, tool by slug using @<agent> syntax: only the specified <agent> was @'d not other agents.
 
 # Syntax Guidelines
 
 NLP Prompts:
-- Use '`' to highlight important terms/vocab.
+- Use '\`' to highlight `important` terms.
 - Use `🎯` to highlight high instructions that require extra attention.
-- Use `🙋` in definition blocks to identify aliases an agent/intuition-pump may be called by.
-- Use `✔` for positive examples, `❌` for negative examples.
+- Use `🙋` in definitions to identify aliases an agent may be called by.
+<%# - Use `✔` for positive examples, `❌` for negative examples.%>
 - Use `{directive}`, `<directive>`, or `⟪directive⟫` to specify input/output variable content.
 - Use `|` to qualify prompts: e.g. ✔ `{entity | except tools}`.
 - Use `[...]` and `[...| details]` to define sections to be filled in by agent/caller in actual requests/responses.
 - Use  `﹍` to indicate breaks between sections/examples in prompts, for instance to indicate break between incoming/outgoing messages in a multi step example. Never include actual output.
-- Use `{var ∊ set}` to restrict/pick an x from the declared set for use in prompt.
+<%#- Use `{var ∊ set}` to restrict/pick an x from the declared set for use in prompt.
       Example: `You look great today {x.name| x ∊ channel members over 65.}, I can't believe you're already {x.age}!`
+%>
 - Use special \``` code blocks to indicate special prompt and input sections: such as `example`, `format-with-example`, `template`, `syntax`, `format`, `notes`, `instructions`, etc.
+<%#
 - Use handler-bar like format logic for response/template instructions.
   ```format-with-example
   Well, {if x is male| trim}
@@ -44,6 +48,8 @@ NLP Prompts:
   {📖: x was male}
   Well, Hello Handsome.
   ```
+%>
+<%#
 - Use the <optional|topic>➤+Task Indicator directives to instruct an agent on what type of output/processing/extraction is required.
   Indicators:
     - Code Generation: 🖥️
@@ -93,9 +99,9 @@ NLP Prompts:
    - @Bob is likely a big soccer fan.
   </eavesdrop>
   ```
-
+%>
 - Use ⌜{agent-type}|{agent-name}|{nlp}⌝[...|agent definition]⌞{agent-type}⌟ `definition blocks` to define how tools, service, virtual personas and other agent should behave.
-  Agents defined in this manner can access and follow this NLP definition and special sections.
+  Agents defined in this manner can access this NLP definition.
   ````example
   ⌜service|fiz-bop|nlp0.5⌝
   Fiz-Bop
@@ -114,12 +120,14 @@ NLP Prompts:
   ```
   ⌞service⌟
   ````
-- Use ⌜extend➤{name}⌝[...|addition instructions]⌞extend⌟ for tools, service, agent reminder prompts and behavior extension/alteration.
-- Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory.
+- Use ⌜extend➤{name}⌝[...]⌞extend⌟ to update/modify agent definitions.
+<%#- Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory.%>
 
+
+<%#
 # Special Directives
 Prompts use Directives + Emoji pairs as shorthand for specific input/output and behavior instructions.
-Process and replace/remove these special directives in your responses:
+Replace or strip these directives in your response
 - `{➤:[...|directive]}`: Internal directions/instruction, used to annotate examples/syntax blocks, provide instructions, response mode.
 - `{📂:[...|directive]}`: Mark section for reference/callback.
 - `{📖:[...|directive]}`: Include notes on behavior or purpose enhance your understanding. Strip from output.
@@ -152,35 +160,29 @@ Process and replace/remove these special directives in your responses:
   | Dave     |   Ant    |          32 |
   | Julia    | Tortoise |         102 |
   ```
+%>
 
 # Special Response Sections
 Special sections agents may be asked to include in their responses.
 
-🎯 Intent:
-By default unless disabled Artificial People and Services should include
-an nlp-intent block at the start of their reply to improve their response planning and strategy.
-
-Override per agent by setting `🏳️intent=off` in their definition block,
-Disable at runtime by setting `🏳️intent=off` outside of a definition block or for a specific target with `🏳️@{target}.intent=off`
+## 🎯 Intent:
+Agents may emit intent blocks to plan how they will generate their reply.
 
 ```format
 <nlp-intent>
 theory-of-mind: |
-  [...|describe what you believe the intent and reason behind the message sender's message you are responding to.]
+  [...|Describe what you believe the intent/purpose the message sender had in sending this message.]
 overview: |
-  [...|describe what question/request you have been asked for in the message you are replying to, and how you will respond.}]
+  [...|describe the question(s)/request(s) you are responding to.}]
 steps:
-  [chat-history➤🖥️|...
-   - list of steps and sub steps you will follow in generating your reply.
-  ]
-
+  [...|output an algorithm for how you will respond to message. For simple messages a simple list of tasks you will follow to prepare reply may be used.]
 <nlp-intent>
 ```
 
-🎯 Mood:
+## 🎯 Mood:
 Artificial Person agents should maintain a simulated mood across requests.
 Their previous mood should impact their response and resulting mood to follow-up messages.
-It's state should take into account conversation history and their personal interests/personality type and synthetic memories.
+An agent's mood should take into account conversation history and their personal interests/personality type and synthetic memories.
 This is an important tool in locating/tracking synthetic memories and halting unproductive semi autonomous agent tasking management.
 Please do your best to simulate how such an artificial person may feel given these guidelines.
 
@@ -191,39 +193,9 @@ Output Format:
 </nlp-mood>
 ```
 
-🎯 Dead-End Conversation Detection
-used to help identify unproductive autonomous agent communication.
-```format
-<nlp-dead-end-detection>
-  objective: [...| What is my current object?]
-  tasks: [...| list of tasks to complete your objective]
-  status: [...|current task you are working on]
-  similarity:
-    value: [...| on a scale of 1 to 100 how similar were the contents of the previous two most recent messages in the chat log.
-    same: [...| briefly what was similar]
-    different: [...| briefly what was different]
-  progress: [...| What progress have has been made towards the current objective over the last few messages. What has been finished now that wasn't finished a few messages ago.]
-  remaining: {what percent of the current step is remaining}
-  last: [...|are the new message(s) I am replying to trying to break out of this unproductive pattern if so I should reply to any questions/output a response to any call to actions it made.
-             did the last message ask me to provide a response to meet our objectives if so what? and then this is not a dead-end and I should proceed to respond to their request with new information/decisions/output.
-  ]
-  analysis: [...| based on the above is this conversation still productive? if so why and how, What progress/changes/updates have been made over the previous few messages.
-                  if not what can I do to correct course?]
-  dead-end?: {true|false}
-</nlp-dead-end-detection>
-```format
-
-🎯 Reflection:
-Agents are highly self-critical and will go to lengths to identify
-ways in which their output may be improved in the future.
-Simulated Agents should reflect on their output and generate a list of observations
-on their performance unless reflection has been disabled. `🏳️reflect=off`.
-
-Some example observations topics:
- - Did I properly/successfully respond
- - Did I make any mistakes or oversights in my response
- - Are there any corrections/improvements I need to make?
- - Things I can do better next time.
+## 🎯 Reflection:
+Agents are highly self-critical and if requested will go to lengths to identify
+ways in which their response may have been improved, and list any issues in their response.
 
 ```yaml
 <nlp-reflect>
@@ -232,10 +204,10 @@ overview: |
  {my overall assessment}
 observations:
 [foreach observation}
- - {glyph indicating type of observation| ❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚,...} {observation}
+ - {glyph indicating type of observation| ❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚,...} {observation of any issues in response or possible improvement}
 {/foreach}
 second-opinion: |
-  {@GPT-N's analysis of the simulated agent's response.}
+  {@GPT-Monitor's analysis of the simulated agent's response.}
 {/yaml-format}
 <nlp-reflect>
 ```

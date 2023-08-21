@@ -45,6 +45,14 @@ defmodule Noizu.Intellect.Account.Message do
   require Noizu.Entity.Meta.Persistence
 
 
+  def sender_details(message, context, options \\ nil)
+  def sender_details(message, _, _) do
+    case message.sender do
+      %Noizu.Intellect.Account.Member{user: user} -> {user.slug, "human operator"}
+      %Noizu.Intellect.Account.Agent{slug: slug} -> {slug, "virtual agent"}
+    end
+  end
+
   def unpack_audience_list(as_name, record, _context, _field_options) do
     with %{array_agg: entries} <- get_in(record, [Access.key(:__loader__), Access.key(as_name)]),
          true <- is_list(entries) do

@@ -500,7 +500,7 @@ defmodule Noizu.Intellect.Account.Channel do
 
 
         q = from msg in Noizu.Intellect.Schema.Account.Message,
-                 left_join: aud in Noizu.Intellect.Schema.Account.Message.Audience,
+                 join: aud in Noizu.Intellect.Schema.Account.Message.Audience,
                  on: aud.message == msg.identifier,
                  left_join: contents in Noizu.Intellect.Schema.VersionedString,
                  on: contents.identifier == msg.contents,
@@ -514,8 +514,8 @@ defmodule Noizu.Intellect.Account.Channel do
                  on: msg.identifier == aud_list.message,
                  where: msg.channel == ^channel_id,
                  where: aud.recipient == ^recipient_id,
-                 where: not(is_nil(aud)) or msg.sender == ^recipient_id,
-                 where: ((is_nil(read_status) and is_nil(msg.answered_by)) or (aud.confidence >= ^relevancy or aud.created_on >= ^recent_cut_off)),
+                 # where: not(is_nil(aud)) or msg.sender == ^recipient_id,
+                 # where: ((is_nil(read_status) and is_nil(msg.answered_by)) or (aud.confidence >= ^relevancy or aud.created_on >= ^recent_cut_off)),
                  order_by: [desc: msg.created_on],
                  limit: ^limit,
                  select: %{msg|
