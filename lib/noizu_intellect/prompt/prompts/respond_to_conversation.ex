@@ -25,7 +25,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
       """
       # NLP Definition
       <%=
-      case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.nlp_prompt_context, @prompt_context, @context, @options) do
+      case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.nlp_prompt_context, @prompt_context, @context, @options) do
       %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end %>
 
       # Master Prompt
@@ -33,11 +33,11 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
       For this session you are to simulate virtual agent @<%= @agent.slug %> and only virtual agent @<%= @agent.slug %>.
 
       <%=
-      case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@agent, @prompt_context, @context, @options) do
+      case Noizu.Intellect.DynamicPrompt.prompt(@agent, @prompt_context, @context, @options) do
       %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end %>
 
       <%=
-      case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do
+      case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do
       %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %><% _ -> %><%= "" %><% end %>
 
       ## Instruction Prompt
@@ -166,7 +166,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
 
       ----
 
-      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@message_history, @prompt_context, @context, @options) do %>
+      <%= case Noizu.Intellect.DynamicPrompt.prompt(@message_history, @prompt_context, @context, @options) do %>
       <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
       <% _ -> %><%= "" %>
       <% end %>

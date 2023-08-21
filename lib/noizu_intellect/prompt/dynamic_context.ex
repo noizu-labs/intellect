@@ -42,7 +42,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   alias Noizu.EntityReference.Protocol, as: ERP
   alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
   alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
-  alias Noizu.Intellect.Prompt.DynamicContext.Protocol, as: PromptProtocol
+  alias Noizu.Intellect.DynamicPrompt, as: PromptProtocol
   @derive Ymlr.Encoder
   defstruct [
     # input
@@ -262,15 +262,28 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
 end
 
 
-defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for:  Noizu.Intellect.Prompt.DynamicContext do
+defimpl Noizu.Intellect.DynamicPrompt, for:  Noizu.Intellect.Prompt.DynamicContext do
   alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
   alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
-
+  def prompt!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
+  end
   def prompt(prompt_context, _, context, options) do
-    Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context.master_prompt_context, prompt_context, context, options)
+    Noizu.Intellect.DynamicPrompt.prompt(prompt_context.master_prompt_context, prompt_context, context, options)
+  end
+  def minder!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
   end
   def minder(prompt_context, _, context, options) do
-    Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context.master_prompt_context, prompt_context, context, options)
+    Noizu.Intellect.DynamicPrompt.minder(prompt_context.master_prompt_context, prompt_context, context, options)
   end
 
   def assigns(prompt_context, _, context, options) do
@@ -296,8 +309,8 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for:  Noizu.Intellect.Pr
   end
 
   def request(prompt_context, _, context, options) do
-    with {:ok, master_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(prompt_context, prompt_context, context, options),
-         {:ok, master_minder_prompt} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.minder(prompt_context, prompt_context, context, options) do
+    with {:ok, master_prompt} <- Noizu.Intellect.DynamicPrompt.prompt(prompt_context, prompt_context, context, options),
+         {:ok, master_minder_prompt} <- Noizu.Intellect.DynamicPrompt.minder(prompt_context, prompt_context, context, options) do
 
       prompts = expand_prompts(master_prompt)
       minders = expand_prompts(master_minder_prompt)
@@ -307,7 +320,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for:  Noizu.Intellect.Pr
         messages: prompts ++ minders
       }
 
-      Noizu.Intellect.Prompt.DynamicContext.Protocol.request(prompt_context.master_prompt_context, request, context, options)
+      Noizu.Intellect.DynamicPrompt.request(prompt_context.master_prompt_context, request, context, options)
     end
   end
 
@@ -335,7 +348,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for:  Noizu.Intellect.Pr
   end
 
   defp inject_assigns(subject, prompt_context, context, options) do
-    with {:ok, assigns} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.assigns(subject, prompt_context, context, options) do
+    with {:ok, assigns} <- Noizu.Intellect.DynamicPrompt.assigns(subject, prompt_context, context, options) do
       %{prompt_context| assigns: assigns}
     else
       _ -> prompt_context

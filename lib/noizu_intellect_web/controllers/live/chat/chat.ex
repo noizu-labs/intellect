@@ -159,10 +159,17 @@ defmodule Noizu.IntellectWeb.Chat do
           with {:ok, channel} <-
                  %{socket.assigns[:active_channel]|
                    type: :chat
-                 } |> Noizu.Intellect.Entity.Repo.update(context),
-               [member|_] <- members
+                 } |> Noizu.Intellect.Entity.Repo.update(context)
             do
-            Noizu.Intellect.Service.Agent.Ingestion.reload!({member, socket.assigns[:active_channel_ref]}, context)
+
+            Enum.map(members,
+              fn
+                (ref = {:ref, Noizu.Intellect.Account.Agent, _}) -> Noizu.Intellect.Service.Agent.Ingestion.reload!({ref, socket.assigns[:active_channel_ref]}, context)
+                (_) -> nil
+              end)
+
+
+
             Noizu.Intellect.Service.Agent.Ingestion.fetch({agent_ref, socket.assigns[:active_channel_ref]}, :state, context)
             js = hide_modal("#{modal}")
             socket = socket

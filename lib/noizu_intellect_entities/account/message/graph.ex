@@ -62,9 +62,24 @@ defmodule Noizu.Intellect.Account.Message.Graph do
     }
   end
 
-  defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol do
+  defimpl Noizu.Intellect.DynamicPrompt do
+    def prompt!(subject, prompt_context, context, options) do
+      with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+        prompt
+      else
+        _ -> ""
+      end
+    end
     def prompt(subject, _prompt_context, _context, _options) do
       {:ok, Ymlr.document!(subject)}
+    end
+
+    def minder!(subject, prompt_context, context, options) do
+      with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+        prompt
+      else
+        _ -> ""
+      end
     end
     def minder(_subject, _prompt_context, _context, _options), do: {:ok, nil}
   end

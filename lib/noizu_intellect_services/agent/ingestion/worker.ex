@@ -127,7 +127,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     cond do
       state.worker.channel.type == :session -> session_message_history(state, context, options)
       state.worker.channel.type == :chat -> session_message_history(state, context, options)
-      :else -> channel_message_history(state,context,options)
+      :else -> session_message_history(state,context,options)
     end
   end
 
@@ -243,6 +243,10 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
               Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
             end
 
+            at = (attr[:at] || "")
+                 |> String.split(",")
+                 |> Enum.map(&String.trim/1)
+            options = put_in(options || [], [:at], at)
             Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
 #          else
 #            # clear ids regardless to avoid continuous loop.
@@ -262,7 +266,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     cond do
       state.worker.channel.type == :session -> session_process_message_queue(state, context, options)
       state.worker.channel.type == :chat -> session_process_message_queue(state, context, options)
-      :else -> channel_process_message_queue(state,context,options)
+      :else -> session_process_message_queue(state,context,options)
     end
   end
 
@@ -301,53 +305,68 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
           Logger.warn("[REPLY:#{state.worker.agent.slug}] -------------------------------\nraw-reply:\n" <> reply <> "\n------------------------------------\n\n")
 
           response = Noizu.Intellect.HtmlModule.extract_session_response_details(reply)
-          with [{:agent, [sender: sender, sections: sections]}|_] <- response,
-               sections <- Enum.group_by(sections, & elem(&1, 0)),
-               [{:reply, reply_response}] <- sections[:reply]
+          #with [{:agent, [sender: sender, sections: sections]}|_] <- response,
+            with sections <- Enum.group_by(response, & elem(&1, 0)),
+               [{:reply, reply_response}|_] <- sections[:reply]
             do
 
-
-            message = %Noizu.Intellect.Account.Message{
-              sender: state.worker.agent,
-              channel: state.worker.channel,
-              depth: 0,
-              user_mood: reply_response[:mood] && String.trim(reply_response[:mood]),
-              event: :message,
-              contents: %{title: "response", body: reply_response[:response]},
-              meta: Ymlr.document!([api_response[:settings], api_response[:messages], api_response[:reply]]) |> String.trim(),
-              time_stamp: Noizu.Entity.TimeStamp.now()
-            }
-            {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
-            # Block so we don't reload and resend.
-            Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-            Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 10, "sender"}}, message, context, options)
+              Enum.map(sections[:reply],
+                                       fn
+                                       ({:reply, reply_response}) -> 1
 
 
-            # mark any unread as read.
-            Enum.map(messages, fn(message) ->
-              if is_nil(message.read_on) do
-                Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-              end
-            end)
 
-            with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
-              # need a from message method.
-              push = %Noizu.IntellectWeb.Message{
-                identifier: message.identifier,
-                type: :message,
-                timestamp: message.time_stamp.created_on,
-                user_name: state.worker.agent.slug,
-                profile_image: state.worker.agent.profile_image,
-                mood: reply_response[:mood] && String.trim(reply_response[:mood]),
-                meta: Ymlr.document!([api_response[:settings], api_response[:messages], api_response[:reply]]) |> String.trim(),
-                body: message.contents.body
-              }
-              Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
-            end
 
-            spawn fn ->
-              Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
-            end
+                                                                     message = %Noizu.Intellect.Account.Message{
+                                                                       sender: state.worker.agent,
+                                                                       channel: state.worker.channel,
+                                                                       depth: 0,
+                                                                       user_mood: reply_response[:mood] && String.trim(reply_response[:mood]),
+                                                                       event: :message,
+                                                                       contents: %{title: "response", body: reply_response[:response]},
+                                                                       meta: Ymlr.document!([api_response[:settings], api_response[:messages], api_response[:reply]]) |> String.trim(),
+                                                                       time_stamp: Noizu.Entity.TimeStamp.now()
+                                                                     }
+                                                                     {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
+                                                                     # Block so we don't reload and resend.
+                                                                     Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+                                                                     Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 10, "sender"}}, message, context, options)
+
+
+                                                                     # mark any unread as read.
+                                                                     Enum.map(messages, fn(message) ->
+                                                                       if is_nil(message.read_on) do
+                                                                         Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+                                                                       end
+                                                                     end)
+
+                                                                     with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
+                                                                       # need a from message method.
+                                                                       push = %Noizu.IntellectWeb.Message{
+                                                                         identifier: message.identifier,
+                                                                         type: :message,
+                                                                         timestamp: message.time_stamp.created_on,
+                                                                         user_name: state.worker.agent.slug,
+                                                                         profile_image: state.worker.agent.profile_image,
+                                                                         mood: reply_response[:mood] && String.trim(reply_response[:mood]),
+                                                                         meta: Ymlr.document!([api_response[:settings], api_response[:messages], api_response[:reply]]) |> String.trim(),
+                                                                         body: message.contents.body
+                                                                       }
+                                                                       Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+                                                                     end
+
+                                                                     spawn fn ->
+                                                                       at = (reply_response[:at] || "")
+                                                                            |> String.split(",")
+                                                                            |> Enum.map(&String.trim/1)
+                                                                       options = put_in(options || [], [:at], at)
+                                                                       Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
+                                                                     end
+
+                                       (other) -> Logger.warn("Invalid response: #{inspect other}")
+                                       end
+                                       )
+
 
           end
         end

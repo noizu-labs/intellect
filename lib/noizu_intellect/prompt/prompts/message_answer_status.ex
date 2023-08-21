@@ -28,12 +28,12 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
         As a chat thread and content analysis engine, given the following channel, channel members, and list of chat messages,
         Analyze the conversation and identify any messages that have been answered or indicated as answered by new message.
 
-        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
+        <%= case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
         <% _ -> %><%= "" %>
         <% end %>
 
-        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@message_history, @prompt_context, @context, @options) do %>
+        <%= case Noizu.Intellect.DynamicPrompt.prompt(@message_history, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
         <% _ -> %><%= "" %>
         <% end %>
@@ -47,7 +47,7 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
           * For instance, a new message that elaborates on topics raised in a recent prior message is likely a response to that earlier message rather than the initiation of a new thread.
 
         # New Message
-        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
+        <%= case Noizu.Intellect.DynamicPrompt.prompt(@current_message, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %>
         <%= prompt || "" %>
         <% _ -> %><%= "" %>

@@ -64,12 +64,12 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
 
         Bear in mind the different confidence levels based on how members are addressed or mentioned in the message, and continue this process of analysis for each new message.
 
-        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
+        <%= case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
         <% _ -> %><%= "" %>
         <% end %>
 
-        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@message_history, @prompt_context, @context, @options) do %>
+        <%= case Noizu.Intellect.DynamicPrompt.prompt(@message_history, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
         <% _ -> %><%= "" %>
         <% end %>
@@ -86,7 +86,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
         determine the most likely audience for new messages based on their background, message contents and direct channel member mentions.
         Provide the requested markdown body for the message-analysis tag.
 
-        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
+        <%= case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
         <% _ -> %><%= "" %>
         <% end %>
@@ -160,7 +160,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
         <% end %>
 
         # New Message
-        <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
+        <%= case Noizu.Intellect.DynamicPrompt.prompt(@current_message, @prompt_context, @context, @options) do %>
         <% {:ok, prompt} when is_bitstring(prompt) -> %>
         <%= prompt || "" %>
         <% _ -> %><%= "" %>

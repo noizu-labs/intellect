@@ -47,6 +47,8 @@
 - [ ] nested comment (nested comments forget about outer scope and use a revised digest of chat to date.)
 
 
+{:ok, Enum.sort_by(messages, &(&1.time_stamp.created_on), {:desc, DateTime})}
+
 https://towardsdatascience.com/qlora-fine-tune-a-large-language-model-on-your-gpu-27bed5a03e2b
 https://github.com/huggingface/peft/tree/main
 https://huggingface.co/blog/how-to-train

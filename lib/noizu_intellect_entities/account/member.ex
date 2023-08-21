@@ -79,7 +79,7 @@ end
 
 
 
-defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Member] do
+defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
 
   def raw(subject, prompt_context, _context, _options) do
     # There should be per agent response_preferences overrides
@@ -98,6 +98,14 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
       background: subject.details && subject.details.body,
       response_preferences: response_preferences
     }
+  end
+
+  def prompt!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
   end
 
   def prompt(subject, %{format: :raw} = prompt_context, context, options) do
@@ -128,6 +136,13 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     ⌞operator⌟
     """
     {:ok, prompt}
+  end
+  def minder!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
   end
   def minder(_subject, _prompt_context, _context, _options) do
     {:ok, nil}

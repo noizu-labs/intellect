@@ -82,29 +82,33 @@ defmodule Noizu.Intellect.HtmlModule do
 
   def extract_session_response_details(response) do
     {_, xml_tree} = Floki.parse_document(response)
-    Enum.map(xml_tree,
-      fn
-        ({"nlp-agent", attrs, contents}) ->
-          sender = Enum.find_value(attrs, & elem(&1, 0) == "for" && elem(&1, 1) || nil)
-          inner = extract_nlp_agent_response(contents)
-          {:agent, [sender: sender, sections: inner]}
-        (_) -> nil
-      end
-    )
-    |> Enum.reject(&is_nil/1)
-    |> List.flatten()
+    extract_nlp_agent_response(xml_tree)
+
+#    Enum.map(xml_tree,
+#      fn
+#        ({"nlp-agent", attrs, contents}) ->
+#          sender = Enum.find_value(attrs, & elem(&1, 0) == "for" && elem(&1, 1) || nil)
+#          inner = extract_nlp_agent_response(contents)
+#          {:agent, [sender: sender, sections: inner]}
+#        (_) -> nil
+#      end
+#    )
+#    |> Enum.reject(&is_nil/1)
+#    |> List.flatten()
   end
 
   def extract_nlp_agent_response(contents) do
     Enum.map(contents,
       fn
+        ({"nlp-agent", attrs, contents}) -> extract_nlp_agent_response(contents)
+        ({"nlp-message", attrs, contents}) -> extract_nlp_agent_response(contents)
         ({"nlp-intent", _, contents}) ->
           text = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
           {:intent, text}
         ({"nlp-reply", attrs, contents}) ->
           mood = Enum.find_value(attrs, & elem(&1, 0) == "mood" && elem(&1, 1) || nil)
           at = Enum.find_value(attrs, & elem(&1, 0) == "at" && elem(&1, 1) || nil)
-          {:reply, [mood: mood, at: at, response: "#{at || ""}" <> Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+          {:reply, [mood: mood, at: at, response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
         ({"nlp-memory", _, contents}) ->
           text = Floki.raw_html(contents)
           with {:ok, memories} <- YamlElixir.read_from_string(text),

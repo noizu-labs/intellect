@@ -52,7 +52,7 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
     Noizu.Intellect.Prompts.RespondToConversation.prompt(:default, options)
   end
 
-  defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol do
+  defimpl Noizu.Intellect.DynamicPrompt do
     defp expand_prompt(expand_prompt, assigns) do
       echo? = false
       case expand_prompt do
@@ -89,10 +89,23 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
         _ -> {:ok, []}
       end
     end
-
+    def prompt!(subject, prompt_context, context, options) do
+      with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+        prompt
+      else
+        _ -> ""
+      end
+    end
     def prompt(subject, prompt_context, _context, _options) do
       # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt
       expand_prompt(subject.prompt, prompt_context.assigns)
+    end
+    def minder!(subject, prompt_context, context, options) do
+      with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+        prompt
+      else
+        _ -> ""
+      end
     end
     def minder(subject, prompt_context, _context, _options) do
       # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt

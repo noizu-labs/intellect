@@ -134,7 +134,8 @@ defmodule Noizu.Intellect.Account.Channel do
         this.type == :chat ->
           group_chat_deliver(this, message, context, options)
         :else ->
-          #channel_deliver(this, message, context, options)
+          # channel_deliver(this, message, context, options)
+          # group_chat_deliver(this, message, context, options)
           group_chat_deliver(this, message, context, options)
       end
     end
@@ -162,12 +163,13 @@ defmodule Noizu.Intellect.Account.Channel do
             %Noizu.Intellect.Account.Member{user: user} -> user.slug
             %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> slug
             _ -> nil
-          end |> IO.inspect(label: "MEMBER SLUG")
+          end |> IO.inspect(label: "MEMBER SLUG | #{inspect options[:at]}")
 
           confidence = cond do
+            is_nil(slug) -> 0
+            Enum.member?(options[:at] || [], "@#{slug}")  -> 100
             String.match?(message.contents.body, ~r/@everyone/i) -> 70
             String.match?(message.contents.body, ~r/@channel/i) -> 70
-            is_nil(slug) -> 0
             :else ->
               r = Regex.compile!("(@#{slug}[^a-z\-A-Z_]|@#{slug}$)", "i")
               cond do
@@ -179,53 +181,53 @@ defmodule Noizu.Intellect.Account.Channel do
           confidence > 0 && member.identifier || nil
         end
       )  |> Enum.reject(&is_nil/1)
-
-      with  {:ok, response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
-            {:ok, extracted_details} <- extract_session_message_delivery(response[:reply]) do
-
-        #IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(response[:messages], [Access.at(0), :content]) <> "\n\n======================\n\n")
-        with %{choices: [%{message: %{content: reply}}|_]} <- response[:reply] do
-          Logger.warn("[Session Delivery Response #{message.identifier}] \n #{reply}\n--------\n#{inspect extracted_details, pretty: true, limit: :infinity}\n------------\n\n")
-        end
-
-        details = Enum.group_by(extracted_details, &(elem(&1, 0)))
-                  |> IO.inspect(pretty: true, label: "ANALYSIS EXTRACTION")
-
-        responding_to = if responding_to = details[:responding_to] do
-          Enum.map(responding_to,
-            fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
-          )
-          Enum.map(responding_to,
-            fn({:responding_to, {id, confidence, _, _}}) -> confidence > 0 && id || nil end
-          ) |> Enum.reject(&is_nil/1)
-        end
-
-        IO.inspect(details[:summary], pretty: true, label: "SUMMARY")
-        with [{:summary, {summary, action, features}}|_] <- details[:summary] do
-          summary = %{summary: summary, action: action, features: features || []}
-          {:ok, sender} = Noizu.EntityReference.Protocol.sref(message.sender)
-          message =  %Noizu.Intellect.Weaviate.Message{
-                       identifier: message.identifier,
-                       content: message.contents.body,
-                       action: summary.action,
-                       sender: sender,
-                       created_on: message.time_stamp.created_on,
-                       features: summary && summary.features || [],
-                       audience: audience,
-                       responding_to: responding_to
-                     }
-                     #|> IO.inspect(label: "WEAVIATE")
-                     |> Noizu.Weaviate.Api.Objects.create()
-            #|> IO.inspect(label: "WEAVIATE")
-                     |> case do
-                          {:ok, %{meta: %{id: weaviate}}} -> %{message| weaviate_object: weaviate}
-                          _ -> message
-                        end
-          Enum.map(details[:summary],
-            fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
-          )
-        end
-      end
+#
+#      with  {:ok, response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
+#            {:ok, extracted_details} <- extract_session_message_delivery(response[:reply]) do
+#
+#        #IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(response[:messages], [Access.at(0), :content]) <> "\n\n======================\n\n")
+#        with %{choices: [%{message: %{content: reply}}|_]} <- response[:reply] do
+#          Logger.warn("[Session Delivery Response #{message.identifier}] \n #{reply}\n--------\n#{inspect extracted_details, pretty: true, limit: :infinity}\n------------\n\n")
+#        end
+#
+#        details = Enum.group_by(extracted_details, &(elem(&1, 0)))
+#                  |> IO.inspect(pretty: true, label: "ANALYSIS EXTRACTION")
+#
+#        responding_to = if responding_to = details[:responding_to] do
+#          Enum.map(responding_to,
+#            fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
+#          )
+#          Enum.map(responding_to,
+#            fn({:responding_to, {id, confidence, _, _}}) -> confidence > 0 && id || nil end
+#          ) |> Enum.reject(&is_nil/1)
+#        end
+#
+#        IO.inspect(details[:summary], pretty: true, label: "SUMMARY")
+#        with [{:summary, {summary, action, features}}|_] <- details[:summary] do
+#          summary = %{summary: summary, action: action, features: features || []}
+#          {:ok, sender} = Noizu.EntityReference.Protocol.sref(message.sender)
+#          message =  %Noizu.Intellect.Weaviate.Message{
+#                       identifier: message.identifier,
+#                       content: message.contents.body,
+#                       action: summary.action,
+#                       sender: sender,
+#                       created_on: message.time_stamp.created_on,
+#                       features: summary && summary.features || [],
+#                       audience: audience,
+#                       responding_to: responding_to
+#                     }
+#                     #|> IO.inspect(label: "WEAVIATE")
+#                     |> Noizu.Weaviate.Api.Objects.create()
+#            #|> IO.inspect(label: "WEAVIATE")
+#                     |> case do
+#                          {:ok, %{meta: %{id: weaviate}}} -> %{message| weaviate_object: weaviate}
+#                          _ -> message
+#                        end
+#          Enum.map(details[:summary],
+#            fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
+#          )
+#        end
+#      end
     end
   end
 
@@ -461,25 +463,28 @@ defmodule Noizu.Intellect.Account.Channel do
     def relevant_or_recent(recipient, channel, context, options \\ nil)
     def relevant_or_recent(recipient, channel, context, options) do
       with {:ok, messages} <- relevant_or_recent__inner(recipient, channel, context, options) do
-        existing = Enum.map(messages, & &1.identifier)
-        include = Enum.map(messages, fn(message) ->
-          is_map(message.responding_to) && Map.keys(message.responding_to) || nil
-        end) |> Enum.reject(&is_nil/1) |> List.flatten() |> Enum.uniq()
-        include = include -- existing
-        final = with {:ok, additional} <- messages_in_set_recipient(include, recipient, channel, context, options) do
-          Enum.sort_by(messages ++ additional, &(&1.time_stamp.created_on), {:desc, DateTime})
-        else
-          _ -> messages
-        end
-        {:ok, final}
+#        existing = Enum.map(messages, & &1.identifier)
+#        include = Enum.map(messages, fn(message) ->
+#          is_map(message.responding_to) && Map.keys(message.responding_to) || nil
+#        end) |> Enum.reject(&is_nil/1) |> List.flatten() |> Enum.uniq()
+#        include = include -- existing
+#        final = with {:ok, additional} <- messages_in_set_recipient(include, recipient, channel, context, options) do
+#          Enum.sort_by(messages ++ additional, &(&1.time_stamp.created_on), {:desc, DateTime})
+#        else
+#          _ -> messages
+#        end
+#        {:ok, final}
+        {:ok, Enum.sort_by(messages, &(&1.time_stamp.created_on), {:desc, DateTime})}
+
+
       end
     end
     def relevant_or_recent__inner(recipient, channel, context, options \\ nil) do
       with {:ok, channel_id} <- Noizu.EntityReference.Protocol.id(channel),
            {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
-        limit = options[:limit] || 20
+        limit = options[:limit] || 100
         relevancy = options[:relevancy] || 50
-        recent_cut_off = DateTime.utc_now() |> Timex.shift(minutes: -45)
+        recent_cut_off = DateTime.utc_now() |> Timex.shift(minutes: -90)
 
 
         responding_to = from p in Noizu.Intellect.Schema.Account.Message.RespondingTo,
@@ -510,7 +515,7 @@ defmodule Noizu.Intellect.Account.Channel do
                  where: msg.channel == ^channel_id,
                  where: aud.recipient == ^recipient_id,
                  where: not(is_nil(aud)) or msg.sender == ^recipient_id,
-                 #where: ((is_nil(read_status) and is_nil(msg.answered_by)) or (aud.confidence >= ^relevancy or aud.created_on >= ^recent_cut_off)),
+                 where: ((is_nil(read_status) and is_nil(msg.answered_by)) or (aud.confidence >= ^relevancy or aud.created_on >= ^recent_cut_off)),
                  order_by: [desc: msg.created_on],
                  limit: ^limit,
                  select: %{msg|
@@ -748,7 +753,14 @@ defmodule Noizu.Intellect.Account.Channel do
 end
 
 
-defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Channel] do
+defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
+  def prompt!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
+  end
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
 
     a = %{
@@ -760,7 +772,7 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     b = if prompt_context.channel_members do
       prompt_context = put_in(prompt_context, [Access.key(:format)], :raw)
       members = Enum.map(prompt_context.channel_members, fn(member) ->
-        with {:ok, member} <- Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(member, prompt_context, context, options) do
+        with {:ok, member} <- Noizu.Intellect.DynamicPrompt.prompt(member, prompt_context, context, options) do
           member
         else
           _ -> nil

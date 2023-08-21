@@ -28,7 +28,7 @@ defmodule Noizu.Intellect.Prompts.SummarizeMessage do
       before or after the summary of the message contents. The summary should be around 1/3rd of the original message size but can be longer if important details are lost.
       Code snippets should be reduced by replacing method bodies, etc with ellipse ("Code Here ...") comments.
 
-      <%= case Noizu.Intellect.Prompt.DynamicContext.Protocol.prompt(@current_message, @prompt_context, @context, @options) do %>
+      <%= case Noizu.Intellect.DynamicPrompt.prompt(@current_message, @prompt_context, @context, @options) do %>
       <% {:ok, prompt} when is_bitstring(prompt)  -> %>
       <%= String.trim_trailing(prompt) %><% _ -> %><%= "" %>
       <% end  # end case %>

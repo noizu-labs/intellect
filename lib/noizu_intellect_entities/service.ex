@@ -68,7 +68,7 @@ defmodule Noizu.Intellect.Service do
   defmodule Repo do
     use Noizu.Repo
     def_repo()
-    import Ecto.Changeset
+    import Ecto.Query
 
     def by_slug(slug, context) do
         q = from service in Noizu.Intellect.Schema.Service,

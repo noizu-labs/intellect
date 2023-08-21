@@ -349,7 +349,7 @@ defmodule Noizu.Intellect.Account.Message do
 end
 
 
-defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message] do
+defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message] do
   require Logger
 
   def message_priority(subject, prompt_context, _context, _options) do
@@ -388,7 +388,13 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     end
   end
 
-
+  def prompt!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
+  end
 
   def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
     {sender_type, sender_slug, sender_name} = case subject.sender do
@@ -412,6 +418,13 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
     prompt = Ymlr.document!(message) |> String.trim_leading("---\n")
     {:ok, prompt}
   end
+  def minder!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
+  end
   def minder(_subject, _prompt_context, _context, _options) do
     prompt = nil
     {:ok, prompt}
@@ -421,8 +434,16 @@ end
 
 
 
-defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Account.Message.Repo] do
+defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message.Repo] do
   require Logger
+
+  def prompt!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
+  end
 
   def prompt(subject, prompt_context, _context, _options) do
 
@@ -479,6 +500,13 @@ defimpl Noizu.Intellect.Prompt.DynamicContext.Protocol, for: [Noizu.Intellect.Ac
 
     prompt = Ymlr.document!({["Chat History"], %{messages: messages}}) |> String.trim_leading("---\n")
     {:ok, prompt}
+  end
+  def minder!(subject, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+      prompt
+    else
+      _ -> ""
+    end
   end
   def minder(_subject, _prompt_context, _context, _options) do
     prompt = nil

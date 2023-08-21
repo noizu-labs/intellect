@@ -5,7 +5,6 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
 
   def session_response_message() do
   """
-  <nlp-agent for="@grace">
   <nlp-intent>
     overview: |-2
       I will provide an overview of what zoocryptids are and their significance in cryptozoology.
@@ -39,7 +38,6 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
       features:
         - zoocryptids
   </nlp-memory>
-  </nlp-agent>
   """
   end
 
