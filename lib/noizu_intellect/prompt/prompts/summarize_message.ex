@@ -1,7 +1,6 @@
 defmodule Noizu.Intellect.Prompts.SummarizeMessage do
   @behaviour Noizu.Intellect.Prompt.ContextWrapper
   require Logger
-  @impl true
 
   def assigns(subject, prompt_context, _context, _options) do
     assigns = Map.merge(
@@ -14,12 +13,20 @@ defmodule Noizu.Intellect.Prompts.SummarizeMessage do
     {:ok, assigns}
   end
 
+  @impl true
+  defdelegate compile_prompt(expand_prompt, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+  @impl true
+  defdelegate compile(this, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+  @impl true
   def prompt(version, options \\ nil)
   def prompt(:default, options), do: prompt(:v2, options)
   def prompt(:v2, options) do
     current_message = options[:current_message]
 
     %Noizu.Intellect.Prompt.ContextWrapper{
+      name: __MODULE__,
       assigns: &__MODULE__.assigns/4,
       arguments: %{current_message: current_message},
       prompt: [user: """
@@ -28,10 +35,7 @@ defmodule Noizu.Intellect.Prompts.SummarizeMessage do
       before or after the summary of the message contents. The summary should be around 1/3rd of the original message size but can be longer if important details are lost.
       Code snippets should be reduced by replacing method bodies, etc with ellipse ("Code Here ...") comments.
 
-      <%= case Noizu.Intellect.DynamicPrompt.prompt(@current_message, @prompt_context, @context, @options) do %>
-      <% {:ok, prompt} when is_bitstring(prompt)  -> %>
-      <%= String.trim_trailing(prompt) %><% _ -> %><%= "" %>
-      <% end  # end case %>
+      <%= Noizu.Intellect.DynamicPrompt.prompt!(@current_message, assigns, @prompt_context, @context, @options) %>
       """
       ]
     }

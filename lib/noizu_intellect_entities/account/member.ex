@@ -43,7 +43,7 @@ defmodule Noizu.Intellect.Account.Member do
                     ecto_settings,
                     context,
                     options
-                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+                  ) do
                {:ok, nil} -> {:ok, nil}
                {:ok, value} ->
                  Noizu.Intellect.Redis.set_binary(redis_key, value)
@@ -61,6 +61,12 @@ defmodule Noizu.Intellect.Account.Member do
   defimpl Noizu.Entity.Protocol do
     def layer_identifier(entity, _layer) do
       {:ok, entity.identifier}
+    end
+  end
+
+  defimpl Inspect do
+    def inspect(subject, _opts) do
+    "#Member<#{subject.user.slug}>"
     end
   end
 
@@ -100,20 +106,20 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
     }
   end
 
-  def prompt!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+  def prompt!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
 
-  def prompt(subject, %{format: :raw} = prompt_context, context, options) do
+  def prompt(subject, assigns, %{format: :raw} = prompt_context, context, options) do
     {:ok, raw(subject, prompt_context, context, options)}
   end
 
 
-  def prompt(subject, %{format: :markdown} = _prompt_context, _context, _options) do
+  def prompt(subject, assigns, %{format: :markdown} = _prompt_context, _context, _options) do
 
     # There should be per agent response_preferences overrides
     response_preferences = case subject.user.response_preferences do
@@ -137,14 +143,14 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
     """
     {:ok, prompt}
   end
-  def minder!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
-      prompt
+  def minder!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, assigns, prompt_context, context, options) do
+      prompt || ""
     else
       _ -> ""
     end
   end
-  def minder(_subject, _prompt_context, _context, _options) do
+  def minder(_subject, _assigns, _prompt_context, _context, _options) do
     {:ok, nil}
   end
 end

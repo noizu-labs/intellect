@@ -224,7 +224,7 @@ defmodule Noizu.IntellectWeb.Helpers do
 
     def extract_message(message) do
       nop = extract_tag(message, "nlp-nop")
-      reply = extract_tag(message, "nlp-reply")
+      reply = extract_tag(message, "nlp-send-msg")
       intent = extract_tag(message, "nlp-intent")
       cot = extract_tag(message, "nlp-cot")
       functions = extract_function(message, "nlp-function")
@@ -334,7 +334,7 @@ defmodule Noizu.IntellectWeb.Helpers do
         v -> v
       end
       |>  Floki.traverse_and_update(fn
-        {"nlp-reply", _, contents} ->
+        {"nlp-send-msg", _, contents} ->
            [{"br", [], []}] ++ escape_llm_response(contents, allowed)
         {"nlp-meta", _, _contents} ->
           ""
@@ -390,7 +390,7 @@ defmodule Noizu.IntellectWeb.Helpers do
       end
      #  document
     |>  Floki.traverse_and_update(fn
-        {"nlp-reply", _attributes, contents} ->
+        {"nlp-send-msg", _attributes, contents} ->
           do_strip_llm_response(contents, allowed)
         {"nlp-intent", _attributes, contents} ->
           #IO.puts "DROP nil-#{elem}"

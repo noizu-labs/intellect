@@ -32,6 +32,8 @@ defmodule Noizu.Intellect.Account.Message do
     @store [name: :responding_to_list]
     field :responding_to, nil, Noizu.Entity.DerivedField, [pull: &__MODULE__.unpack_responding_to_list/4] # todo provide a method to unpack the tuple
 
+    field :note
+
     field :depth
     field :user_mood #, nil, Noizu.Intellect.Emoji
     field :event #, nil, Noizu.Intellect.Message.Event
@@ -99,7 +101,7 @@ defmodule Noizu.Intellect.Account.Message do
                     ecto_settings,
                     context,
                     options
-                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+                  ) do
                {:ok, nil} -> {:ok, nil}
                {:ok, value} ->
                  Noizu.Intellect.Redis.set_binary(redis_key, value)
@@ -226,11 +228,6 @@ defmodule Noizu.Intellect.Account.Message do
     )
   end
 
-  defimpl Noizu.Entity.Protocol do
-    def layer_identifier(entity, _layer) do
-      {:ok, entity.identifier}
-    end
-  end
 
   def mark_read(this, recipient, _context, _options) do
     with {:ok, recipient_id} <- Noizu.EntityReference.Protocol.id(recipient) do
@@ -249,23 +246,66 @@ defmodule Noizu.Intellect.Account.Message do
     {:ok, trunc(String.length(this.contents.body || "") / 3)}
   end
 
+
+  defimpl Noizu.Entity.Protocol do
+    def layer_identifier(entity, _layer) do
+      {:ok, entity.identifier}
+    end
+  end
+
+  defimpl Inspect do
+    def inspect(subject, opts) do
+    {:ok, channel} = Noizu.EntityReference.Protocol.sref(subject.channel)
+    "#Message<#{subject.identifier}>{
+      channel: #{channel},
+      contents: #{Inspect.inspect(subject.contents && String.slice(subject.contents.body, 0..64), opts)}
+    }"
+    end
+  end
+
   defmodule Repo do
     use Noizu.Repo
     import Ecto.Query
 
     def_repo()
 
+
+    def __after_get__(entity, context, options) do
+      with {:ok, entity} <- super(entity, context, options) do
+        with {:ok, m} <- YamlElixir.read_from_string(entity.meta) do
+          t = (get_in(entity, [Access.key(:__transient__, %{})]) || %{})
+              |> put_in([:raw_meta], entity.meta)
+          entity = %{entity| meta: m, __transient__: t}
+          {:ok, entity}
+        else
+        _ -> {:ok, entity}
+        end
+      end
+    end
+
     def __before_create__(entity, context, options) do
       with {:ok, entity} <- super(entity, context, options),
            {:ok, token_size} <- Noizu.Intellect.Account.Message.message_token_size(entity, context, options) do
-        {:ok, %{entity| token_size: token_size}}
+        meta = cond do
+          x = (entity.__transient__ || %{})[:raw_meta] -> x
+          is_bitstring(entity.meta) or is_nil(entity.meta) -> entity.meta
+          :else -> Ymlr.document!(entity.meta)
+        end
+        {:ok, %{entity| token_size: token_size, meta: meta}}
       end
     end
 
     def __before_update__(entity, context, options) do
       with {:ok, entity} <- super(entity, context, options),
            {:ok, token_size} <- Noizu.Intellect.Account.Message.message_token_size(entity, context, options) do
-        {:ok, %{entity| token_size: token_size}}
+
+        meta = cond do
+          x = (entity.__transient__ || %{})[:raw_meta] -> x
+          is_bitstring(entity.meta) or is_nil(entity.meta) -> entity.meta
+          :else -> Ymlr.document!(entity.meta)
+        end
+
+        {:ok, %{entity| token_size: token_size, meta: meta}}
       end
     end
 
@@ -353,6 +393,27 @@ defmodule Noizu.Intellect.Account.Message do
       {:ok, messages}
     end
 
+
+    defimpl Inspect do
+      def inspect(subject, opts) do
+        ids = Enum.map(subject.entities, & &1.identifier)
+        {s_ids,ids} = Enum.split(ids, 5)
+        {ids, e_ids} = Enum.split(ids, -5)
+        s_covers = Enum.join(s_ids, ",")
+        middle = cond do
+          length(ids) > 0 -> ",...,"
+          :else -> ""
+        end
+        e_covers = Enum.join(e_ids, ",")
+        """
+        #Message.Repo<>{
+          messages: #{s_covers}#{middle}#{e_covers},
+          length: #{subject.length}
+        }
+        """
+      end
+    end
+
   end
 end
 
@@ -396,15 +457,15 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message] do
     end
   end
 
-  def prompt!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+  def prompt!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
 
-  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+  def prompt(subject, assigns, %{format: :markdown} = prompt_context, context, options) do
     {sender_type, sender_slug, sender_name} = case subject.sender do
       %Noizu.Intellect.Account.Member{user: user} -> {"human operator", user.slug, user.name}
       %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual agent", slug, name}
@@ -426,14 +487,14 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message] do
     prompt = Ymlr.document!(message) |> String.trim_leading("---\n")
     {:ok, prompt}
   end
-  def minder!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+  def minder!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
-  def minder(_subject, _prompt_context, _context, _options) do
+  def minder(_subject, _assigns, _prompt_context, _context, _options) do
     prompt = nil
     {:ok, prompt}
   end
@@ -444,16 +505,14 @@ end
 
 defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message.Repo] do
   require Logger
-
-  def prompt!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+  def prompt!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
-
-  def prompt(subject, prompt_context, _context, _options) do
+  def prompt(subject, assigns, prompt_context, _context, _options) do
 
     slug_lookup = Enum.map(prompt_context.channel_members, fn(member) ->
       case member do
@@ -509,17 +568,19 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message.Rep
     prompt = Ymlr.document!({["Chat History"], %{messages: messages}}) |> String.trim_leading("---\n")
     {:ok, prompt}
   end
-  def minder!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+  def minder!(subject,  assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
-  def minder(_subject, _prompt_context, _context, _options) do
+  def minder(_subject, _assigns, _prompt_context, _context, _options) do
     prompt = nil
     {:ok, prompt}
   end
+  def assigns(_, prompt_context, _, _), do: {:ok, prompt_context.assigns}
+  def request(_, request, _, _), do: {:ok, request}
 end
 
 defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message] do

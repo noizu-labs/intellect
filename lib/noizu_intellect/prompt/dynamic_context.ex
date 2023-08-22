@@ -58,7 +58,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     # contexts
     nlp_prompt_context: nil,
     master_prompt_context: nil,
-    assigns: %{nlp: true, message_graph: false, members: %{verbose: :brief}},
+    assigns: %{nlp: true, objectives: [], message_graph: false, members: %{verbose: :brief}},
     vsn: @vsn
   ]
 
@@ -244,7 +244,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
   end
 
   def execute(prompt_context, context, options) do
-    with  {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options) do
+    with {:ok, request} <- Noizu.Intellect.Prompt.DynamicContext.for_openai(prompt_context, context, options) do
       call_openai_chat_api(request, prompt_context, context, options)
     end
   end
@@ -259,31 +259,42 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     end
   end
 
+
+  defimpl Inspect do
+    def inspect(subject, opts) do
+      """
+      #DynamicContext<>{
+        master_prompt_context: #{Inspect.inspect(subject.master_prompt_context, opts)}
+      }
+      """
+    end
+  end
+
 end
 
 
 defimpl Noizu.Intellect.DynamicPrompt, for:  Noizu.Intellect.Prompt.DynamicContext do
   alias Noizu.Intellect.Prompt.MessageWrapper, as: Message
   alias Noizu.Intellect.Prompt.RequestWrapper, as: Request
-  def prompt!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+  def prompt!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
-  def prompt(prompt_context, _, context, options) do
-    Noizu.Intellect.DynamicPrompt.prompt(prompt_context.master_prompt_context, prompt_context, context, options)
+  def prompt(prompt_context, assigns, _, context, options) do
+    Noizu.Intellect.DynamicPrompt.prompt(prompt_context.master_prompt_context, assigns, prompt_context, context, options)
   end
-  def minder!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+  def minder!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
-  def minder(prompt_context, _, context, options) do
-    Noizu.Intellect.DynamicPrompt.minder(prompt_context.master_prompt_context, prompt_context, context, options)
+  def minder(prompt_context, assigns, _, context, options) do
+    Noizu.Intellect.DynamicPrompt.minder(prompt_context.master_prompt_context, assigns, prompt_context, context, options)
   end
 
   def assigns(prompt_context, _, context, options) do
@@ -291,8 +302,8 @@ defimpl Noizu.Intellect.DynamicPrompt, for:  Noizu.Intellect.Prompt.DynamicConte
               |> put_in(
                    [Access.key(:assigns)],
                    Map.merge(prompt_context.assigns || %{}, %{
-                     prompt_context: prompt_context,
                      agent: prompt_context.agent,
+                     objectives: [],
                      channel: prompt_context.channel,
                      message_history: %Noizu.Intellect.Account.Message.Repo{entities: prompt_context.message_history, length: length(prompt_context.message_history)},
                      channel_members: prompt_context.channel_members,
@@ -305,13 +316,13 @@ defimpl Noizu.Intellect.DynamicPrompt, for:  Noizu.Intellect.Prompt.DynamicConte
                  )
     prompt_context = prompt_context
                      |> then(& inject_assigns(prompt_context.master_prompt_context, &1, context, options))
+                     |> put_in([Access.key(:assigns), :prompt_context], prompt_context)
     {:ok, prompt_context.assigns}
   end
 
   def request(prompt_context, _, context, options) do
-    with {:ok, master_prompt} <- Noizu.Intellect.DynamicPrompt.prompt(prompt_context, prompt_context, context, options),
-         {:ok, master_minder_prompt} <- Noizu.Intellect.DynamicPrompt.minder(prompt_context, prompt_context, context, options) do
-
+    with {:ok, master_prompt} <- Noizu.Intellect.DynamicPrompt.prompt(prompt_context, prompt_context.assigns, prompt_context, context, options),
+         {:ok, master_minder_prompt} <- Noizu.Intellect.DynamicPrompt.minder(prompt_context, prompt_context.assigns, prompt_context, context, options) do
       prompts = expand_prompts(master_prompt)
       minders = expand_prompts(master_minder_prompt)
 

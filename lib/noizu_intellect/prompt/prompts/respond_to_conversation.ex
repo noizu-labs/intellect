@@ -13,32 +13,34 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
     {:ok, assigns}
   end
 
+  @impl true
+  defdelegate compile_prompt(expand_prompt, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+  @impl true
+  defdelegate compile(this, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+  @impl true
   def prompt(version, options \\ nil)
   def prompt(:default, options), do: prompt(:v1, options)
   def prompt(:v1, options) do
     current_message = options[:current_message]
 
     %Noizu.Intellect.Prompt.ContextWrapper{
+      name: __MODULE__,
       assigns: &__MODULE__.assigns/4,
       arguments: %{current_message: current_message},
       prompt: [user:
       """
       # NLP Definition
-      <%=
-      case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.nlp_prompt_context, @prompt_context, @context, @options) do
-      %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end %>
+      <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.nlp_prompt_context, assigns, @prompt_context, @context, @options) %>
 
       # Master Prompt
       As GPT-N (GPT for work groups), you task is to simulate virtual agents and services defined below and respond on behalf of those virtual agent to all incoming requests.
       For this session you are to simulate virtual agent @<%= @agent.slug %> and only virtual agent @<%= @agent.slug %>.
 
-      <%=
-      case Noizu.Intellect.DynamicPrompt.prompt(@agent, @prompt_context, @context, @options) do
-      %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %><% _ -> %><%= "" %><% end %>
+      <%= Noizu.Intellect.DynamicPrompt.prompt!(@agent, assigns, @prompt_context, @context, @options) %>
 
-      <%=
-      case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do
-      %><% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %><% _ -> %><%= "" %><% end %>
+      <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
       ## Instruction Prompt
       @<%= @agent.slug %> you are to scan the following messages and from them extract memory notes for
@@ -166,10 +168,7 @@ defmodule Noizu.Intellect.Prompts.RespondToConversation do
 
       ----
 
-      <%= case Noizu.Intellect.DynamicPrompt.prompt(@message_history, @prompt_context, @context, @options) do %>
-      <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
-      <% _ -> %><%= "" %>
-      <% end %>
+      <%= Noizu.Intellect.DynamicPrompt.prompt!(@message_history, assigns, @prompt_context, @context, @options) %>
 
       ## Final Instructions
       As previously instructed output your response using the requested format. Remember to use <message-link for={msg.id}> tags </message-link> when referencing previous messages in your reply.

@@ -9,8 +9,9 @@ export const UpdateElapsedTime_Hook = {
         else element.innerText = 'just now';
     },
     updateElapsedTime() {
-        console.log("Update Times");
+
         const children = this.el.querySelectorAll('time.nz-elapsed-time');
+        console.log("Update Times", children);
         const viewportTop = window.scrollY || document.documentElement.scrollTop;
         const viewportBottom = viewportTop + window.innerHeight;
         let childrenInView = [];
@@ -26,6 +27,7 @@ export const UpdateElapsedTime_Hook = {
             if (isVisible) {
                 this.setElapsedTime(currentTime, child);
             } else {
+                this.setElapsedTime(currentTime, child);
                 console.log("Not Visible");
             }
         });
@@ -36,7 +38,7 @@ export const UpdateElapsedTime_Hook = {
         children.forEach((child) => {
             child.dataset.startTime = Math.floor(Date.parse(child.getAttribute("datetime")) / 1000);
         });
-        this.interval = setInterval(() => {this.updateElapsedTime()}, 5000);
+        this.interval = setInterval(() => {this.updateElapsedTime()}, 1000);
     },
     updated() {
         const children = this.el.querySelectorAll('time.nz-elapsed-time');
@@ -45,6 +47,8 @@ export const UpdateElapsedTime_Hook = {
                 child.dataset.startTime = Math.floor(Date.parse(child.getAttribute("datetime")) / 1000);
             }
         });
+        clearInterval(this.interval)
+        this.interval = setInterval(() => {this.updateElapsedTime()}, 1000);
     },
     destroyed() {
         if (this.interval) {

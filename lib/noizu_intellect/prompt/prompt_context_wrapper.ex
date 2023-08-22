@@ -1,8 +1,11 @@
 defmodule Noizu.Intellect.Prompt.ContextWrapper do
   @vsn 1.0
   defstruct [
+    name: nil,
     prompt: nil,
     minder: nil,
+    compiled_prompt: nil,
+    compiled_minder: nil,
     settings: nil,
     assigns: nil,
     request: nil,
@@ -12,6 +15,7 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
 
 
   @type t :: %__MODULE__{
+               name: nil,
                prompt: any,
                minder: any,
                settings: any,
@@ -22,42 +26,110 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
              }
 
   @callback prompt(version :: any, options :: any) :: {:ok, __MODULE__.t}
+  @callback compile_prompt(any) :: any
+  @callback compile_prompt(any, any) :: any
+  @callback compile(any) :: any
+  @callback compile(any, any) :: any
 
-  def session_response_prompt(options \\ nil) do
-    Noizu.Intellect.Prompts.SessionResponse.prompt(:default, options)
+  def prompt_template(template, version, options \\ nil) do
+    with x <- apply(template, :prompt, [version, options]),
+         {:ok, x} <- apply(template, :compile, [x, options])
+      do
+      x
+    end
+  end
+
+  def session_response_prompt(objectives, options \\ nil) do
+    options = put_in(options || [], [:objectives], objectives)
+    prompt_template(Noizu.Intellect.Prompts.SessionResponse, :default, options)
   end
 
   def answered_prompt(current_message, options \\ nil) do
     options = put_in(options || [], [:current_message], current_message)
-    Noizu.Intellect.Prompts.MessageAnswerStatus.prompt(:default, options)
+    prompt_template(Noizu.Intellect.Prompts.MessageAnswerStatus, :default, options)
   end
 
   def summarize_message_prompt(message, options \\ nil) do
     options = put_in(options || [], [:current_message], message)
-    Noizu.Intellect.Prompts.SummarizeMessage.prompt(:default, options)
+    prompt_template(Noizu.Intellect.Prompts.SummarizeMessage, :default, options)
   end
-
 
   def session_monitor_prompt(current_message, options \\ nil) do
     options = put_in(options || [], [:current_message], current_message)
-    Noizu.Intellect.Prompts.SessionMonitor.prompt(:default, options)
+    prompt_template(Noizu.Intellect.Prompts.SessionMonitor, :default, options)
   end
 
   def relevancy_prompt(current_message, options \\ nil) do
     options = put_in(options || [], [:current_message], current_message)
-    Noizu.Intellect.Prompts.ChatMonitor.prompt(:default, options)
+    prompt_template(Noizu.Intellect.Prompts.ChatMonitor, :default, options)
   end
 
   def respond_to_conversation(options \\ nil) do
-    Noizu.Intellect.Prompts.RespondToConversation.prompt(:default, options)
+    prompt_template(Noizu.Intellect.Prompts.RespondToConversation, :default, options)
+  end
+
+  def compile_prompt(expand_prompt, options \\ nil) do
+    echo? = options[:verbose]
+    case expand_prompt do
+      prompt when is_bitstring(prompt) ->
+        prompt = EEx.compile_string(prompt, trim: true)
+        echo? && IO.puts "-----------------------------------------"
+        echo? && IO.puts(prompt)
+        {:ok, {:eex_prompt, {:user, prompt}}}
+      {type, prompt} when is_bitstring(prompt) ->
+        prompt = EEx.compile_string(prompt, trim: true)
+        echo? && IO.puts "-----------------------------------------"
+        echo? && IO.puts(prompt)
+        {:ok, {:eex_prompt, {type, prompt}}}
+      prompts when is_list(prompts) ->
+        prompts = Enum.map(prompts,
+          fn (prompt) ->
+            case prompt do
+              prompt when is_bitstring(prompt) ->
+                prompt = EEx.compile_string(prompt, trim: true)
+                echo? && IO.puts "-----------------------------------------"
+                echo? && IO.puts(prompt)
+                {:eex_prompt, {:user, prompt}}
+              {type, prompt} when is_bitstring(prompt) ->
+                prompt = EEx.compile_string(prompt, trim: true)
+                echo? && IO.puts "-----------------------------------------"
+                echo? && IO.puts(prompt)
+                {:eex_prompt, {type, prompt}}
+              _ -> nil
+            end
+          end
+        )
+        {:ok, prompts}
+      nil -> {:ok, []}
+      _ -> {:ok, []}
+    end
+  end
+
+  def compile(this, options \\ nil) do
+    this = %{this|
+      compiled_prompt: compile_prompt(this.prompt, options),
+      compiled_minder: compile_prompt(this.minder, options),
+    }
+    {:ok, this}
+  end
+
+  defimpl Inspect do
+    def inspect(subject, _opts) do
+      "#Prompt<#{subject.name}}>"
+    end
   end
 
   defimpl Noizu.Intellect.DynamicPrompt do
-    defp expand_prompt(expand_prompt, assigns) do
-      echo? = false
+    defp expand_prompt(expand_prompt, assigns, options \\ nil) do
+      echo? = options[:verbose]
       case expand_prompt do
+        {:eex_prompt, {type, compiled_prompt}} ->
+          {prompt,_} = Code.eval_quoted(compiled_prompt, [assigns:  assigns])
+          echo? && IO.puts "-----------------------------------------"
+          echo? && IO.puts(prompt)
+          {:ok, {type, prompt}}
         prompt when is_bitstring(prompt) ->
-          prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
+          {prompt,_} =  EEx.eval_string(prompt, [assigns:  assigns], trim: true)
           echo? && IO.puts "-----------------------------------------"
           echo? && IO.puts(prompt)
           {:ok, {:user, prompt}}
@@ -70,6 +142,11 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
           prompts = Enum.map(prompts,
             fn (prompt) ->
               case prompt do
+                {:eex_prompt, {type, compiled_prompt}} ->
+                  {prompt,_} = Code.eval_quoted(compiled_prompt, [assigns:  assigns])
+                  echo? && IO.puts "-----------------------------------------"
+                  echo? && IO.puts(prompt)
+                  {type, prompt}
                 prompt when is_bitstring(prompt) ->
                   prompt = EEx.eval_string(prompt, [assigns: assigns], trim: true)
                   echo? && IO.puts "-----------------------------------------"
@@ -89,27 +166,27 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
         _ -> {:ok, []}
       end
     end
-    def prompt!(subject, prompt_context, context, options) do
-      with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+    def prompt!(subject, assigns, prompt_context, context, options) do
+      with {:ok, prompt} <- prompt(subject, assigns, prompt_context, context, options) do
         prompt
       else
         _ -> ""
       end
     end
-    def prompt(subject, prompt_context, _context, _options) do
+    def prompt(subject, assigns, prompt_context, _context, _options) do
       # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt
-      expand_prompt(subject.prompt, prompt_context.assigns)
+      expand_prompt(subject.prompt, assigns)
     end
-    def minder!(subject, prompt_context, context, options) do
-      with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+    def minder!(subject, assigns, prompt_context, context, options) do
+      with {:ok, prompt} <- minder(subject, assigns, prompt_context, context, options) do
         prompt
       else
         _ -> ""
       end
     end
-    def minder(subject, prompt_context, _context, _options) do
+    def minder(subject, assigns, prompt_context, _context, _options) do
       # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt
-      expand_prompt(subject.minder, prompt_context.assigns)
+      expand_prompt(subject.minder, assigns)
     end
     def assigns(subject, prompt_context, context, options) do
       cond do

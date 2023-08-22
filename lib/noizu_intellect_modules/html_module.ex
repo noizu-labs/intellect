@@ -82,32 +82,99 @@ defmodule Noizu.Intellect.HtmlModule do
 
   def extract_session_response_details(response) do
     {_, xml_tree} = Floki.parse_document(response)
-    extract_nlp_agent_response(xml_tree)
+    response = extract_nlp_agent_response(xml_tree)
+    if nlp_agent_response_valid?(response) do
+      {:ok, response}
+    else
+      {:error, {:invalid, response}}
+    end
+  end
 
-#    Enum.map(xml_tree,
-#      fn
-#        ({"nlp-agent", attrs, contents}) ->
-#          sender = Enum.find_value(attrs, & elem(&1, 0) == "for" && elem(&1, 1) || nil)
-#          inner = extract_nlp_agent_response(contents)
-#          {:agent, [sender: sender, sections: inner]}
-#        (_) -> nil
-#      end
-#    )
-#    |> Enum.reject(&is_nil/1)
-#    |> List.flatten()
+
+  def attr_extract__value(attrs, key) do
+    Enum.find_value(attrs, & elem(&1, 0) == key && elem(&1, 1) || nil)
+    |> then(
+         fn
+           v when is_bitstring(v) -> String.trim(v)
+           _ -> nil
+         end
+       )
+  end
+
+  def attr_extract__list(attrs, key, int? \\ true) do
+    Enum.find_value(attrs, & elem(&1, 0) == key && elem(&1, 1) || nil)
+    |> then(
+         fn
+           v when is_bitstring(v) ->
+             if int? do
+               v = v
+                   |> String.split(",")
+                   |> Enum.map(&String.trim/1)
+                   |> Enum.map(&String.to_integer/1)
+             else
+               v = v
+                   |> String.split(",")
+                   |> Enum.map(&String.trim/1)
+             end
+           _ -> nil
+         end
+       )
+  end
+
+  def nlp_agent_response_valid?(response) do
+    cond do
+      (r = response[:reply]
+      is_list(r) && length(r) > 0) -> true
+
+      (r = response[:function_call]
+      is_list(r) && length(r) > 0) -> true
+      :else -> false
+    end
   end
 
   def extract_nlp_agent_response(contents) do
-    Enum.map(contents,
+    o = Enum.map(contents,
       fn
         ({"nlp-agent", attrs, contents}) -> extract_nlp_agent_response(contents)
         ({"nlp-message", attrs, contents}) -> extract_nlp_agent_response(contents)
         ({"nlp-intent", _, contents}) ->
           text = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
           {:intent, text}
-        ({"nlp-reply", attrs, contents}) ->
+        ({"nlp-objective", attrs, contents}) ->
+          name = attr_extract__value(attrs, "name")
+          ids = attr_extract__list(attrs, "for")
+          if name do
+            intent = Enum.map(contents,
+                          fn
+                            {"nlp-intent", _, contents} ->
+                              intent = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+                              with {:ok, p} <-  YamlElixir.read_from_string(intent),
+                                   steps <- p["steps"],
+                                   true <- is_list(steps) || {:error, {:malformed_intent, :missing_steps}}
+                                do
+                                {:intent, p}
+                              end
+                            _ -> nil
+                          end
+                        ) |> Enum.reject(&is_nil/1)
+            with [{:intent, intent}] <- intent do
+              {:objective, for: ids, name: name, theory_of_mind: intent["theory-of-mind"], overview: intent["overview"], steps: intent["steps"]}
+            else
+              _ ->
+                # handle error.
+                nil
+            end
+          else
+            # else handle error.
+            nil
+          end
+          ({"nlp-mark-read", attrs, contents}) ->
+            ids = attr_extract__list(attrs, "for")
+            {:ack, [ids: ids, comment: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+        ({"nlp-send-msg", attrs, contents}) ->
           mood = Enum.find_value(attrs, & elem(&1, 0) == "mood" && elem(&1, 1) || nil)
           at = Enum.find_value(attrs, & elem(&1, 0) == "at" && elem(&1, 1) || nil)
+               |> then(& is_bitstring(&1) && String.split(&1, ",") || nil)
           {:reply, [mood: mood, at: at, response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
         ({"nlp-memory", _, contents}) ->
           text = Floki.raw_html(contents)
@@ -135,6 +202,16 @@ defmodule Noizu.Intellect.HtmlModule do
     )
     |> Enum.reject(&is_nil/1)
     |> List.flatten()
+
+    Enum.group_by(o, &elem(&1, 0))
+    rescue exception ->
+      contents = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+      IO.inspect(contents, label: "ERROR")
+      reraise exception, __STACKTRACE__
+    catch exception ->
+      contents =  Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+      IO.inspect(contents, label: "ERROR")
+      throw exception
   end
 
   def extract_message_delivery_details(response) do

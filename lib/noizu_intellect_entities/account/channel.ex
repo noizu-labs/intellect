@@ -47,7 +47,7 @@ defmodule Noizu.Intellect.Account.Channel do
                     ecto_settings,
                     context,
                     options
-                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+                  ) do
                {:ok, nil} -> {:ok, nil}
                {:ok, value} ->
                  Noizu.Intellect.Redis.set_binary(redis_key, value)
@@ -163,7 +163,7 @@ defmodule Noizu.Intellect.Account.Channel do
             %Noizu.Intellect.Account.Member{user: user} -> user.slug
             %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> slug
             _ -> nil
-          end |> IO.inspect(label: "MEMBER SLUG | #{inspect options[:at]}")
+          end
 
           confidence = cond do
             is_nil(slug) -> 0
@@ -175,7 +175,7 @@ defmodule Noizu.Intellect.Account.Channel do
               cond do
                 String.match?(message.contents.body, r) -> 100
                 :else -> 0
-              end |> IO.inspect(label: "MATCH #{inspect r}")
+              end
           end
           Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {member.identifier, confidence, "Chat Response"}}, message, context, options)
           confidence > 0 && member.identifier || nil
@@ -443,6 +443,14 @@ defmodule Noizu.Intellect.Account.Channel do
       {:ok, entity.identifier}
     end
   end
+
+  defimpl Inspect do
+    def inspect(subject, _opts) do
+      "#Message<#{subject.identifier}>"
+    end
+  end
+
+
 
   defmodule Repo do
     use Noizu.Repo
@@ -754,14 +762,14 @@ end
 
 
 defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
-  def prompt!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
-      prompt
+  def prompt!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, assigns, prompt_context, context, options) do
+      prompt || ""
     else
       _ -> ""
     end
   end
-  def prompt(subject, %{format: :markdown} = prompt_context, context, options) do
+  def prompt(subject, assigns, %{format: :markdown} = prompt_context, context, options) do
 
     a = %{
       identifier: subject.identifier,
@@ -772,7 +780,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
     b = if prompt_context.channel_members do
       prompt_context = put_in(prompt_context, [Access.key(:format)], :raw)
       members = Enum.map(prompt_context.channel_members, fn(member) ->
-        with {:ok, member} <- Noizu.Intellect.DynamicPrompt.prompt(member, prompt_context, context, options) do
+        with {:ok, member} <- Noizu.Intellect.DynamicPrompt.prompt(member, assigns, prompt_context, context, options) do
           member
         else
           _ -> nil
@@ -797,7 +805,14 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
     {:ok, prompt}
 
   end
-  def minder(_subject, _prompt_context, _context, _options) do
+  def minder!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, assigns, prompt_context, context, options) do
+      prompt || ""
+    else
+      _ -> ""
+    end
+  end
+  def minder(_subject, _assigns, _prompt_context, _context, _options) do
     {:ok, nil}
   end
 end

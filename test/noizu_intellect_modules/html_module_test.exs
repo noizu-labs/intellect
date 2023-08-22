@@ -3,7 +3,34 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   @moduletag lib: :noizu_intellect_module
   import Noizu.Intellect.HtmlModule
 
-  def session_response_message() do
+  def session_response_message(scenario \\ :default)
+  def session_response_message(:default), do: session_response_message(:basic)
+  def session_response_message(:objective) do
+    """
+    **Objective**: Gather requirements for a Twitter clone with Mindy
+
+    <nlp-objective for="27028" name="gather-requirements">
+    <nlp-intent>
+    theory-of-mind: I need to gather requirements for a Twitter clone with Mindy.
+    overview: Mindy and I will collaborate to gather all the necessary requirements for the Twitter clone.
+    steps:
+      - Discuss the purpose and target audience of the Twitter clone.
+      - Identify key features such as user registration, posting tweets, following/unfollowing users, etc.
+      - Determine any additional functionalities like direct messaging, hashtags, or search functionality.
+    </nlp-intent>
+    </nlp-objective>
+
+    <nlp-send-msg mood="😊" at="@mindy,@grace" for="27028">
+    Mindy, let's collaborate on gathering the requirements for a Twitter clone. We'll need to discuss its purpose and target audience. Then we can identify key features like user registration, posting tweets, following/unfollowing users, and any additional functionalities such as direct messaging or search functionality. Once we have all the requirements gathered, we can present them to Keith.
+
+    Let's get started! What are your initial thoughts on the purpose and target audience of this Twitter clone?
+    </nlp-send-msg>
+    <nlp-send-msg mood="😊" at="@mindy,@grace" for="27028">
+    Another reply.
+    </nlp-send-msg>
+    """
+  end
+  def session_response_message(:basic) do
   """
   <nlp-intent>
     overview: |-2
@@ -19,7 +46,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   arg: 5
   </nlp-function-call>
 
-  <nlp-reply mood="😄">
+  <nlp-send-msg mood="😄">
     Zoocryptids are creatures or animals that are rumored or believed to exist based on anecdotal evidence, folklore, or eyewitness accounts. The term "zoocryptid" is derived from the words "zoo" (referring to animals) and "cryptid" (referring to hidden or unknown creatures).
 
     Cryptozoology is the field of study that focuses on the investigation and search for zoocryptids. It is considered a pseudoscience as it deals with creatures that have not been proven to exist by mainstream science. Cryptozoologists aim to gather evidence, such as eyewitness testimonies, photographs, footprints, and other traces, to support the existence of these creatures.
@@ -27,7 +54,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
     Some famous examples of zoocryptids include the Loch Ness Monster, Bigfoot, Yeti, Chupacabra, and Mothman. These creatures have captured the public's imagination and have become subjects of folklore and popular culture.
 
     It is important to note that while cryptozoology explores the possibility of unknown creatures, the scientific community generally does not recognize the existence of zoocryptids due to the lack of verifiable evidence. However, the study of zoocryptids continues to intrigue and fascinate many people around the world.
-  </nlp-reply>
+  </nlp-send-msg>
 
   <nlp-memory>
     - memory: |-2
@@ -202,6 +229,22 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
 
   describe "Handle Session Channel Response" do
     @tag :wip
+    test "with objective" do
+      {:ok, sut} = Noizu.Intellect.HtmlModule.extract_session_response_details(session_response_message(:objective))
+      assert [reply: reply_one, reply: reply_two] = sut[:reply]
+      assert reply_one[:mood] == "😊"
+      assert reply_one[:at] == ["@mindy", "@grace"]
+      assert reply_one[:response] =~ "gathering the requirements"
+      assert reply_two[:response] == "Another reply."
+      [{:objective, objective}] = sut[:objective]
+      assert objective[:for] == [27028]
+      assert objective[:name] == "gather-requirements"
+      [step1,step2,step3] = objective[:steps]
+      assert step1 =~ "Discuss the purpose"
+      assert step2 =~ "Identify key features"
+      assert step3 =~ "Determine any additional"
+    end
+
     test "happy path" do
       sut = Noizu.Intellect.HtmlModule.extract_session_response_details(session_response_message())
       IO.inspect sut

@@ -24,7 +24,6 @@ defmodule Noizu.Intellect.Schema.Account.Message.Audience do
       created_on: now,
       modified_on: now,
     } |> Noizu.Intellect.Repo.insert(on_conflict: :replace_all, conflict_target: [:message, :recipient])
-      |> IO.inspect(label: "AUDIENCE")
   end
 
   @doc false

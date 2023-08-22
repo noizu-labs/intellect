@@ -21,26 +21,26 @@ defmodule Noizu.Intellect.Prompt.Lingua do
 end
 
 defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Prompt.Lingua] do
-  def prompt!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- prompt(subject, prompt_context, context, options) do
+  def prompt!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- prompt(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
-  def prompt(subject, prompt_context, _context, _options) do
-    assigns = put_in(prompt_context.assigns, [:section], :prompt)
+  def prompt(subject, assigns, prompt_context, _context, _options) do
+    assigns = put_in(assigns, [:section], :prompt)
     {:ok, Noizu.Intellect.Prompt.Lingua.prompt(subject, assigns)}
   end
-  def minder!(subject, prompt_context, context, options) do
-    with {:ok, prompt} <- minder(subject, prompt_context, context, options) do
+  def minder!(subject, assigns, prompt_context, context, options) do
+    with {:ok, prompt} <- minder(subject, assigns, prompt_context, context, options) do
       prompt
     else
       _ -> ""
     end
   end
-  def minder(subject, prompt_context, _context, _options) do
-    assigns = put_in(prompt_context.assigns, [:section], :minder)
+  def minder(subject, assigns, prompt_context, _context, _options) do
+    assigns = put_in(assigns, [:section], :minder)
     {:ok, Noizu.Intellect.Prompt.Lingua.prompt(subject, assigns)}
   end
   def assigns(_, prompt_context, _,_) do

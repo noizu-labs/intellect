@@ -48,7 +48,7 @@ defmodule Noizu.Intellect.Account.Agent.Chat.Session do
                     ecto_settings,
                     context,
                     options
-                  ) |> IO.inspect(label: "CACHE LOOKUP") do
+                  ) do
                {:ok, nil} -> {:ok, nil}
                {:ok, value} ->
                  Noizu.Intellect.Redis.set_binary(redis_key, value)

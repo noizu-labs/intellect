@@ -1,7 +1,6 @@
 defmodule Noizu.Intellect.Prompts.SessionMonitor do
   @behaviour Noizu.Intellect.Prompt.ContextWrapper
   require Logger
-  @impl true
 
   def assigns(subject, prompt_context, _context, _options) do
     assigns = Map.merge(
@@ -14,11 +13,20 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
     {:ok, assigns}
   end
 
+
+  @impl true
+  defdelegate compile_prompt(expand_prompt, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+  @impl true
+  defdelegate compile(this, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+  @impl true
   def prompt(version, options \\ nil)
   def prompt(:default, options), do: prompt(:v2, options)
   def prompt(:v2, options) do
     current_message = options[:current_message]
     %Noizu.Intellect.Prompt.ContextWrapper{
+      name: __MODULE__,
       arguments: %{current_message: current_message},
       assigns: &__MODULE__.assigns/4,
       prompt: [user:
@@ -64,15 +72,9 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
 
         Bear in mind the different confidence levels based on how members are addressed or mentioned in the message, and continue this process of analysis for each new message.
 
-        <%= case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
-        <% _ -> %><%= "" %>
-        <% end %>
+        <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
-        <%= case Noizu.Intellect.DynamicPrompt.prompt(@message_history, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
-        <% _ -> %><%= "" %>
-        <% end %>
+        <%= Noizu.Intellect.DynamicPrompt.prompt!(@message_history, assigns, @prompt_context, @context, @options) %>
 
         # Output Format
         Given the previous conversation and following new message provide the requested markdown body for the message-analysis tag.
@@ -86,10 +88,8 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
         determine the most likely audience for new messages based on their background, message contents and direct channel member mentions.
         Provide the requested markdown body for the message-analysis tag.
 
-        <%= case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt || "" %>
-        <% _ -> %><%= "" %>
-        <% end %>
+        <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
+
         <% end %>
 
 
@@ -160,11 +160,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
         <% end %>
 
         # New Message
-        <%= case Noizu.Intellect.DynamicPrompt.prompt(@current_message, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %>
-        <%= prompt || "" %>
-        <% _ -> %><%= "" %>
-        <% end %>
+        <%= Noizu.Intellect.DynamicPrompt.prompt!(@current_message, assigns, @prompt_context, @context, @options) %>
         """,
       ],
       minder: [system:

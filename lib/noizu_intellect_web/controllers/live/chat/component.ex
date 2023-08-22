@@ -124,13 +124,49 @@ defmodule Noizu.IntellectWeb.Chat.Component do
               <pre class="tab-page tab-2 align-top"><%=  @message.body %></pre>
               <div class="tab-page tab-3 align-top">
                  <%= if @message.meta do %>
-                <div class="meta-details">
+
+
+                <%= if is_bitstring(@message.meta) do %>
+                  <div class="meta-details">
                     <pre>
                     <%= @message.meta %>
                     </pre>
-                </div>
+                  </div>
                 <% else %>
-                [NONE]
+                  <h2>Response</h2>
+                  <div class="meta-details">
+                    <pre>
+                    <%= Ymlr.document!(@message.meta["response"]) %>
+                    </pre>
+                  </div>
+
+                  <h2>Raw</h2>
+                  <div class="meta-details">
+                    <pre>
+                    <%= Ymlr.document!(@message.meta["raw_reply"]) %>
+                    </pre>
+                  </div>
+
+                  <h2>Messages</h2>
+                  <div class="meta-details">
+                    <pre>
+                    <%= Ymlr.document!(@message.meta["messages"]) %>
+                    </pre>
+                  </div>
+
+                  <h2>Settings</h2>
+                  <div class="meta-details">
+                    <pre>
+                    <%= Ymlr.document!(@message.meta["settings"]) %>
+                    </pre>
+                  </div>
+                <% end %>
+
+                <% else %>
+                  <div class="meta-details">
+                  [NONE]
+                  </div>
+
                 <% end %>
               </div>
     </div>

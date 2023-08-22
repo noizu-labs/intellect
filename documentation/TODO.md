@@ -1,3 +1,18 @@
+August 22nd
+=============
+- [ ] update prompt,minder to accept assigns to avoid nested prompt call issues.
+- [ ] Tighten up agent-to-agent chat instructions (restore prior)
+- [ ] persist objectives. Insure objective message in chat list, insure injected.
+- [ ] Smarter previous messages. Follow message chain + weaviate matches.
+      With special candidate message filtering, use weight/sticky ness to keep per objective until objective cleared
+      To avoid reprocessing.
+- [ ] Agent to agent communication monitor prompt. Detect dead end conversations and inject system messages.
+- [ ] Enable system messages in message queue.
+
+
+
+Other 
+=======
 ## Prompts
 - [x] Simplify prompts to use Yaml like structures rather than harder to parse json.
 - [x] Simplify output format to use Yaml as it's easier for agents.
@@ -41,9 +56,10 @@
 
 ## UX
 - [x] show markdown
-- [x] show meta data 
+- [x] show meta data
+  - [ ] break into sections, add additional table for message_meta (id, msg, type, content)
 - [ ] show synthetics.
-- [ ] bookmarks 
+- [ ] bookmarks
 - [ ] nested comment (nested comments forget about outer scope and use a revised digest of chat to date.)
 
 

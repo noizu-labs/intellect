@@ -1,7 +1,7 @@
 defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
   @behaviour Noizu.Intellect.Prompt.ContextWrapper
   require Logger
-  @impl true
+
 
   def assigns(subject, prompt_context, _context, _options) do
     assigns = Map.merge(
@@ -14,12 +14,21 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
     {:ok, assigns}
   end
 
+  @impl true
+  defdelegate compile_prompt(expand_prompt, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+  @impl true
+  defdelegate compile(this, options \\ nil), to: Noizu.Intellect.Prompt.ContextWrapper
+
+
+  @impl true
   def prompt(version, options \\ nil)
   def prompt(:default, options), do: prompt(:v2, options)
   def prompt(:v2, options) do
     current_message = options[:current_message]
 
     %Noizu.Intellect.Prompt.ContextWrapper{
+      name: __MODULE__,
       assigns: &__MODULE__.assigns/4,
       arguments: %{current_message: current_message},
       prompt: [user:
@@ -28,15 +37,9 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
         As a chat thread and content analysis engine, given the following channel, channel members, and list of chat messages,
         Analyze the conversation and identify any messages that have been answered or indicated as answered by new message.
 
-        <%= case Noizu.Intellect.DynamicPrompt.prompt(@prompt_context.channel, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
-        <% _ -> %><%= "" %>
-        <% end %>
+        <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
-        <%= case Noizu.Intellect.DynamicPrompt.prompt(@message_history, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %><%= prompt %>
-        <% _ -> %><%= "" %>
-        <% end %>
+        <%= Noizu.Intellect.DynamicPrompt.prompt!(@message_history, assigns, @prompt_context, @context, @options) %>
 
         # Output Format
         Given the previous conversation and following new message provide the requested markdown body for the message-analysis tag.
@@ -47,11 +50,7 @@ defmodule Noizu.Intellect.Prompts.MessageAnswerStatus do
           * For instance, a new message that elaborates on topics raised in a recent prior message is likely a response to that earlier message rather than the initiation of a new thread.
 
         # New Message
-        <%= case Noizu.Intellect.DynamicPrompt.prompt(@current_message, @prompt_context, @context, @options) do %>
-        <% {:ok, prompt} when is_bitstring(prompt) -> %>
-        <%= prompt || "" %>
-        <% _ -> %><%= "" %>
-        <% end %>
+        <%= Noizu.Intellect.DynamicPrompt.prompt!(@current_message, assigns, @prompt_context, @context, @options) %>
 
         # Output Format
         Provide your final response in the following format, ensure the contents of monitor-response are properly formatted yaml.

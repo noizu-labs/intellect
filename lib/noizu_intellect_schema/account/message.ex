@@ -19,6 +19,7 @@ defmodule Noizu.Intellect.Schema.Account.Message do
     field :created_on, :utc_datetime_usec
     field :modified_on, :utc_datetime_usec
     field :deleted_on, :utc_datetime_usec
+    field :note, :string, virtual: true
     field :__loader__, :map, virtual: true
   end
 

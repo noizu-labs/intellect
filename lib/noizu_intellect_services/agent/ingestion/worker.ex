@@ -16,6 +16,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     field :agent, nil, Noizu.Entity.Reference
     field :account, nil, Noizu.Entity.Reference
     field :channel, nil, Noizu.Entity.Reference
+    field :objectives, []
     field :book_keeping, %{}
     field :time_stamp, nil, Noizu.Entity.TimeStamp
   end
@@ -24,7 +25,13 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #-------------------
   #
   #-------------------
-  def init(R.ref(module: __MODULE__, identifier: identifier), _args, _context) do
+  def init(R.ref(module: __MODULE__, identifier: identifier), _args, context) do
+    Logger.error("WORKER INIT| #{inspect identifier}")
+    self = self()
+    spawn(fn ->
+      Process.sleep(100)
+      Noizu.Intellect.Service.Agent.Ingestion.fetch(identifier, :state, context, nil) |> IO.inspect(label: "LAZY LOAD")
+    end)
     %__MODULE__{
       identifier: identifier,
     }
@@ -43,6 +50,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #-------------------
   def load(state, context), do: load(state, context, nil)
   def load(state, context, options) do
+    Logger.error("WORKER LOAD| #{inspect state.identifier}")
     with {:ok, worker} <- entity(state.identifier, context) do
       {:ok, worker}
     else
@@ -202,7 +210,6 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
       Enum.map(reply,
         fn({:reply, attr}) ->
           # Has valid response block
-
           if response = attr[:response] do
             Logger.error("[RESPONSE:#{state.worker.agent.slug}] #{ response} \n----------------- #{inspect reply}")
             message = %Noizu.Intellect.Account.Message{
@@ -270,6 +277,18 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     end
   end
 
+
+
+
+  def monitor_agent_response(state, message, context, options) do
+    # TODO pass response through monitor and revisor to strip back and forth agent chatter.
+    body = get_in(message, [Access.key(:contents), Access.key(:body)])
+    body = String.replace(body, "Let's continue brainstorming together!", "")
+    reply = put_in(message, [Access.key(:contents), Access.key(:body)], body)
+    {:ok, reply}
+  end
+
+
   def session_process_message_queue(state, context, options) do
     # TODO - logic depends on channel type, if session we get all unread messages and filter others by nearby object
     # weaviate search. Prompt returns a list of messages not a composite message and expects a single return.
@@ -282,103 +301,112 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
            state.worker.agent,
            state.worker.channel,
            messages,
-           Noizu.Intellect.Prompt.ContextWrapper.session_response_prompt(),
+           Noizu.Intellect.Prompt.ContextWrapper.session_response_prompt(state.worker.objectives),
            context,
            options),
          {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options)
       do
 
       try do
-        #IO.puts("[MESSAGE 1: #{state.worker.agent.slug}] \n" <> get_in(api_response[:messages], [Access.at(0), :content]))
-        #IO.puts("[MESSAGE 2: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(1), :content]))
-        #IO.puts("[MESSAGE 3: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(2), :content]))
-        #IO.puts("[MESSAGE 4: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(3), :content]))
-        #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
-        #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
-
-
-
         with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
-             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
-             valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
+             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(reply)
           do
-          Logger.warn("[REPLY:#{state.worker.agent.slug}] -------------------------------\nraw-reply:\n" <> reply <> "\n------------------------------------\n\n")
-
-          response = Noizu.Intellect.HtmlModule.extract_session_response_details(reply)
-          #with [{:agent, [sender: sender, sections: sections]}|_] <- response,
-            with sections <- Enum.group_by(response, & elem(&1, 0)),
-               [{:reply, reply_response}|_] <- sections[:reply]
-            do
-
-              Enum.map(sections[:reply],
-                                       fn
-                                       ({:reply, reply_response}) -> 1
+          Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
 
 
+          format_response = Enum.map([:reply, :function_call, :ack, :memory, :intent, :objective, :error], fn(s) ->
+            r = if response[s] do
+              Enum.map(response[s] || [], fn
+                ({^s, x}) -> x
+                (_) -> nil
+              end) |> Enum.reject(&is_nil/1)
+            end
+            {s, r}
+          end) |> Map.new()
+          meta_list = %{"settings" => api_response[:settings], "messages" => api_response[:messages], "raw_reply" => api_response[:reply],  "response" => format_response}
 
 
-                                                                     message = %Noizu.Intellect.Account.Message{
-                                                                       sender: state.worker.agent,
-                                                                       channel: state.worker.channel,
-                                                                       depth: 0,
-                                                                       user_mood: reply_response[:mood] && String.trim(reply_response[:mood]),
-                                                                       event: :message,
-                                                                       contents: %{title: "response", body: reply_response[:response]},
-                                                                       meta: Ymlr.document!([api_response[:settings], api_response[:messages], api_response[:reply]]) |> String.trim(),
-                                                                       time_stamp: Noizu.Entity.TimeStamp.now()
-                                                                     }
-                                                                     {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
-                                                                     # Block so we don't reload and resend.
-                                                                     Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-                                                                     Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 10, "sender"}}, message, context, options)
+          Enum.map(response[:reply],
+            fn
+              ({:reply, reply_response}) ->
+                message = %Noizu.Intellect.Account.Message{
+                  sender: state.worker.agent,
+                  channel: state.worker.channel,
+                  depth: 0,
+                  user_mood: reply_response[:mood],
+                  event: :message,
+                  contents: %{title: "response", body: reply_response[:response]},
+                  meta: Ymlr.document!(meta_list) |> String.trim(),
+                  time_stamp: Noizu.Entity.TimeStamp.now()
+                }
+
+                {:ok, message} = monitor_agent_response(state, message, context, options)
+
+                {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
+                # Block so we don't reload and resend.
+                Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+                Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 10, "sender"}}, message, context, options)
 
 
-                                                                     # mark any unread as read.
-                                                                     Enum.map(messages, fn(message) ->
-                                                                       if is_nil(message.read_on) do
-                                                                         Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-                                                                       end
-                                                                     end)
+                # mark any unread as read.
+                Enum.map(messages, fn(message) ->
+                  if is_nil(message.read_on) do
+                    Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+                  end
+                end)
 
-                                                                     with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
-                                                                       # need a from message method.
-                                                                       push = %Noizu.IntellectWeb.Message{
-                                                                         identifier: message.identifier,
-                                                                         type: :message,
-                                                                         timestamp: message.time_stamp.created_on,
-                                                                         user_name: state.worker.agent.slug,
-                                                                         profile_image: state.worker.agent.profile_image,
-                                                                         mood: reply_response[:mood] && String.trim(reply_response[:mood]),
-                                                                         meta: Ymlr.document!([api_response[:settings], api_response[:messages], api_response[:reply]]) |> String.trim(),
-                                                                         body: message.contents.body
-                                                                       }
-                                                                       Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
-                                                                     end
+                with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
+                  # need a from message method.
+                  push = %Noizu.IntellectWeb.Message{
+                    identifier: message.identifier,
+                    type: :message,
+                    timestamp: message.time_stamp.created_on,
+                    user_name: state.worker.agent.slug,
+                    profile_image: state.worker.agent.profile_image,
+                    mood: reply_response[:mood] && String.trim(reply_response[:mood]),
+                    meta: meta_list,
+                    body: message.contents.body
+                  }
+                  Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+                end
 
-                                                                     spawn fn ->
-                                                                       at = (reply_response[:at] || "")
-                                                                            |> String.split(",")
-                                                                            |> Enum.map(&String.trim/1)
-                                                                       options = put_in(options || [], [:at], at)
-                                                                       Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
-                                                                     end
+                spawn fn ->
+                  options = put_in(options || [], [:at], reply_response[:at])
+                  Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
+                end
+              (other) ->
+                Logger.warn("Invalid response: #{inspect other}")
+            end
+          )
 
-                                       (other) -> Logger.warn("Invalid response: #{inspect other}")
-                                       end
-                                       )
+          # Temp extract objectives store, store locally for now.
+          #IO.inspect(response[:objective], label: "RESPONSE OBJECTIVE")
+          with [{:objective, obj}|_] <- response[:objective] do
+            state = if index = Enum.find_index(state.worker.objectives, & &1[:name] == obj[:name]) do
+                      put_in(state, [Access.key(:worker),Access.key(:objectives), Access.at(index)], obj)
+                      |> tap(fn(_) -> obj[:name] |> IO.inspect(label: "[#{state.worker.agent.slug}: Update Objective: #{index}]") end)
+                    else
+                      update_in(state, [Access.key(:worker),Access.key(:objectives)], & [obj|&1])
+                      |> tap(fn(_) -> obj[:name] |> IO.inspect(label: "[#{state.worker.agent.slug}: Add Objective]") end)
+                    end
+                    |> shallow_persist(context, options)
 
+            clear_response_acks(response, messages, state, context, options)
 
+            {:ok, state}
+          else
+            _ -> {:ok, state}
           end
+        else
+          _ -> {:ok, state}
         end
-
       rescue error ->
         Logger.error(Exception.format(:error, error, __STACKTRACE__))
-        :nop
+        {:ok, state}
       catch error ->
         Logger.error(Exception.format(:error, error, __STACKTRACE__))
-        :nop
+        {:ok, state}
       end
-      {:ok, state}
     else
       _ -> {:ok, state}
     end
@@ -422,7 +450,18 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
           # clear ack'd
           clear_response_acks(response, messages, state, context, options)
           # process replies.
-          process_response_replies(response, messages, [api_response[:settings], api_response[:messages], api_response[:reply]], state, context, options)
+
+          format_response = Enum.map([:reply, :function_call, :ack, :memory, :intent, :objective, :error], fn(s) ->
+            r = if api_response[s] do
+              Enum.map(api_response[s] || [], fn
+                ({^s, x}) -> x
+                (_) -> nil
+              end) |> Enum.reject(&is_nil/1)
+            end
+            {s, r}
+          end) |> Map.new()
+          meta_list = %{settings: api_response[:settings], messages: api_response[:messages], response: format_response}
+          process_response_replies(response, messages, meta_list, state, context, options)
 
 
           with [{:nlp_chat_analysis, details}|_] <- response[:nlp_chat_analysis],
@@ -435,6 +474,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
             - #{inspect inbox}
             """
 
+
             # need a from message method.
             push = %Noizu.IntellectWeb.Message{
               identifier: :system,
@@ -443,7 +483,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
               user_name: "#{state.worker.agent.slug}-system",
               profile_image: nil,
               mood: :thumbsy,
-              meta: Ymlr.document!([api_response[:settings], api_response[:messages], api_response[:reply]]),
+              meta: Ymlr.document!(meta_list),
               body: (details[:contents] || "Missing Contents") <> inbox
             }
             Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))

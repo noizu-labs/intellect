@@ -12,6 +12,10 @@
     #user-menu
     */
 
+    .meta-details {
+        @apply max-h-[50vh] overflow-y-auto text-[.7rem] bg-slate-200;
+    }
+
     .nlp-step {
         @apply py-3 ring-1 ring-slate-500 bg-slate-100;
     }
