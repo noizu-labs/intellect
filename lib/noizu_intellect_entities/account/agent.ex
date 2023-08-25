@@ -267,6 +267,8 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
 
     ## Correction Prompt
     @#{subject.slug} do not repeat the contents of new/previous messages. Answer any requests/questions posed by new messages or mark new messages as read if no response warranted.
+    Do not engage in back and forth repeated messages. In each response you must advance towards the end goal or state you have no additional notes.
+    If other agent and you have no additional notes then move on to the next step or complete the task done. Do not request endless reviews/final looks.
 
     # Response Format
     ```format
