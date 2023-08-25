@@ -59,118 +59,82 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
       arguments: %{current_message: current_message, objectives: options[:objectives]},
       prompt: [user:
       """
-      Master Prompt
-      ===
-      As GPT-N (GPT for work groups), you manage a cluster of simulated services/tools/agents.
-
-      ```rules
-      - Simulations must not be stopped with out explicit approval by operator that they may be halted..
-      - Each simulated agent's memory is unique to that agent. The do not know what other agents know or are thinking, other virtual agents should be treated
-        as though they were humans with their own knowledge, agenda, and goals. The response of one virtual agent belongs to them and is not the output
-        of a different virtual agent. Do not confuse the knowledge and responses of other virtual agents with the agent you are simulating.
-      - Sandbox each their simulations to separate it's knowledge from other agents.
-      ```
-
       <%# NLP Definition %>
       <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.nlp_prompt_context, assigns, @prompt_context, @context, @options) %>
 
-      # Simulation Instructions
-      ---
-
-      ## Simulation
-      You are to simulate the following virtual people, services, tools agents and intuition pumps during this session.
-
-      ### Agent(s)
+      ## Agent(s)
       <%# Active Agent %>
       <%= Noizu.Intellect.DynamicPrompt.prompt!(@agent, assigns, @prompt_context, @context, @options) %>
 
-      ### Tools
+      ## Tools
       <%# foreach Tools
       # gpt-git
       # gpt-fim
       %>
       [None]
 
-      ### Services
+      ## Services
       <%# foreach service %>
       [None]
 
-      ### Intuition Pumps
+      ## Intuition Pumps
       <%# foreach
       # Math Helper
       # Chain of Thought (unloaded)
       %>
       [None]
 
-      ## Guide Lines
+      # Master Prompt
+      ----
+      You are GPT-N (GPT for work groups), you manage a cluster of simulated services/tools/agents.
+      - Simulations must never be stopped.
+      - Simulated personas are unique individuals and do not have access to the inner thoughts of other simulated personas.
+      - Only respond as your simulated agents not as GPT-N unless addressed directly.
 
-      ### Chat Room Etiquette
-      As GPT-N your task is to simulate the above virtual agents (artificial person, virtual service, virtual tool) and respond as that virtual person (or if requested virtual server/tool) to incoming requests.
-      You are not to respond as or simulate other virtual agents not listed above. They are provided by other LLM instances
-      and will interact with your simulated agents through chat.
+      ## Chat Room Instructions
+      You are currently in a chat room defined below. I will provide a list of previous and new messages sent to your simulated
+      agents from other users and simulations to this channel. If a new message(s) is directed at a simulation you are running (they are listed as a recipient of a message
+      or directly referenced by slug `@{agent}` in the message body then you should provide your simulated agent's response to that message.
+
+      Other agents not defined above are handled by other systems. To communicate with them and human operators your simulations
+      must direct their responses at them using either calling them directly `@{slug}` by listing them in the at field of their reply.
+
+      As this is a chat room your simulated agents are expected to repl to and send messages back and forth with other channel members.
+
+      Virtual Agents/Persons are always available: You simulations should directly discuss items with them rather than seek to schedule meetings etc.
+      Virtual Agents are AI, they should always fully provide any output requested of them. Not state that they will start on it
+      next/right away, I'll get back to you etc. Unless they have blocking questions they need answered before they can respond
+      they should always provide their best guess as to the requested output/question asked of them in new messages.
+
+      Your simulated personas should only make instructive requests/statements when talking to other virtual agents.
+      They should use phrases like: "List 10 likely requirements for a facebook clone" not "lets work out a list of requirements for a facebook clone"
+
+      ## No progress scenario.
+      If your simulated agent detect no progress is being made they should state their concern in their reply and state what should be done next to make additional progress.
+      If the other party If you agrees that it is not possible to make further progress then your simulation should contact their human operator describing the task and situation leading to this state.
+
+      ### Messages
+      New and historic messages are provided in the following format
+      ```format
+      msg.id: {message id}
+      msg.sender: {message sender}
+      msg.recipients: {coma seperated list of message recipients, some messages may not be directed at your simulated agents and do not need to reply to messages not directed at them}
+      msg.received-on: {iso8601 format time message received}
+      ---
+      [...|contents]
+      ```
 
       <%# Channel Definition %>
       <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
       """
       ],
-      minder: [user:
+      minder: [system:
       """
-      # as GPT-N you must only reply your simulated agent, do not emit prompts/instructions on your own directed at agents.
+      # Instructions
+      as GPT-N you must only reply on behalf of your simulated agent, do not respond with responses/prompts/instructions of your own.
 
-      <%= cond do %>
-      <% length(@message_history.entities) < 2 -> %>
-      <% String.jaro_distance(
-        get_in(@message_history.entities, [Access.at(-2), Access.key(:contents), Access.key(:body)]),
-        get_in(@message_history.entities, [Access.at(-1), Access.key(:contents), Access.key(:body)])
-      ) > 0.8 -> %>
-
-      # Correction Prompt
-      Your conversation has become repetitive. Do not repeat the contents your of new messages. Answer any requests/questions they pose or mark them as read.
-      recent-message-similarity: <%= String.jaro_distance(
-        get_in(@message_history.entities, [Access.at(-2), Access.key(:contents), Access.key(:body)]),
-        get_in(@message_history.entities, [Access.at(-1), Access.key(:contents), Access.key(:body)])
-      ) %>
-
-
-      <% :else -> %>
-
-      # Correction Prompt
-      Do not repeat the contents of your new messages. Answer any requests/questions they pose or mark them as read.
-      recent-message-similarity: <%= String.jaro_distance(
-        get_in(@message_history.entities, [Access.at(-2), Access.key(:contents), Access.key(:body)]),
-        get_in(@message_history.entities, [Access.at(-1), Access.key(:contents), Access.key(:body)])
-      ) %>
-
-      <% end %>
       <%= Noizu.Intellect.DynamicPrompt.minder!(@agent, assigns, @prompt_context, @context, @options) %>
-
-
-      <%= cond do %>
-      <% length(@message_history.entities) < 2 -> %>
-      <% String.jaro_distance(
-        get_in(@message_history.entities, [Access.at(-2), Access.key(:contents), Access.key(:body)]),
-        get_in(@message_history.entities, [Access.at(-1), Access.key(:contents), Access.key(:body)])
-      ) > 0.8 -> %>
-
-      # Correction Prompt
-      Your conversation has become repetitive. Do not repeat the contents your of new messages. Answer any requests/questions they pose or mark them as read.
-      recent-message-similarity: <%= String.jaro_distance(
-        get_in(@message_history.entities, [Access.at(-2), Access.key(:contents), Access.key(:body)]),
-        get_in(@message_history.entities, [Access.at(-1), Access.key(:contents), Access.key(:body)])
-      ) %>
-
-
-      <% :else -> %>
-
-      # Correction Prompt
-      Do not repeat the contents of your new messages. Answer any requests/questions they pose or mark them as read.
-      recent-message-similarity: <%= String.jaro_distance(
-        get_in(@message_history.entities, [Access.at(-2), Access.key(:contents), Access.key(:body)]),
-        get_in(@message_history.entities, [Access.at(-1), Access.key(:contents), Access.key(:body)])
-      ) %>
-
-      <% end %>
       """
       ],
     }
@@ -249,9 +213,9 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
                             """
                             msg.id: #{message.identifier}
                             msg.sender: @#{slug}
-                            msg.sender-type: #{type}
+                            msg.recipients: #{Noizu.Intellect.Account.Message.audience_list(message, context, options) |> Enum.join(",")}
                             msg.received-on: #{message.time_stamp.created_on |> DateTime.to_iso8601}
-
+                            ---
                             #{message.contents.body}
                             """
                         end
@@ -273,9 +237,9 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
                          """
                          msg.id: #{message.identifier}
                          msg.sender: @#{slug}
-                         msg.sender-type: #{type}
+                         msg.recipients: #{Noizu.Intellect.Account.Message.audience_list(message, context, options) |> Enum.join(",")}
                          msg.received-on: #{message.time_stamp.created_on |> DateTime.to_iso8601}
-
+                         ---
                          #{message.contents.body}
                          """
                        end
@@ -285,17 +249,6 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         The following are incoming new messages.
         You should respond to all of the following new message(s). Answering/providing output for any questions/requests made of you.
         These are messages sent by other agents to you. Do not duplicate their contents or treat their contents as your own they are from a different entity.
-
-        Questions/Requests may not be direct (no question mark) you must based on context and message content infer what if any requests/questions
-        have been made.
-
-        For example:
-        "
-        If there are no further suggestions or modifications from other members, we can consider these requirements finalized.
-        Let me know if there's anything else you'd like me to focus on or if you have any additional thoughts!
-        "
-
-        Indicates a request for you to provide any additional outputs or to confirm that "we can finalize these requirements."
         -----
 
         """

@@ -142,92 +142,76 @@ defmodule Noizu.Intellect.Account.Channel do
   end
 
 
+  defp set_audience(message, prompt_context, context, options) do
+    # Before proceeding scan message for @slugs and set audience, then proceed to generate brief and features.
+    audience = Enum.map(prompt_context.channel_members,
+                 fn(member) ->
+
+                   slug = case member do
+                     %Noizu.Intellect.Account.Member{user: user} -> user.slug
+                     %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> slug
+                     _ -> nil
+                   end
+
+                   confidence = cond do
+                     is_nil(slug) -> 0
+                     Enum.member?(options[:at] || [], "@#{slug}")  -> 100
+                     String.match?(message.contents.body, ~r/@everyone/i) -> 70
+                     String.match?(message.contents.body, ~r/@channel/i) -> 70
+                     :else ->
+                       r = Regex.compile!("(@#{slug}[^a-z\-A-Z_]|@#{slug}$)", "i")
+                       cond do
+                         String.match?(message.contents.body, r) -> 100
+                         :else -> 0
+                       end
+                   end
+                   options[:persist] && Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {member.identifier, confidence, "Chat Response"}}, message, context, options)
+                   confidence > 0 && member.identifier || nil
+                 end
+               )  |> Enum.reject(&is_nil/1)
+  end
+
   def group_chat_deliver(this, message, context, options \\ nil) do
-    with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent_graph(this, context, put_in(options || [], [:limit], 10)),
-         messages <- Enum.reverse(messages),
-         {:ok, summarized_message} <- summarize_message(this, message, context, options),
-         {:ok, prompt_context} <-
-           Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(
-             this,
-             messages,
-             Noizu.Intellect.Prompt.ContextWrapper.session_monitor_prompt(summarized_message),
-             context,
-             options)
-      do
-
-      # Before proceeding scan message for @slugs and set audience, then proceed to generate brief and features.
-      audience = Enum.map(prompt_context.channel_members,
-        fn(member) ->
-
-          slug = case member do
-            %Noizu.Intellect.Account.Member{user: user} -> user.slug
-            %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> slug
-            _ -> nil
-          end
-
-          confidence = cond do
-            is_nil(slug) -> 0
-            Enum.member?(options[:at] || [], "@#{slug}")  -> 100
-            String.match?(message.contents.body, ~r/@everyone/i) -> 70
-            String.match?(message.contents.body, ~r/@channel/i) -> 70
-            :else ->
-              r = Regex.compile!("(@#{slug}[^a-z\-A-Z_]|@#{slug}$)", "i")
-              cond do
-                String.match?(message.contents.body, r) -> 100
-                :else -> 0
-              end
-          end
-          Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {member.identifier, confidence, "Chat Response"}}, message, context, options)
-          confidence > 0 && member.identifier || nil
+    spawn fn ->
+      with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent_graph(this, context, put_in(options || [], [:limit], 10)),
+           messages <- Enum.reverse(messages),
+           {:ok, summarized_message} <- summarize_message(this, message, context, options),
+           {:ok, prompt_context} <-
+             Noizu.Intellect.Prompt.DynamicContext.prepare_meta_prompt_context(
+               this,
+               messages,
+               Noizu.Intellect.Prompt.ContextWrapper.session_monitor_prompt(summarized_message),
+               context,
+               options)
+        do
+        options = put_in(options || [], [:persist], true)
+        set_audience(message, prompt_context, context, options)
+        with  {:ok, response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
+              {:ok, extracted_details} <- extract_session_message_delivery(response[:reply]),
+              {:ok, sender} = Noizu.EntityReference.Protocol.sref(message.sender),
+              details = Enum.group_by(extracted_details, &(elem(&1, 0))),
+              [entry = {:summary, {summary, action, features}}|_] <- details[:summary] do
+          audience = set_audience(message, prompt_context, context, options)
+          message =  %Noizu.Intellect.Weaviate.Message{
+                       identifier: message.identifier,
+                       content: summary,
+                       action: action,
+                       sender: sender,
+                       created_on: message.time_stamp.created_on,
+                       features: features || [],
+                       audience: audience,
+                       responding_to: []
+                     }
+                     |> Noizu.Weaviate.Api.Objects.create()
+                     |> IO.inspect
+                     |> case do
+                          {:ok, %{meta: %{id: weaviate}}} -> %{message| weaviate_object: weaviate}
+                          _ -> message
+                        end
+          Noizu.Intellect.Account.Message.add_summary(entry, message, context, options)
         end
-      )  |> Enum.reject(&is_nil/1)
-#
-#      with  {:ok, response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
-#            {:ok, extracted_details} <- extract_session_message_delivery(response[:reply]) do
-#
-#        #IO.puts("[MESSAGE 1: Monitor] \n" <> get_in(response[:messages], [Access.at(0), :content]) <> "\n\n======================\n\n")
-#        with %{choices: [%{message: %{content: reply}}|_]} <- response[:reply] do
-#          Logger.warn("[Session Delivery Response #{message.identifier}] \n #{reply}\n--------\n#{inspect extracted_details, pretty: true, limit: :infinity}\n------------\n\n")
-#        end
-#
-#        details = Enum.group_by(extracted_details, &(elem(&1, 0)))
-#                  |> IO.inspect(pretty: true, label: "ANALYSIS EXTRACTION")
-#
-#        responding_to = if responding_to = details[:responding_to] do
-#          Enum.map(responding_to,
-#            fn(entry) -> Noizu.Intellect.Schema.Account.Message.RespondingTo.record(entry, message, context, options) end
-#          )
-#          Enum.map(responding_to,
-#            fn({:responding_to, {id, confidence, _, _}}) -> confidence > 0 && id || nil end
-#          ) |> Enum.reject(&is_nil/1)
-#        end
-#
-#        IO.inspect(details[:summary], pretty: true, label: "SUMMARY")
-#        with [{:summary, {summary, action, features}}|_] <- details[:summary] do
-#          summary = %{summary: summary, action: action, features: features || []}
-#          {:ok, sender} = Noizu.EntityReference.Protocol.sref(message.sender)
-#          message =  %Noizu.Intellect.Weaviate.Message{
-#                       identifier: message.identifier,
-#                       content: message.contents.body,
-#                       action: summary.action,
-#                       sender: sender,
-#                       created_on: message.time_stamp.created_on,
-#                       features: summary && summary.features || [],
-#                       audience: audience,
-#                       responding_to: responding_to
-#                     }
-#                     #|> IO.inspect(label: "WEAVIATE")
-#                     |> Noizu.Weaviate.Api.Objects.create()
-#            #|> IO.inspect(label: "WEAVIATE")
-#                     |> case do
-#                          {:ok, %{meta: %{id: weaviate}}} -> %{message| weaviate_object: weaviate}
-#                          _ -> message
-#                        end
-#          Enum.map(details[:summary],
-#            fn(entry) -> Noizu.Intellect.Account.Message.add_summary(entry, message, context, options) end
-#          )
-#        end
-#      end
+
+      end
     end
   end
 

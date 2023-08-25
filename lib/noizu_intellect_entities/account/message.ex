@@ -55,6 +55,12 @@ defmodule Noizu.Intellect.Account.Message do
     end
   end
 
+  def audience_list(message, context, options \\ nil) do
+    (message.audience || [])
+    |> Enum.filter(fn({k,v}) -> v.confidence >= 0 end)
+    |> Enum.map(fn({k,_}) -> "@#{k}"  end)
+  end
+
   def unpack_audience_list(as_name, record, _context, _field_options) do
     with %{array_agg: entries} <- get_in(record, [Access.key(:__loader__), Access.key(as_name)]),
          true <- is_list(entries) do

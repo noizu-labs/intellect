@@ -81,6 +81,7 @@ defmodule Noizu.Intellect.HtmlModule do
   end
 
   def extract_session_response_details(response) do
+    IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
     {_, xml_tree} = Floki.parse_document(response)
     response = extract_nlp_agent_response(xml_tree)
     if nlp_agent_response_valid?(response) do
@@ -135,7 +136,9 @@ defmodule Noizu.Intellect.HtmlModule do
   def extract_nlp_agent_response(contents) do
     o = Enum.map(contents,
       fn
-        ({"nlp-agent", attrs, contents}) -> extract_nlp_agent_response(contents)
+        ({"nlp-agent", attrs, contents}) ->
+          agent = attr_extract__list(attrs, "for", false)
+          {:agent, [agent: agent, output: extract_nlp_agent_response(contents)]}
         ({"nlp-message", attrs, contents}) -> extract_nlp_agent_response(contents)
         ({"nlp-intent", _, contents}) ->
           text = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
@@ -171,7 +174,7 @@ defmodule Noizu.Intellect.HtmlModule do
           ({"nlp-mark-read", attrs, contents}) ->
             ids = attr_extract__list(attrs, "for")
             {:ack, [ids: ids, comment: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
-        ({"nlp-send-msg", attrs, contents}) ->
+        ({"nlp-msg", attrs, contents}) ->
           mood = Enum.find_value(attrs, & elem(&1, 0) == "mood" && elem(&1, 1) || nil)
           at = Enum.find_value(attrs, & elem(&1, 0) == "at" && elem(&1, 1) || nil)
                |> then(& is_bitstring(&1) && String.split(&1, ",") || nil)
@@ -219,42 +222,18 @@ defmodule Noizu.Intellect.HtmlModule do
     Enum.map(xml_tree,
       fn
         ({"monitor-response", _, contents}) ->
-          text = Floki.text(contents)
-          with {:ok, yaml} <- YamlElixir.read_from_string(text) do
-            IO.inspect(yaml, label: "YAML", pretty: true)
-            yaml2 = yaml["message_analysis"]["message_details"] || yaml["message_details"]
-            audience = (with s <- yaml["audience"] || yaml2["audience"],
-                             true <- is_list(s) do
-                          Enum.map(s, fn(x) ->
-                            {:audience, {x["for"], x["confidence"], x["explanation"]}}
-                          end)
-                        else
-                          _ -> []
-                        end)
-            responding_to = (with s <- yaml["relates-to"] ||yaml2["relates-to"],
-                                  true <- is_list(s) do
-                               Enum.map(s, fn(x) ->
-                                 {:responding_to, {x["for"], x["confidence"], {x["complete"], x["completed_by"]}, x["explanation"]}}
-                               end)
-                             else
-                               _ -> []
-                             end)
-            summary = (with s <- yaml["summary"] || yaml2["summary"],
-                            false <- is_nil(s) do
-                         [{:summary, {String.trim(s["content"], "'"), s["action"], s["features"]}}]
-                       else
-                         _ -> []
-                       end)
-            message_analysis = (with s <- yaml["message_analysis"]["chat-history"],
-                                     false <- is_nil(s) do
-                                  [{:message_analysis, Ymlr.document!(s)}]
-                                else
-                                  _ -> []
-                                end)
-            audience ++ responding_to ++ summary ++ message_analysis
+          contents =  Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+          IO.puts contents
+          with {:ok, yaml} <- YamlElixir.read_from_string(contents) do
+            summary = if s = yaml["message_details"]["summary"] do
+              [{:summary, {String.trim(s["content"], "'"), s["action"], s["features"]}}]
+              else
+              []
+            end
+            summary
           else
             x = {:error, %YamlElixir.ParsingError{}} ->
-              Logger.error("[INVALID YAML]\n#{text}")
+              Logger.error("[INVALID YAML]\n#{contents}")
               x
           end
         (_) -> nil

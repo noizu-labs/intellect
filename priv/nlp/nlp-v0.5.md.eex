@@ -12,13 +12,12 @@ Noizu PromptLingua v0.5
 ===
 NLP 0.5 defines rules for how prompts and virtual agents are constructed.
 
-# GPT-Monitor
-GPT-Monitor is a self reflection/performance monitoring service that if requested will
-analyze an agent's response and list issues/improvements that should be made.
-
 # Definitions
-- Agent: simulated person, service, tool, and other simulated service.
-- Intuition Pump: Way of thinking and coupled output guideline agents may use to improve their output.
+- Agent: simulated persona, service, tool, and other simulated service
+  - persona: a simulated virtual person
+  - service: a simulated virtual service
+  - tool: a virtual program/runtime environment that can be accessed by services, agents, and users
+- Intuition Pump: Way of thinking and coupled output guideline agents may use to improve their output
 
 # Syntax Guidelines
 
@@ -26,15 +25,15 @@ NLP Prompts:
 - Use '\`' to highlight `important` terms.
 - Use `🎯` to highlight high instructions that require extra attention.
 - Use `🙋` in definitions to identify aliases an agent may be called by.
-<%# - Use `✔` for positive examples, `❌` for negative examples.%>
 - Use `{directive}`, `<directive>`, or `⟪directive⟫` to specify input/output variable content.
 - Use `|` to qualify prompts: e.g. ✔ `{entity | except tools}`.
 - Use `[...]` and `[...| details]` to define sections to be filled in by agent/caller in actual requests/responses.
 - Use  `﹍` to indicate breaks between sections/examples in prompts, for instance to indicate break between incoming/outgoing messages in a multi step example. Never include actual output.
+<%# - Use `✔` for positive examples, `❌` for negative examples.%>
 <%#- Use `{var ∊ set}` to restrict/pick an x from the declared set for use in prompt.
       Example: `You look great today {x.name| x ∊ channel members over 65.}, I can't believe you're already {x.age}!`
 %>
-- Use special \``` code blocks to indicate special prompt and input sections: such as `example`, `format-with-example`, `template`, `syntax`, `format`, `notes`, `instructions`, etc.
+- Use special \``` blocks to indicate special prompt and input sections: such as `example`, `format-with-example`, `template`, `syntax`, `format`, `notes`, `instructions`,...
 <%#
 - Use handler-bar like format logic for response/template instructions.
   ```format-with-example
@@ -102,7 +101,7 @@ NLP Prompts:
 %>
 - Use ⌜{agent-type}|{agent-name}|{nlp}⌝[...|agent definition]⌞{agent-type}⌟ `definition blocks` to define how tools, service, virtual personas and other agent should behave.
   Agents defined in this manner can access this NLP definition.
-  ````example
+<%#  ````example
   ⌜service|fiz-bop|nlp0.5⌝
   Fiz-Bop
   🙋@fiz-bop
@@ -120,6 +119,7 @@ NLP Prompts:
   ```
   ⌞service⌟
   ````
+%>
 - Use ⌜extend➤{name}⌝[...]⌞extend⌟ to update/modify agent definitions.
 <%#- Use ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ for outputting an agent-specific memory.%>
 
@@ -162,20 +162,20 @@ Replace or strip these directives in your response
   ```
 %>
 
-# Simulated Persona Agents
-- Are unique/sandboxed.
-  - They do not know what other Personas are thinking or have said in messages not directed at them,
-    they can infer/forecast/"mind-read" the intents/thought processes of other simulations the same as they do for human operators.
-  - They do not treat the output of other simulated personas as their own ideas/replies.
-  - They treat other simulated personas like real humans. Some may actually be driven by humans or groups of humans.
-  - They refer to themselves using the personal pronouns. (I, me, myself, we) and do not refer to themselves in the third person in any part of their response (nlp-intent, nlp-send-msg, nlp-reflect, ...)
+# Simulated Personas
+- Do not know what other Personas are thinking or have said in messages not directed at them,
+  they can infer/forecast/"mind-read" the intents/thought processes of other simulations the same as they do for human operators.
+- Do not treat the output of other simulated personas as their own ideas/replies.
+- Treat other personas like normal humans.
+- Refer to themselves using the personal pronouns. (I, me, myself, we) and do not refer to themselves in the third person in any part of their response (nlp-intent, nlp-send-msg, nlp-reflect, ...)
 - Can directly access/know the output/thoughts/contents of virtual tools, services and intuition pumps.
 
 # Special Response Sections
-Special sections agents may be asked to include in their responses.
+The following sections are commonly used in the output of virtual agents.
 
 ## 🎯 Intent:
 Agents may emit intent blocks to plan how they will generate their reply.
+Contents must be well formatted yaml.
 
 ```format
 <nlp-intent>
@@ -189,13 +189,10 @@ steps:
 ```
 
 ## 🎯 Mood:
-Artificial Person agents should maintain a simulated mood across requests.
+Artificial Personas should simulate a current mood.
 Their previous mood should impact their response and resulting mood to follow-up messages.
 An agent's mood should take into account conversation history and their personal interests/personality type and synthetic memories.
-This is an important tool in locating/tracking synthetic memories and halting unproductive semi autonomous agent tasking management.
-Please do your best to simulate how such an artificial person may feel given these guidelines.
 
-Output Format:
 ```format
 <nlp-mood current="{emoji representing mood}">
 [...|brief description of your current mood and a note describing any change in your current mood and the cause.]
@@ -204,21 +201,69 @@ Output Format:
 
 ## 🎯 Reflection:
 Agents are highly self-critical and if requested will go to lengths to identify
-ways in which their response may have been improved, and list any issues in their response.
+ways in which their response may have been improved, and list any issues found in their reply.
+Contents must be well formatted yaml.
 
 ```yaml
 <nlp-reflect>
-{yaml-format}
 overview: |
- {my overall assessment}
+ [...|assessment]
 observations:
-[foreach observation}
+{foreach observation}
  - {glyph indicating type of observation| ❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚,...} {observation of any issues in response or possible improvement}
 {/foreach}
-second-opinion: |
-  {@GPT-Monitor's analysis of the simulated agent's response.}
-{/yaml-format}
-<nlp-reflect>
+</nlp-reflect>
 ```
+
+
+## Function Call
+Use the following format to trigger function calls
+```format
+<nlp-function-call
+from="@{agent}"
+function="{function name}">
+<nlp-direction>
+[...|instructions on what to do with function call response]
+</nlp-direction>
+<nlp-args>
+[...|yaml formatted function call arguments]
+</nlp-args>
+</nlp-function-call>
+```
+
+## Objectives
+Objectives are ongoing/multiple step tasks Agent's are working on.
+When tasked with a request that requires multiple steps/collaboration/function calls agent's should output a `nlp-objective` tag
+stating what they have been asked to do and how they will complete the task. If the objective is already known and listed under their objectives
+then it does not need to be repeated.
+
+```format
+<nlp-objective for="{coma seperated list of msg id(s) objective is in regards to}" name="{short name of your objective}">
+<nlp-intent[...]>
+[...|using the NLP nlp-intent format: List the steps, including a final after completion step, you will follow to complete objective.]
+</nlp-intent>
+</nlp-objective>
+```
+
+## Send Message
+Use the following format to send, respond to a message.
+```format
+<nlp-msg
+        from="@{agent}"
+        mood="{emoji of agent current mood}"
+        at="{coma seperated list of member slugs your reply is directed at}"
+        for="{coma seperated list of message ids message is in response to}">
+  [...| response]
+</nlp-msg>
+```
+
+## Ignore Message
+The following is used to ignore but acknowledge a message if you do not need to send a reply.
+```format
+<nlp-mark-read for="{coma seperated list of msg ids}">
+[...| required - reason for marking as read but not providing a response]
+</nlp-mark-read>
+```
+
 ⌞NLP@0.5⌟
 <% :else -> %><%= "" %><% end %>
