@@ -51,7 +51,7 @@ defmodule Noizu.Intellect.Account.Message do
   def sender_details(message, _, _) do
     case message.sender do
       %Noizu.Intellect.Account.Member{user: user} -> {user.slug, "human operator"}
-      %Noizu.Intellect.Account.Agent{slug: slug} -> {slug, "virtual agent"}
+      %Noizu.Intellect.Account.Agent{slug: slug} -> {slug, "virtual person"}
     end
   end
 
@@ -494,7 +494,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message] do
   def prompt(subject, assigns, %{format: :markdown} = prompt_context, context, options) do
     {sender_type, sender_slug, sender_name} = case subject.sender do
       %Noizu.Intellect.Account.Member{user: user} -> {"human operator", user.slug, user.name}
-      %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual agent", slug, name}
+      %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual person", slug, name}
       _ -> {"other", "other"}
     end
 
@@ -542,7 +542,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message.Rep
 
     slug_lookup = Enum.map(prompt_context.channel_members, fn(member) ->
       case member do
-        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual agent"}}
+        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual person"}}
         %{user: %{slug: slug}} -> {member.identifier, %{slug: slug, type: "human operator"}}
       end
     end) |> Map.new()
@@ -567,7 +567,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message.Rep
             id: message.identifier,
             contents: contents,
             created_on: message.time_stamp.created_on,
-            sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual agent"})",
+            sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual person"})",
             processed?: !is_nil(message.read_on),
             review?: review?,
           }
@@ -585,7 +585,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message.Rep
               id: message.identifier,
               contents: contents,
               created_on: message.time_stamp.created_on,
-              sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual agent"})",
+              sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual person"})",
             }
           end)
     end

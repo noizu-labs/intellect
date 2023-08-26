@@ -762,7 +762,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
       current_time: DateTime.utc_now()
     }
     b = if prompt_context.channel_members do
-      prompt_context = put_in(prompt_context, [Access.key(:format)], :raw)
+      prompt_context = put_in(prompt_context, [Access.key(:format)], :channel_member)
       members = Enum.map(prompt_context.channel_members, fn(member) ->
         with {:ok, member} <- Noizu.Intellect.DynamicPrompt.prompt(member, assigns, prompt_context, context, options) do
           member
@@ -773,18 +773,27 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
       members
     else
       []
-    end
+    end |> Enum.join("\n")
 
+    prompt =
+    """
+    # Chat Room
+    You are currently in the following chat-room-channel
 
+    [Channel]
+    id: #{a.identifier}
+    name: "#{a.name}"
+    description: "#{a.description}"
 
-    prompt = """
-    # Channel
-    Your are currently processing messages in the following channel
-    #{Ymlr.document!(a)}
+    ## Channel Members:
+    #{b}
 
-    ## Channel Members
-    #{Ymlr.document!(b)}
+    ## Chat History
+    Previously Received Messages
 
+    #{assigns[:chat_history] || "[NONE]"}
+
+    [/Channel]
     """
     {:ok, prompt}
 

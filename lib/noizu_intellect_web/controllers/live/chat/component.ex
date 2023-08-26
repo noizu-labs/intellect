@@ -148,11 +148,14 @@ defmodule Noizu.IntellectWeb.Chat.Component do
                   </div>
 
                   <h2>Messages</h2>
-                  <div class="meta-details">
-                    <pre>
-                    <%= Ymlr.document!(@message.meta["messages"]) %>
-                    </pre>
-                  </div>
+                  <%= for msg <- @message.meta["messages"] do %>
+                    <h3><%= msg["role"] %></h3>
+                    <div class="meta-details py-4">
+                      <pre>
+<%= msg["content"] %>
+                      </pre>
+                    </div>
+                  <% end %>
 
                   <h2>Settings</h2>
                   <div class="meta-details">

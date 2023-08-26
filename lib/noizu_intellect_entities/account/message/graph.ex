@@ -25,7 +25,7 @@ defmodule Noizu.Intellect.Account.Message.Graph do
 
     slug_lookup = Enum.map(channel_members, fn(member) ->
       case member do
-        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual agent"}}
+        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual person"}}
         %{user: %{slug: slug}} -> {member.identifier, %{slug: slug, type: "human operator"}}
       end
     end) |> Map.new()
@@ -44,7 +44,7 @@ defmodule Noizu.Intellect.Account.Message.Graph do
 
       %{
         id: message.identifier,
-        sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual agent"})",
+        sender: "#{message.sender.identifier} @#{slug_lookup[message.sender.identifier][:slug] || "???"} (#{slug_lookup[message.sender.identifier][:type] || "virtual person"})",
         contents: contents,
         processed?: !is_nil(message.read_on),
         review?: is_nil(message.answered_by) && message.priority > 60 && is_nil(message.read_on) && true || false,

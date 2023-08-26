@@ -99,9 +99,10 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
     %{
       identifier: subject.identifier,
       type: "human operator",
-      slug: "@" <> subject.user.slug,
+      handle: subject.user.slug,
       name: subject.user.name,
-      background: subject.details && subject.details.body,
+      role: subject.details && subject.details.title,
+      details: subject.details && subject.details.body,
       response_preferences: response_preferences
     }
   end
@@ -118,6 +119,26 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
     {:ok, raw(subject, prompt_context, context, options)}
   end
 
+
+  def prompt(subject, assigns, %{format: :channel_member} = prompt_context, context, options) do
+    options = put_in(options || [], [:verbose], true)
+    r = raw(subject, prompt_context, context, options)
+
+    prompt =
+      """
+      [#{r.name}]
+      id: #{r.identifier}
+      handle: @#{r.handle}
+      name: #{r.name}
+
+      #{r.name} is our biological human.
+      #{r.details}
+
+      **response preferences:**
+      #{r.response_preferences || "N/A"}
+      """
+    {:ok, prompt}
+  end
 
   def prompt(subject, assigns, %{format: :markdown} = _prompt_context, _context, _options) do
 

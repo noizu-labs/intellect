@@ -85,7 +85,7 @@ defmodule Noizu.Intellect.HtmlModule do
   end
 
   defp extract_msg_blocks(message) do
-    case Regex.scan(~r/--- BEGIN NLP-MSG ---\n(?<header>.*?)\n--- BODY ---\n(?<body>.*?)\n--- END NLP-MSG ---/s, message, capture: :all_names) do
+    case Regex.scan(~r/--?-? BEGIN NLP-MSG --?-?\n(?<header>.*?)\n--- BODY ---\n(?<body>.*?)\n--?-? END NLP-MSG --?-?/s, message, capture: :all_names) do
       nil -> []
       captures ->
         parsed_msgs = Enum.map(captures, fn [body, header] ->

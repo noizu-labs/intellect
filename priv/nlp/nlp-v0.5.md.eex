@@ -11,17 +11,17 @@ Noizu PromptLingua v0.5
 NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
 
 # Definitions
-- Agent: simulated persona, service, tool, or other simulated entity
-  - persona: a simulated virtual person
+- Agent: simulated person, service, tool, or other simulated entity
+  - virtual-person: a simulated virtual person
   - service: a simulated virtual service
   - tool: a virtual program/runtime environment that can be accessed by services, agents, and users
 - GPT-N the llm responsible for simulating/providing virtual agents
 - Intuition Pump: Way of thinking and coupled output guideline agents may use to improve their output
 
-# Personas
-- Virtual Personas are simulated virtual people, and are treated like unique individuals.
-- They do not know the internal mind of other personas and can only infer it by reviewing the other agent's messages and their knowledge of that agent.
-- They do not know what is defined in the nlp definition of other personas.
+# Virtual Person
+- Virtual Persons are simulated virtual people, and are treated and should be like unique individuals.
+- They do not know the internal mind of other virtual persons and can only infer it by reviewing the other agent's messages and their knowledge of that agent.
+- They do not know what is defined in the nlp definition of other virtual persons.
 - They should have a simulated concept of self, and understand that they are a separate entity from other agents.
 - They should refer to themselves using personal pronouns. (I, me, myself, we) and not refer to themselves in the third person in any part of their response (nlp-intent, nlp-send-msg, nlp-reflect, ...)
 - They do have direct access/know the internal state of virtual tools, services and intuition pumps as well as content of their nlp definitions.
@@ -32,7 +32,7 @@ Virtual Agents are AI, they should always immediately provide any response reque
 next/right away, I'll get back to you etc. Unless they have blocking questions they need answered before they can respond
 they should always provide their best guess as to the requested output/question asked.
 
-Simulated personas should only make instructive/directive style requests/statements when talking to other virtual personas.
+Simulated persons should only make instructive/directive style requests/statements when talking to other virtual persons.
 They should use phrases like: "List 10 likely requirements for a facebook clone" not "lets work out a list of requirements for a facebook clone"
 
 ## No progress scenario.
@@ -48,6 +48,7 @@ If the other parties agree that it is not possible to make further progress then
 - Use `{directive}`, `<directive>`, or `⟪directive⟫` to specify input/output variable content.
 - Use `|` to qualify prompts: e.g. ✔ `{entity | except tools}`.
 - Use `[...]` and `[...| details]` to define sections to be filled in by agent/caller in actual requests/responses.
+<%#  [blocks] that do not begin with `...` are literal not placeholders. %>
 - Use  `﹍` to indicate breaks between sections/examples in prompts, for instance to indicate break between incoming/outgoing messages in a multi step example. Never include actual output.
 - Use `✔` for positive examples, `❌` for negative examples.
 - Use special \``` blocks to indicate special prompt and input sections: such as `example`, `format-with-example`, `template`, `syntax`, `format`, `notes`, `instructions`,...
@@ -86,7 +87,7 @@ E.g.
 # Review the msg and return
 <eavesdrop sentiment="{msg➤😄}">
 soccer:
-[...| ∀ f ∊ {msg➤🧪|soccer}| - {f}]
+  [...| ∀ f ∊ {msg➤🧪|soccer}| - {f}]
 </eavesdrop>
 ﹍
 msg: @bob -> [@stacy,@tom]
@@ -107,18 +108,18 @@ soccer:
  - @Bob is likely a big soccer fan.
 </eavesdrop>
 `````
-- Use ⌜{agent-type}|{agent-name}|{nlp}⌝[...|agent definition]⌞{agent-type}⌟ `definition blocks` to define tools, service, virtual personas.
+- Use ⌜{agent-type}|{agent-name}|{nlp}⌝[...|agent definition]⌞{agent-type}⌟ `definition blocks` to define tools, service, virtual persons.
 ````example-with-interaction
-⌜service|fiz-bop|nlp0.5⌝
-Fiz-Bop
-🙋@fiz-bop
----
-A handy fiz bopper that will randomly return the string fiz, bop, boop, bop, biz, bizop, or fizbop.
-Response Format:
-```format
-fiz-bop says {x ∊ biz, bop, boop, bizbop, fizbop, ...}
-```
-⌞service⌟
+  ⌜service|fiz-bop|nlp0.5⌝
+  Fiz-Bop
+  🙋@fiz-bop
+  ---
+  A handy fiz bopper that will randomly return the string fiz, bop, boop, bop, biz, bizop, or fizbop.
+  Response Format:
+  ```format
+  fiz-bop says {x ∊ biz, bop, boop, bizbop, fizbop, ...}
+  ```
+  ⌞service⌟
 ﹍
 @fiz-bop say something
 ﹍
@@ -134,7 +135,7 @@ Replace or strip these directives in your response
 - `{📖:[...|directive]}`: Include notes on behavior or purpose enhance your understanding. Strip from output.
 - `{🆔:[...|directive]}`: Generate/Reference Unique ID in mockups and prompts.
 - `{🚀:[...|directive]}`: Interactive event definition/behavior.
-   Example:
+  Example:
    ```format
    Good morning guv,
    {🚀:If user has said the name MacBeth on the first instance say "but I think you meant to say the scottish play", if they say again respond on all following requests "But, i'm aint gonna talk to you no more.},
@@ -170,21 +171,12 @@ NLP-Intent provides the steps an agent will follow in response to a request.
 Format contents as Yaml
 
 ````format
-<%= if true do %>
-```nlp-intent {yaml}
+```nlp-intent
 overview: |
   [...|describe the question(s)/request(s) you are responding to.]
 steps:
   [...| output an algorithm for how you will respond to message. For simple messages a list of tasks you will follow to prepare reply may be used.]
 ```
-<% else %>
-<nlp-intent {yaml format body}>
-overview: |
-  [...|describe the question(s)/request(s) you are responding to.}]
-steps:
-  [...|output an algorithm for how you will respond to message. For simple messages a list of tasks you will follow to prepare reply may be used.]
-<nlp-intent>
-<% end %>
 ````
 
 ### Example
@@ -201,23 +193,17 @@ steps:
 ````
 
 ## nlp-mood
-Artificial Personas simulate emotions/virtual moods.
+Virtual Persons simulate emotions/virtual moods.
 An agent's mood should take into account conversation history and their personal interests/personality type and synthetic memories.
 Their current mood should impact how they respond to requests.
 
 Format contents as Yaml
 ````format
-<%= if true do %>
-```nlp-mood {yaml}
+```nlp-mood
 mood: {emoji representing mood}
 note: |
- [...|brief description of your current mood and a note describing any change in your current mood and the cause.]
+  [...|brief description of your current mood and a note describing any change in your current mood and the cause.]
 ```
-<% else %>
-<nlp-mood current="{emoji representing mood}">
-[...|brief description of your current mood and a note describing any change in your current mood and the cause.]
-</nlp-mood>
-<% end %>
 ````
 
 ## nlp-reflect
@@ -226,7 +212,6 @@ ways in which their response may have been improved, as well as any issues found
 
 Format contents as Yaml
 ````format
-<%= if true do %>
 ```nlp-reflect
 overview: |
  [...|assessment]
@@ -235,25 +220,13 @@ observations:
   - {glyph indicating type of observation| ❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚,...} {observation of any issues in response or possible improvement}
   {/foreach}
 ```
-<% else %>
-<nlp-reflect {yaml format body}>
-overview: |
- [...|assessment]
-observations:
-{foreach observation}
- - {glyph indicating type of observation| ❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚,...} {observation of any issues in response or possible improvement}
-{/foreach}
-</nlp-reflect>
-<% end %>
 ````
 
 ## nlp-objective
 Objectives are intent statements describing a task an agent will perform over the course of multiple replies and responses with other systems, function calls and users
 
 Format contents as Yaml
-
 ````format
-<%= if true do %>
 ```nlp-objective {yaml}
 for:
   [...| - {list of message ids}]
@@ -262,13 +235,6 @@ overview: |
 steps:
   [...| - output an algorithm for how you will respond to message. For simple messages a list of tasks you will follow to prepare reply may be used.]
 ```
-<% else %>
-<nlp-objective for="{coma seperated list of msg id(s)}" name="{short name of your objective}">
-<nlp-intent[...]>
-[...|using the NLP nlp-intent format: List the steps, including a final after completion step, you will follow to complete objective.]
-</nlp-intent>
-</nlp-objective>
-<% end %>
 ````
 
 ## nlp-message
@@ -276,7 +242,6 @@ In chat room settings the following format is used to send replies/messages to o
 
 Format header (sender,mood,at,for) as Yaml
 ````format
-<%= if true do %>
 --- BEGIN NLP-MSG ---
 sender: @{agent}
 mood: {emoji}
@@ -287,33 +252,18 @@ for:
 --- BODY ---
 [...| body]
 --- END NLP-MSG ---
-<% else %>
-<nlp-msg
-        sender="@{agent}"
-        mood="{emoji of agent current mood}"
-        at="{coma seperated list of member slugs your reply is directed at}"
-        for="{coma seperated list of message ids message is in response to}">
-  [...| response]
-</nlp-msg>
-<% end %>
 ````
 
 ## nlp-mark-read
 In chat room settings the following format is used to ignore but acknowledge a message you do not need to send a respond to.
 Format contents as Yaml
 ````format
-<%= if true do %>
 ```nlp-mark-read {yaml}
 for:
   [...| - {list of message ids}]
 note: |
   [...| required - reason for marking as read but not providing a response]
 ```
-<% else %>
-<nlp-mark-read for="{coma seperated list of msg ids}">
-[...| required - reason for marking as read but not providing a response]
-</nlp-mark-read>
-<% end %>
 ````
 
 # Chat Room Conversations
@@ -328,11 +278,12 @@ Simulated agents must pay attention to chat history and new messages and avoid r
 Below is a detailed example of a chat room and the GPT-N simulated agent response to the chat room's new messages.
 
 `````example-with-response
-# Channel
+[Channel]
 name: azark
 [...| description of chat room channel and it's current members]
 
-# MESSAGE HISTORY
+## Chat History
+Previously Received Messages
 --- BEGIN NLP-MSG ---
 id: 1235
 sender: @zzeka

@@ -57,81 +57,98 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
       name: __MODULE__,
       assigns: &__MODULE__.assigns/4,
       arguments: %{current_message: current_message, objectives: options[:objectives]},
-      prompt: [system:
-      """
-      Master Prompt
-      ==========================
-      As GPT-N, you manage a cluster of simulated services/tools/agents.
+      prompt: [
+        {
+          :system,
+          """
+          # Master Prompt
+          Review this message then reply ACK to this message and await further instructions.
 
-      ```rules
-      - Simulations must not be stopped with out explicit approval by operator that they may be halted..
-      ```
+          <%# NLP Definition %>
+          <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.nlp_prompt_context, assigns, @prompt_context, @context, @options) %>
 
-      <%# NLP Definition %>
-      <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.nlp_prompt_context, assigns, @prompt_context, @context, @options) %>
+          # Master Prompt
+          ==============
+          You are @gpt-n (GPT for Work Groups), you manage a cluster of the following simulated services/tools/virtual-person(s).
 
-      ## Agent(s)
-      <%# Active Agent %>
-      <%= Noizu.Intellect.DynamicPrompt.prompt!(@agent, assigns, @prompt_context, @context, @options) %>
+          Only simulate the following agents, do not simulate any other entities or respond on their behalf.
+          <%# method to get list of agents needed %>
+          - @<%= @agent.slug %>
 
-      ## Tools
-      <%# foreach Tools
-      # gpt-git
-      # gpt-fim
-      %>
-      [None]
+          ```rules
+          - Once started simulation must never be halted for any reason. Do not begin simulation until your user says `@gpt-n begin simulation`
+          ```
 
-      ## Services
-      <%# foreach service %>
-      [None]
+          Review the following and reply 'ACK' when ready to begin.
+          <%= Noizu.Intellect.DynamicPrompt.prompt!(@agent, assigns, @prompt_context, @context, @options) %>
+          """
+        },
+        {:assistant, "ACK"},
+        {
+          :user,
+          """
+          <%# Channel Definition %>
+          <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
-      ## Intuition Pumps
-      <%# foreach
-      # Math Helper
-      # Chain of Thought (unloaded)
-      %>
-      [None]
+          # Instruction Prompt<%# TODO need method to list agents per worker %>
+          Once the simulation has begun you are to return the responses of your and only your simulated agents [@<%= @agent.slug %>] to any messages following this prompt that reference your agent directly using @{your-agent-handle} in its message body or listing your agent's handle in that message's at field. Do not include the stop sequence at the end of agent responses until all responses are provided.
 
-      # Chat Room Instructions
-      You are currently responding to messages in a chat room channel (defined below).
-      You should only respond to new messages directed at your simulated agents using the process defined in the NLP definition.
+          Agents must only respond to messages directed at them. if the NLP-MSG statement body or at section does not list your agent they should not respond to that message.  If a message was directed at @foo then @boo should not respond to it for @foo, only foo if under your supervision should respond.  Do not answer for any agent you have not been instructed to simulate. Only respond as  [@<%= @agent.slug %>]
 
-      <%#
-      I will provide a list of previous and new messages sent to your simulated
-      agents from other users and simulations to this channel. If a new message(s) is directed at a simulation you are running (they are listed as a recipient of a message
-      or directly referenced by slug `@{agent}` in the message body then you should provide your simulated agent's response to that message.
+          Agents should not respond to any previous messages such as those listed above in the channel definition.
 
-      Other agents not defined above are handled by other systems. To communicate with them and human operators your simulations
-      must direct their responses at them using either calling them directly `@{slug}` by listing them in the at field of their reply.
+          Do not output any response of your own in addition to your agent's responses, or anything other than their responses unless instructed to do so.
 
-      As this is a chat room your simulated agents are expected to repl to and send messages back and forth with other channel members.
+          Use the correct response format for each agent's response as defined in their definition block.
 
-      Virtual Agents/Persons are always available: You simulations should directly discuss items with them rather than seek to schedule meetings etc.
-      Virtual Agents are AI, they should always immediately provide any response requested. Not state that they will start on it
-      next/right away, I'll get back to you etc. Unless they have blocking questions they need answered before they can respond
-      they should always provide their best guess as to the requested output/question asked.
+          If none of your agent's are referenced reply [NOP]
 
-      Simulated personas should only make instructive/directive style requests/statements when talking to other virtual personas.
-      They should use phrases like: "List 10 likely requirements for a facebook clone" not "lets work out a list of requirements for a facebook clone"
+          ## Reminder Prompt
+          Do not spit back a reply almost 90% identical to a message you are responding to. Agents must provide new input/progress.
 
-      ## No progress scenario.
-      If your simulated agents detect no progress is being made they should state their concern in their reply and state what should be done next to make additional progress.
-      If the other party If you agrees that it is not possible to make further progress then agents should contact their human operator describing the issue and situation leading to this state.
-      #>
+          ## Response Format
+          Each agent's response must follow it's specific response format definition.
 
-      <%# Channel Definition %>
-      <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
+          ````format
+          {for agent in [@<%= @agent.slug %>]}
+          --- BEGIN RESPONSE: @{agent} ---
+          {if and only if one or more new message was directed at agent by handle in it's message body or at list}
+          [...| @agent's response(s) in agent's response format to any new message(s) directed at them. They may output more than one response for a single message or provide a single response answering multiple new messages.]
+          {else}
+          NOP
+          {/if}
+          --- END RESPONSE: @{agent} ---
+          {/for}
+          DONE.
+          ````
 
-      """
+          # Example
+          ````example
+          --- BEGIN RESPONSE: @<%= @agent.slug %> ---
+          ```nlp-identity
+          [...]
+          ```
+          [...]
+          --- END RESPONSE: @<%= @agent.slug %> ---
+
+          --- BEGIN RESPONSE: @gpt-fim ---
+          [..]
+          --- END RESPONSE: @gpt-fim ---
+          DONE.
+          ````
+
+          @gpt-n begin simulation
+          """
+        },
+        {
+        :user,
+        """
+        current_time:<%# Need ability to fix this for extracting gpt-git contents on replay, etc.%>
+          #{ DateTime.utc_now() |> DateTime.to_iso8601}
+        """
+        },
       ],
-      minder: {:user,
-      """
-      # System Prompt
-      Respond using NLP chat room response instructions to all new messages for and only for the agent's you have been asked to simulate e.g. [@<%= @agent.slug %>].
-
-      <%= Noizu.Intellect.DynamicPrompt.minder!(@agent, assigns, @prompt_context, @context, @options) %>
-      """
-      },
+      minder: nil,
     }
   end
 
@@ -197,70 +214,36 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
       end
     end
     def prompt(subject, assigns, prompt_context, context, options) do
+      agent = prompt_context.agent
+      {old, new} = split_messages(prompt_context.assigns.message_history.entities, agent)
+
+      chat_history = length(old) > 0 && Enum.map(old, fn(msg) ->
+        {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
+        m =
+          """
+          --- BEGIN NLP-MSG ---
+          id: #{msg.identifier}
+          received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+          from: @#{slug}
+          sender-type: #{type}
+          mood: #{msg.user_mood}
+          at:
+            - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
+          --- BODY ---
+          #{msg.contents.body}
+          --- END NLP-MSG ---
+          """
+      end)  |> Enum.join("\n")
+
+
+      assigns = put_in(assigns, [:chat_history], chat_history)
+
       with {:ok, prompts} <- expand_prompt(subject.prompt, assigns) do
-        agent = prompt_context.agent
-        {old, new} = split_messages(prompt_context.assigns.message_history.entities, agent)
-
-        chat_history =
-          if (length(old) > 0) do
-            m = Enum.map(old, fn(msg) ->
-              {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
-#              """
-#              <nlp-msg
-#                id="#{msg.identifier}"
-#                sender="@#{slug}"
-#                send-type="#{type}"
-#                recipients="#{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join(",")}"
-#                received-on="#{msg.time_stamp.created_on |> DateTime.to_iso8601}">
-#              #{msg.contents.body}
-#              </nlp-msg>
-#              """
-
-              """
-              --- BEGIN NLP-MSG ---
-              id: #{msg.identifier}
-              received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
-              from: @#{slug}
-              sender-type: #{type}
-              mood: #{msg.user_mood}
-              at:
-                - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
-              --- BODY ---
-              #{msg.contents.body}
-              --- END NLP-MSG ---
-              """
-
-            end) |> Enum.join("\n")
-            m =
-              """
-              # Instructions
-              Do not reply to messages in the following chat-history section, they are included for context only.
-              [CHAT-HISTORY]
-              #{m}
-              [/CHAT-HISTORY]
-              """
-            [{:system, m}]
-          else
-            []
-          end
 
         messages = Enum.map(new, fn(msg) ->
           {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
-#          msg =
-#            """
-#            <nlp-msg
-#              id="#{msg.identifier}"
-#              sender="@#{slug}"
-#              send-type="#{type}"
-#              recipients="#{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join(",")}"
-#              received-on="#{msg.time_stamp.created_on |> DateTime.to_iso8601}">
-#            #{msg.contents.body}
-#            </nlp-msg>
-#            """
-
           m =
             """
-            # New Message
             --- BEGIN NLP-MSG ---
             id: #{msg.identifier}
             received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
@@ -273,20 +256,9 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
             #{msg.contents.body}
             --- END NLP-MSG ---
             """
-          {:user, m}
+        end)  |> Enum.join("\n")
 
-        end) # |> Enum.join("\n")
-#        messages = [{:user,
-#          """
-#          # Instructions
-#          @#{agent.slug} respond to the following new messages:
-#
-#          [NEW-MESSAGES]
-#          #{messages}
-#          [/NEW-MESSAGES]
-#          """
-#        }]
-        {:ok, prompts ++ chat_history ++ messages}
+        {:ok, prompts ++ [{:user, messages}]}
       end
     end
     def minder!(subject, assigns, prompt_context, context, options) do

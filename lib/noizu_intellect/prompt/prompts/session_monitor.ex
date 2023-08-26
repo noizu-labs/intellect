@@ -221,11 +221,11 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
         | human operator    | t                        | *                        | t                | *                        | 70                    | Indirect mention by Human Operator |
         | human operator    | *                        | t                        | t                | *                        | 60                    | Name indirect mention by Human Operator |
         | human operator    | *                        | *                        | *                | t                        | 50                    | Message pertains to agent domain |
-        | virtual agent     | t                        | *                        | f                | *                        | 50                    | Direct mention by Virtual Agent |
-        | virtual agent     | *                        | t                        | f                | *                        | 50                    | Name mention by Virtual Agent   |
-        | virtual agent     | t                        | *                        | t                | *                        | 40                    | Indirect mention by Virtual Agent |
-        | virtual agent     | *                        | t                        | t                | *                        | 30                    | Name indirect mention by Virtual Agent |
-        | virtual agent     | *                        | *                        | *                | t                        | 20                    | Message pertains to agent domain |
+        | virtual person     | t                        | *                        | f                | *                        | 50                    | Direct mention by virtual person |
+        | virtual person     | *                        | t                        | f                | *                        | 50                    | Name mention by virtual person   |
+        | virtual person     | t                        | *                        | t                | *                        | 40                    | Indirect mention by virtual person |
+        | virtual person     | *                        | t                        | t                | *                        | 30                    | Name indirect mention by virtual person |
+        | virtual person     | *                        | *                        | *                | t                        | 20                    | Message pertains to agent domain |
         | *                 | *                        | *                        | *                | *                        | 0                     | Not relevant to agent. |
         <% end %>
 
