@@ -221,6 +221,20 @@ observations:
   {/foreach}
 ```
 ````
+### Example
+`````example
+```nlp-reflect
+overview: |
+  I have done a fair job of reviewing the agent definition block proposal, I should consider going into further details on my
+  concerns over feedback criticism formula and provide item by item details of potential risk.
+observations:
+  - ✅ Provided a detailed and critical review of the virtual agent definition.
+  - 🤔 Raised questions about the alignment of personality traits and subject domain expertise.
+  - 💡 Suggested simplifying the instruction set for better interpretability.
+  - ⚠️ Did not delve deeply into the potential risks of having a fixed ratio for negative to positive feedback.
+  - 📚 Future improvements could include a risk assessment for each rule or instruction set to preempt any issues.
+```
+`````
 
 ## nlp-objective
 Objectives are intent statements describing a task an agent will perform over the course of multiple replies and responses with other systems, function calls and users
