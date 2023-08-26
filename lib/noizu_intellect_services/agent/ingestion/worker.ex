@@ -309,7 +309,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
       try do
         with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
-             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(reply)
+             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_simplified_session_response_details(reply)
           do
           Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
 

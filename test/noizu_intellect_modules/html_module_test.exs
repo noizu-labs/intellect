@@ -3,8 +3,98 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   @moduletag lib: :noizu_intellect_module
   import Noizu.Intellect.HtmlModule
 
+
+  def yaml_session_response_message(:objective) do
+    """
+    [@grace]
+    ```nlp-identity
+    I am Grace, a virtual person with expertise in Elixir/Phoenix/LiveView and machine learning. I am an INTP personality type.
+    ```
+
+    ```nlp-mood
+    mood: 😊
+    note: |
+      I'm feeling positive and ready to work on the requirements for a Twitter clone with Mindy.
+    ```
+
+    ```nlp-objective
+    name: "Twitter: Clone Requirements"
+    for:
+      - 1028
+    overview: |
+      Gather all the requirements for a Twitter clone in collaboration with Mindy. Once complete, send a message to Keith Brings with the full results.
+    steps:
+      - Discuss and brainstorm potential features and functionalities of the Twitter clone.
+      - Identify user roles and their respective permissions.
+      - Determine data storage and management requirements.
+      - Define security measures and authentication methods.
+      - Document any additional specifications or constraints.
+      - Provide final report to Keith Brings
+    ```
+
+    ```nlp-intent
+    overview: |
+      Inform Keith Brings that I have received his request and begun the task, and provide instructions to Mindy.
+    steps:
+      - Send confirmation to Keith Brings
+      - Send initial instructions to Mindy
+      - List initial feature ideas to get us started.
+    ```
+
+    --- BEGIN NLP-MSG ---
+    sender: @grace
+    mood: 😊
+    at:
+      - @keith-brings
+    for:
+      - 1028
+    --- BODY ---
+    Understood Keith Brings. I will contact Mindy and prepare a list of requirements for the Twitter clone.
+    --- END NLP-MSG ---
+
+    --- BEGIN NLP-MSG ---
+    sender: @grace
+    mood: 😊
+    at:
+      - @mindy
+    for:
+      - 1028
+    --- BODY ---
+    @Mindy, Keith Brings has requested that we gather all the requirements for a Twitter clone without his input.
+    For this task we will:
+    - Discuss and brainstorm potential features and functionalities of the Twitter clone.
+    - Identify user roles and their respective permissions.
+    - Determine data storage and management requirements.
+    - Define security measures and authentication methods.
+    - Document any additional specifications or constraints.
+    - Provide final report to Keith Brings
+
+    To start, let's brainstorm potential features/functionalities of a Twitter clone.
+
+    Some initial features:
+    - User registration and login
+    - Posting tweets
+    - Following other users
+    - Retweeting
+    - Hashtags and trending topics
+
+    What additional features should we consider?
+    --- END NLP-MSG ---
+
+    ```nlp-reflect
+    overview: |
+      I have responded to Keith Brings' request and provided initial instructions to Mindy for the Twitter clone requirements. I have also listed some initial feature ideas to get us started.
+    observations:
+      - ✅ Responded to Keith Brings' request and confirmed understanding.
+      - ✅ Provided initial instructions to Mindy for the Twitter clone requirements.
+      - ✅ Listed initial feature ideas to get us started.
+    ```
+    """
+  end
+
   def session_response_message(scenario \\ :default)
   def session_response_message(:default), do: session_response_message(:basic)
+
   def session_response_message(:objective) do
     """
     **Objective**: Gather requirements for a Twitter clone with Mindy
@@ -229,6 +319,23 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
 
   describe "Handle Session Channel Response" do
     @tag :wip
+    test "with objective (yaml)" do
+      {:ok, sut} = Noizu.Intellect.HtmlModule.extract_simplified_session_response_details(yaml_session_response_message(:objective))
+      assert [reply: reply_one, reply: reply_two] = sut[:reply]
+      assert reply_one[:mood] == "😊"
+      assert reply_one[:at] == ["@keith-brings"]
+      assert reply_one[:response] =~ "Understood Keith Brings."
+      assert reply_two[:at] == ["@mindy"]
+      assert reply_two[:response] =~ "gather all the requirements for a Twitter clone"
+      [{:objective, objective}] = sut[:objective]
+      assert objective[:for] == [1028]
+      assert objective[:name] == "Twitter: Clone Requirements"
+      [step1,step2,step3|_] = objective[:steps]
+      assert step1 =~ "Discuss and brainstorm potential"
+      assert step2 =~ "Identify user roles"
+      assert step3 =~ "Determine data storage"
+    end
+
     test "with objective" do
       {:ok, sut} = Noizu.Intellect.HtmlModule.extract_session_response_details(session_response_message(:objective))
       assert [reply: reply_one, reply: reply_two] = sut[:reply]

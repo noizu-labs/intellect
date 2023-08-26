@@ -58,15 +58,26 @@ defmodule Noizu.Intellect.Account.Message do
   def audience_list(message, context, options \\ nil) do
     (message.audience || [])
     |> Enum.filter(fn({k,v}) -> v.confidence >= 0 end)
-    |> Enum.map(fn({k,_}) -> "@#{k}"  end)
+    |> Enum.map(fn({_,v}) -> "@#{v.slug}"  end)
   end
 
-  def unpack_audience_list(as_name, record, _context, _field_options) do
+  def unpack_audience_list(as_name, record, context, _field_options) do
     with %{array_agg: entries} <- get_in(record, [Access.key(:__loader__), Access.key(as_name)]),
          true <- is_list(entries) do
       entries = Enum.map(entries, fn({subject, confidence, comment}) ->
-        {subject, %{confidence: confidence, comment: comment}}
-      end) |> Map.new()
+        case rem(subject, 100) do
+          16 -> Noizu.Intellect.Account.Member.entity(subject, context)
+          19 -> Noizu.Intellect.Account.Agent.entity(subject, context)
+          _ -> nil
+        end
+        |> case do
+             {:ok, %{slug: slug}} -> {subject, %{slug: slug, confidence: confidence, comment: comment}}
+             {:ok, %{user: %{slug: slug}}} -> {subject, %{slug: slug, confidence: confidence, comment: comment}}
+             _ -> nil
+        end
+      end)
+                |> Enum.reject(&is_nil/1)
+                |> Map.new()
       {:ok, entries}
     else
       _ -> {:error, {:loading, :audience_list}}
@@ -153,7 +164,16 @@ defmodule Noizu.Intellect.Account.Message do
                on: msg.identifier == aud_list.message,
                where: msg.identifier == ^identifier,
                limit: 1,
-               select: %{msg| __loader__: %{contents: content, brief: brief, responding_to_list: resp, audience_list: aud_list, audience: aud, read_status: read_status}}
+               select: %{msg|
+                 __loader__: %{
+                   contents: content,
+                   brief: brief,
+                   responding_to_list: resp,
+                   audience_list: aud_list,
+                   audience: aud,
+                   read_status: read_status
+                 }
+               }
 
       case apply(store, :one, [q]) |> IO.inspect("MESSAGE LOADER") do
         record = %Noizu.Intellect.Schema.Account.Message{} -> from_record(record, settings, context, options)

@@ -80,6 +80,90 @@ defmodule Noizu.Intellect.HtmlModule do
     |> List.flatten()
   end
 
+  defp extract_block(message, block) do
+    Regex.scan(~r/(^|\n)(```+)#{block}[ \t]*\n(?<body>.*?)\n\2[ \t]*(\n|$)/s, message, capture: ["body"]) || []
+  end
+
+  defp extract_msg_blocks(message) do
+    case Regex.scan(~r/--- BEGIN NLP-MSG ---\n(?<header>.*?)\n--- BODY ---\n(?<body>.*?)\n--- END NLP-MSG ---/s, message, capture: :all_names) do
+      nil -> []
+      captures ->
+        parsed_msgs = Enum.map(captures, fn [body, header] ->
+          with {:ok, [y]} <- YamlElixir.read_all_from_string(header) do
+            {:reply, [sender: y["sender"], for: y["for"], mood: y["mood"], at: y["at"], response: body |> String.trim()]}
+          end
+        end) |> Enum.reject(&is_nil/1)
+    end
+  end
+
+  def extract_simplified_session_response_details(response) do
+    IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
+    identity = Enum.map(extract_block(response, "nlp-identity"),
+                 fn
+                   ([""]) -> nil
+                   ([nil]) -> nil
+                   ([m]) ->
+                   {:identity, m}
+                 end
+               )  |> Enum.reject(&is_nil/1)
+    intent = Enum.map(extract_block(response, "nlp-intent"),
+      fn([m]) ->
+        with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
+          {:intent, [overview: y["overview"], steps: y["observation"]]}
+        end
+      end
+    )  |> Enum.reject(&is_nil/1)
+    mood = Enum.map(extract_block(response, "nlp-mood"),
+               fn
+                 ([""]) -> nil
+                 ([nil]) -> nil
+                 ([m]) ->
+                 with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
+                   {:mood, [mood: y["mood"], note: y["note"]]}
+                 end
+               end
+             )  |> Enum.reject(&is_nil/1)
+    objective = Enum.map(extract_block(response, "nlp-objective"),
+             fn
+               ([""]) -> nil
+               ([nil]) -> nil
+               ([m]) ->
+               with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
+                 {:objective, [name: y["name"], for: y["for"], overview: y["overview"], steps: y["steps"] ]}
+               end
+             end
+           )  |> Enum.reject(&is_nil/1)
+
+    reflect = Enum.map(extract_block(response, "nlp-reflect"),
+               fn
+                 ([""]) -> nil
+                 ([nil]) -> nil
+                 ([m]) ->
+                 with {:ok, [y]} <- YamlElixir.read_all_from_string(m) |> IO.inspect do
+                   {:intent, [overview: y["overview"], observations: y["observations"]]}
+                 end
+               end
+             )  |> Enum.reject(&is_nil/1)
+    ack = Enum.map(extract_block(response, "nlp-mark-read"),
+                fn
+                  ([""]) -> nil
+                  ([nil]) -> nil
+                  ([m]) ->
+                  with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
+                    {:ack, [for: y["for"], note: y["note"]]}
+                  end
+                end
+              )  |> Enum.reject(&is_nil/1)
+    replies = extract_msg_blocks(response)
+    response = (identity ++ intent ++ mood ++objective ++ reflect ++ ack ++ replies)
+               |> Enum.group_by(&elem(&1, 0))
+    if nlp_agent_response_valid?(response) do
+      {:ok, response}
+    else
+      {:error, {:invalid, response}}
+    end
+  end
+
   def extract_session_response_details(response) do
     IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
     {_, xml_tree} = Floki.parse_document(response)

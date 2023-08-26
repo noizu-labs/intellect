@@ -58,10 +58,11 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
 
         """,
       ],
-      minder: [system:
+      minder: [user:
         """
         # Output Format
         Provide your final response in the following format, ensure the contents inside monitor-response are properly formatted yaml, do not convert message-analysis, chat-history, message_details etc into xml tags.
+        Do not output [...] placeholders list all items.
 
         <monitor-response>
         message_details:
