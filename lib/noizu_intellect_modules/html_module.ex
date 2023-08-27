@@ -90,7 +90,7 @@ defmodule Noizu.Intellect.HtmlModule do
       captures ->
         parsed_msgs = Enum.map(captures, fn [body, header] ->
           with {:ok, [y]} <- YamlElixir.read_all_from_string(header) do
-            {:reply, [sender: y["sender"], for: y["for"], mood: y["mood"], at: y["at"], response: body |> String.trim()]}
+            {:reply, [sender: y["sender"], for: (y["for"] || []) |> Enum.filter(&is_integer/1), mood: y["mood"], at: y["at"], response: body |> String.trim()]}
           end
         end) |> Enum.reject(&is_nil/1)
     end
@@ -129,7 +129,7 @@ defmodule Noizu.Intellect.HtmlModule do
                ([nil]) -> nil
                ([m]) ->
                with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
-                 {:objective, [name: y["name"], for: y["for"], overview: y["overview"], steps: y["steps"] ]}
+                 {:objective, [name: y["name"], for: (y["for"] || []) |> Enum.filter(&is_integer/1), overview: y["overview"], steps: y["steps"] ]}
                end
              end
            )  |> Enum.reject(&is_nil/1)
@@ -150,7 +150,7 @@ defmodule Noizu.Intellect.HtmlModule do
                   ([nil]) -> nil
                   ([m]) ->
                   with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
-                    {:ack, [for: y["for"], note: y["note"]]}
+                    {:ack, [for: (y["for"] || []) |> Enum.filter(&is_integer/1), note: y["note"]]}
                   end
                 end
               )  |> Enum.reject(&is_nil/1)

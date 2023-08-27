@@ -132,7 +132,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           --- END RESPONSE: @<%= @agent.slug %> ---
 
           --- BEGIN RESPONSE: @gpt-fim ---
-          [..]
+          [...]
           --- END RESPONSE: @gpt-fim ---
           DONE.
           ````
