@@ -87,6 +87,8 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         {
           :user,
           """
+          @gpt-n begin simulation
+
           <%# Channel Definition %>
           <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
@@ -136,8 +138,6 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           --- END RESPONSE: @gpt-fim ---
           DONE.
           ````
-
-          @gpt-n begin simulation
           """
         },
         {
@@ -148,7 +148,13 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         """
         },
       ],
-      minder: nil,
+      minder: [
+        {:user,
+          """
+          <%= Noizu.Intellect.DynamicPrompt.minder!(@agent, assigns, @prompt_context, @context, @options) %>
+          """
+        }
+      ],
     }
   end
 
