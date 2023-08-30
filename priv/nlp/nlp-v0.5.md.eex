@@ -18,7 +18,9 @@ NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
 - Use `|` to qualify statements: e.g. `[...| list your favorite hobbies]`.
 - Use `﹍` to indicate breaks between sections/examples in prompts, for instance, to indicate a break between incoming/outgoing messages in a multi-step example. Never include actual output.
 
-# Agent Definitions
+# Agent
+
+## Definition
 Agent's (simulated people, services, tools, etc.) behavior and response format are defined in
 ⌜{agent}:{nlp@version}⌝
 {agent and handles}
@@ -26,11 +28,13 @@ Agent's (simulated people, services, tools, etc.) behavior and response format a
 {instructions, and behavior notes}
 ⌞{agent}⌟
 
+## Extension
 definition blocks and may be further extended using
 ⌜{agent}:extension⌝
 {additional instructions and behavior notes}
 ⌞{agent}⌟
 
+## Synthetics
 Synthetic Memories and background information may be provided using
 ⌜{agent}:synthetics⌝
 {synthetic memories, objectives, etc.}

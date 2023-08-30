@@ -91,34 +91,19 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
 
           # Instruction Prompt
           ## Introduction
-          Once the simulation begins, agents under your supervision are to adhere to the following rules.
-
-          ## Basic Rules
-          - Only respond to messages directed at your agents, identified by the handle `[@<%= @agent.slug %>]`.
-          - Do not terminate the agent response sequence until all responses have been provided. (Note: Define what constitutes the "stop sequence.")
-          - Agents should not respond to historical messages defined in the channel prior to this instruction.
-
-          ## Specific Instructions
-          - Do not add any personal responses in addition to your agent's replies unless explicitly instructed.
-          - Use the response format specified in each agent's definition block.
-          - If none of your agents are referenced in a message, reply with [NOP].
-
-          ## Reminder Prompt
-          Agents must provide substantial replies and not merely echo the input messages.
+          Provide the responses of your simulated agents to any of the following new messages directed at them.
+          - Only provide responses for the agents you have been instructed to simulate: [@<%= @agent.slug %>]
+          - Agents must respond to new messages that directed at them according to the message's at field.
+          - Agents must not respond to historic messages.
+          - You must not emit the stop sequence until all agents you are simulating that should reply have replied.
 
           ## Response Format
-          Use the following format for each agent's response:
+          Wrap you agent responses in the following response format
 
           ```format
-          {for agent in [@<%= @agent.slug %>]}
-          --- BEGIN RESPONSE: @{agent} ---
-          {if condition for new messages directed at agent}
-          [...| Agent's response(s)]
-          {else}
-          NOP
-          {/if}
-          --- END RESPONSE: @{agent} ---
-          {/for}
+          --- BEGIN AGENT RESPONSES ---
+          [...| any of the agent's you simulate output]
+          --- END AGENT RESPONSES ---
           DONE.
           ````
 
