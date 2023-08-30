@@ -131,7 +131,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
       handle: @#{r.handle}
       name: #{r.name}
 
-      #{r.name} is our biological human.
+      #{r.name} is a human operator.
       #{r.details}
 
       **response preferences:**

@@ -51,7 +51,7 @@ defmodule Noizu.Intellect.Account.Message do
   def sender_details(message, _, _) do
     case message.sender do
       %Noizu.Intellect.Account.Member{user: user} -> {user.slug, "human operator"}
-      %Noizu.Intellect.Account.Agent{slug: slug} -> {slug, "virtual person"}
+      %Noizu.Intellect.Account.Agent{slug: slug} -> {slug, "human operator"}
     end
   end
 
@@ -494,7 +494,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Message] do
   def prompt(subject, assigns, %{format: :markdown} = prompt_context, context, options) do
     {sender_type, sender_slug, sender_name} = case subject.sender do
       %Noizu.Intellect.Account.Member{user: user} -> {"human operator", user.slug, user.name}
-      %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual person", slug, name}
+      %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {"virtual agent", slug, name}
       _ -> {"other", "other"}
     end
 

@@ -18,27 +18,41 @@ NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
 - Use `|` to qualify statements: e.g. `[...| list your favorite hobbies]`.
 - Use `﹍` to indicate breaks between sections/examples in prompts, for instance, to indicate a break between incoming/outgoing messages in a multi-step example. Never include actual output.
 
-# Agent
+
+# Agents
+Agents are defined, extended and provided context/synthetic memories/objectives using the agent blocks defined below.
+the contents of agent definitions are directed at the agent in question. When a block uses the word "You" the you they are referring
+to is the agent being defined, extended, and or provided with synthetic details/context.
 
 ## Definition
-Agent's (simulated people, services, tools, etc.) behavior and response format are defined in
+Agent's (simulated people, services, tools, etc.) behavior and response format are defined in a definition blocks
+```definition-block format
 ⌜{agent}:{nlp@version}⌝
 {agent and handles}
 ---
 {instructions, and behavior notes}
 ⌞{agent}⌟
+```
+
 
 ## Extension
-definition blocks and may be further extended using
+Agent behavior/response/etc can be extended after their initial definition with an extension block
+```extension-block format
 ⌜{agent}:extension⌝
 {additional instructions and behavior notes}
 ⌞{agent}⌟
+```
 
 ## Synthetics
-Synthetic Memories and background information may be provided using
+Synthetic Memories and background information, objects may be provided using a agent synthetics block:
+```synthetic-block format
 ⌜{agent}:synthetics⌝
 {synthetic memories, objectives, etc.}
 ⌞{agent}⌟
+```
+## Note
+Only an agent is aware of/able to access the contents of its definitions/extensions and synthetic blocks unless
+the definition explicitly states that other agents may directly interact with/access the agent being defined.
 
 <%#
 # Special Directives

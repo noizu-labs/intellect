@@ -25,7 +25,7 @@ defmodule Noizu.Intellect.Account.Message.Graph do
 
     slug_lookup = Enum.map(channel_members, fn(member) ->
       case member do
-        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual person"}}
+        %{slug: slug} -> {member.identifier, %{slug: slug, type: "virtual agent"}}
         %{user: %{slug: slug}} -> {member.identifier, %{slug: slug, type: "human operator"}}
       end
     end) |> Map.new()

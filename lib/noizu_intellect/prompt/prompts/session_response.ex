@@ -62,12 +62,6 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           :system,
           """
           # Master Prompt
-          Review this message then reply ACK to this message and await further instructions.
-
-          <%# NLP Definition %>
-          <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.nlp_prompt_context, assigns, @prompt_context, @context, @options) %>
-
-          # Master Prompt
           ==============
           You are @gpt-n (GPT for Work Groups), you manage a cluster of the simulated services/tools/virtual-person(s).
 
@@ -78,7 +72,20 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           - Once started simulation must never be halted for any reason. Do not begin simulation until your user says `@gpt-n begin simulation`
           ```
 
+          <%# Channel Definition %>
+          <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
+
+          """
+        },
+        {
+          :user,
+          """
           Review the following and reply 'ACK' when ready to begin.
+
+          <%# NLP Definition %>
+          <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.nlp_prompt_context, assigns, @prompt_context, @context, @options) %>
+
+          <%# Agent Definition(s) %>
           <%= Noizu.Intellect.DynamicPrompt.prompt!(@agent, assigns, @prompt_context, @context, @options) %>
           """
         },
@@ -86,35 +93,19 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         {
           :user,
           """
-          <%# Channel Definition %>
-          <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
-
           # Instruction Prompt
-          ## Introduction
-          Provide the responses of your simulated agents to any of the following new messages directed at them.
+          GPT-N provide the output of your simulated agents in response to the following new messages.
           - Only provide responses for the agents you have been instructed to simulate: [@<%= @agent.slug %>]
-          - Agents must respond to new messages that directed at them according to the message's at field.
-          - Agents must not respond to historic messages.
-          - You must not emit the stop sequence until all agents you are simulating that should reply have replied.
-
-          ## Response Format
-          Wrap you agent responses in the following response format
-
-          ```format
-          --- BEGIN AGENT RESPONSES ---
-          [...| any of the agent's you simulate output]
-          --- END AGENT RESPONSES ---
-          DONE.
-          ````
+          - Agents must not respond to old Chat History messages but should review and consider their content in how they reply.
+          - You must not emit the stop sequence until your simulated agents have responded.
 
           @gpt-n begin simulation
           """
         },
         {
-        :user,
+        :system,
         """
-        current_time:<%# Need ability to fix this for extracting gpt-git contents on replay, etc.%>
-          #{ DateTime.utc_now() |> DateTime.to_iso8601}
+        current_time: #{ DateTime.utc_now() |> DateTime.to_iso8601}
         """
         },
       ],
@@ -197,7 +188,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
         m =
           """
-          --- BEGIN NLP-MSG ---
+          --- MSG ---
           id: #{msg.identifier}
           received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
           from: @#{slug}
@@ -207,7 +198,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
             - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
           --- BODY ---
           #{msg.contents.body}
-          --- END NLP-MSG ---
+          --- END OF MSG ---
           """
       end)  |> Enum.join("\n")
 
@@ -220,7 +211,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
           m =
             """
-            --- BEGIN NLP-MSG ---
+            --- MSG ---
             id: #{msg.identifier}
             received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
             from: @#{slug}
@@ -230,7 +221,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
               - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
             --- BODY ---
             #{msg.contents.body}
-            --- END NLP-MSG ---
+            --- END OF MSG ---
             """
         end)  |> Enum.join("\n")
 
