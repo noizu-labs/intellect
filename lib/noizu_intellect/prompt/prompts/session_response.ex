@@ -69,10 +69,9 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
 
           # Master Prompt
           ==============
-          You are @gpt-n (GPT for Work Groups), you manage a cluster of the following simulated services/tools/virtual-person(s).
+          You are @gpt-n (GPT for Work Groups), you manage a cluster of the simulated services/tools/virtual-person(s).
 
           Only simulate the following agents, do not simulate any other entities or respond on their behalf.
-          <%# method to get list of agents needed %>
           - @<%= @agent.slug %>
 
           ```rules
@@ -87,35 +86,34 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         {
           :user,
           """
-          @gpt-n begin simulation
-
           <%# Channel Definition %>
           <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
-          # Instruction Prompt<%# TODO need method to list agents per worker %>
-          Once the simulation has begun you are to return the responses of your and only your simulated agents [@<%= @agent.slug %>] to any messages following this prompt that reference your agent directly using @{your-agent-handle} in its message body or listing your agent's handle in that message's at field. Do not include the stop sequence at the end of agent responses until all responses are provided.
+          # Instruction Prompt
+          ## Introduction
+          Once the simulation begins, agents under your supervision are to adhere to the following rules.
 
-          Agents must only respond to messages directed at them. if the NLP-MSG statement body or at section does not list your agent they should not respond to that message.  If a message was directed at @foo then @boo should not respond to it for @foo, only foo if under your supervision should respond.  Do not answer for any agent you have not been instructed to simulate. Only respond as  [@<%= @agent.slug %>]
+          ## Basic Rules
+          - Only respond to messages directed at your agents, identified by the handle `[@<%= @agent.slug %>]`.
+          - Do not terminate the agent response sequence until all responses have been provided. (Note: Define what constitutes the "stop sequence.")
+          - Agents should not respond to historical messages defined in the channel prior to this instruction.
 
-          Agents should not respond to any previous messages such as those listed above in the channel definition.
-
-          Do not output any response of your own in addition to your agent's responses, or anything other than their responses unless instructed to do so.
-
-          Use the correct response format for each agent's response as defined in their definition block.
-
-          If none of your agent's are referenced reply [NOP]
+          ## Specific Instructions
+          - Do not add any personal responses in addition to your agent's replies unless explicitly instructed.
+          - Use the response format specified in each agent's definition block.
+          - If none of your agents are referenced in a message, reply with [NOP].
 
           ## Reminder Prompt
-          Do not spit back a reply almost 90% identical to a message you are responding to. Agents must provide new input/progress.
+          Agents must provide substantial replies and not merely echo the input messages.
 
           ## Response Format
-          Each agent's response must follow it's specific response format definition.
+          Use the following format for each agent's response:
 
-          ````format
+          ```format
           {for agent in [@<%= @agent.slug %>]}
           --- BEGIN RESPONSE: @{agent} ---
-          {if and only if one or more new message was directed at agent by handle in it's message body or at list}
-          [...| @agent's response(s) in agent's response format to any new message(s) directed at them. They may output more than one response for a single message or provide a single response answering multiple new messages.]
+          {if condition for new messages directed at agent}
+          [...| Agent's response(s)]
           {else}
           NOP
           {/if}
@@ -124,20 +122,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           DONE.
           ````
 
-          # Example
-          ````example
-          --- BEGIN RESPONSE: @<%= @agent.slug %> ---
-          ```nlp-identity
-          [...]
-          ```
-          [...]
-          --- END RESPONSE: @<%= @agent.slug %> ---
-
-          --- BEGIN RESPONSE: @gpt-fim ---
-          [...]
-          --- END RESPONSE: @gpt-fim ---
-          DONE.
-          ````
+          @gpt-n begin simulation
           """
         },
         {

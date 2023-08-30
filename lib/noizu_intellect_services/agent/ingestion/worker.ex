@@ -30,7 +30,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     self = self()
     spawn(fn ->
       Process.sleep(100)
-      Noizu.Intellect.Service.Agent.Ingestion.fetch(identifier, :state, context, nil) |> IO.inspect(label: "LAZY LOAD")
+      Noizu.Intellect.Service.Agent.Ingestion.fetch(identifier, :state, context, nil)
     end)
     %__MODULE__{
       identifier: identifier,
@@ -81,11 +81,13 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #---------------------
   #
   #---------------------
-  def queue_heart_beat(state, context, options \\ nil, fuse \\ 5_000) do
+  def queue_heart_beat(state, context, options \\ nil, fuse \\ 10_000) do
     # Start HeartBeat
     _identifier = {self(), :os.system_time(:millisecond)}
     _settings = apply(__pool__(), :__cast_settings__, [])
     _timeout = 15_000
+    fuse = div(fuse, 2)
+    fuse = fuse + :rand.uniform(fuse) + :rand.uniform(fuse)
 
     msg = M.s(call: M.call(handler: :heart_beat), context: context, options: options)
     timer = Process.send_after(self(), msg, fuse)
@@ -509,6 +511,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   #
   #---------------------
   def heart_beat(state, context, options) do
+    IO.puts "Heart Beat #{inspect state.identifier}"
     state = queue_heart_beat(state, context, options)
     with {:ok, state} <- process_message_queue(state, context, options) do
       {:noreply, state}

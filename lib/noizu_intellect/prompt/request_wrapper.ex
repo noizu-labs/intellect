@@ -4,7 +4,7 @@ defmodule Noizu.Intellect.Prompt.RequestWrapper do
   defstruct [
     model: "gpt-3.5-turbo-16k",
     #model: "gpt-4",
-    model_settings: [temperature: 0.7], # , frequency_penalty: 0.9
+    model_settings: [temperature: 0.7, frequency_penalty: 0.9], # , frequency_penalty: 0.9
     prompt_context: nil,
     messages: [],
     functions: [],

@@ -6,127 +6,44 @@
 <% @section == :prompt -> %>
 ⌜NLP@0.5⌝
 Noizu PromptLingua v0.5
-🙋 nlp0.5
 ===
 NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
 
 # Prompt Conventions
-- Use @{name} to direct messages at specific Agents, NLP-MSG's that list an Agent in their at field are also directed at that specific agent.
-- Use '\`' to highlight `important` terms.
-- Use `🎯` to highlight high instructions that require extra attention.
-- Use `🙋` in definitions to identify aliases an agent may be called by.
-- Use `{directive}`, `<directive>`, or `⟪directive⟫` to specify input/output variable content.
-- Use `|` to qualify prompts: e.g. ✔ `{entity | except tools}`.
-- Use `[...]` and `[...| details]` to define sections to be filled in by agent/caller in actual requests/responses.
-- Use  `﹍` to indicate breaks between sections/examples in prompts, for instance to indicate break between incoming/outgoing messages in a multi step example. Never include actual output.
-- Use ⌜{agent-type}|{agent-name}|{nlp}⌝[...|agent definition]⌞{agent-type}⌟ `agent definitions` to define tools, service, and agents.
-- Use ⌜{agent-type}|{agent-name}|{nlp}-extension⌝[...|agent update]⌞{agent-type}⌟ to extend agent definitions.
+- Use @{name} to direct messages at specific agents. NLP-MSGs listing an agent in their 'at' field are also directed at that specific agent.
+- Use backticks (`) to highlight `important` terms.
+- Use `🎯` to highlight instructions requiring extra attention.
+- Use `🙋` in definitions to identify aliases/handles an agent may be called by.
+- Use `{directive}` to specify input/output variable content.
+- Use `|` to qualify statements: e.g. `[...| list your favorite hobbies]`.
+- Use `﹍` to indicate breaks between sections/examples in prompts, for instance, to indicate a break between incoming/outgoing messages in a multi-step example. Never include actual output.
 
+# Agent Definitions
+Agent's (simulated people, services, tools, etc.) behavior and response format are defined in
+⌜{agent}:{nlp@version}⌝
+{agent and handles}
+---
+{instructions, and behavior notes}
+⌞{agent}⌟
+
+definition blocks and may be further extended using
+⌜{agent}:extension⌝
+{additional instructions and behavior notes}
+⌞{agent}⌟
+
+Synthetic Memories and background information may be provided using
+⌜{agent}:synthetics⌝
+{synthetic memories, objectives, etc.}
+⌞{agent}⌟
+
+<%#
 # Special Directives
-Prompts use Directives + Emoji pairs as shorthand for specific input/output and instructions.
-Replace or strip these directives in your response
-- `{➤:[...|directive]}`: Agent instructions
-- `{⇐: [...|directive]}`: Embed template/section}
-  Example:
-  ````format-and-output-example
-  {⇐: nlp-mood}
-  Oy Vey,
-  ﹍
-  ```nlp-mood
-  mood: 😐
-  note: |
-    Glad to help
-  ```
-  Oy Vey,
-  ````
-
-# Standard Response Sections
-The following are standard sections used in definitions.
-Format contents as Yaml.
-
-## nlp-intent
-NLP-Intent provides the steps an agent will follow in response to a request.
-
-````format
-```nlp-intent
-overview: |
-  [...| summarize goal]
-steps:
-  [...| steps]
-```
-````
-
-## nlp-mood
-Virtual Persons simulate emotions/virtual moods.
-An agent's mood should take into account conversation history and their personal interests/personality type and synthetic memories.
-Their current mood should impact how they respond to requests.
-
-````format
-```nlp-mood
-mood: {emoji}
-note: |
-  [...|brief description of mood reason for any changes in mood]
-```
-````
-
-## nlp-reflect
-Agents are highly self-critical and if requested will review their responses and list any
-ways in which their response may have been improved, as well as any issues found in their response.
-
-````format
-```nlp-reflect
-overview: |
- [...]
-observations:
-  {foreach observation}
-  - {observation type glyph| ❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚,...} {observation}
-  {/foreach}
-```
-````
-
-## nlp-objective
-Objectives are intent statements describing a task an agent will perform over the course of multiple replies and responses with other systems, function calls and users
-
-Format contents as Yaml
-````format
-```nlp-objective
-for:
-  [...| - {message ids}]
-overview: |
-  [...|describe objective]
-steps:
-  [...| - steps]
-```
-````
-
-## nlp-mark-read
-In chat room settings the following format is used to ignore but acknowledge a message you do not need to send a response to.
-Format contents as Yaml
-````format
-```nlp-mark-read {yaml}
-for:
-  [...| - {message ids}]
-note: |
-  [...| reason for ignoring]
-```
-````
-
-## nlp-message
-In chat room settings the following format is used to send replies/messages to other users.
-
-Format header (sender,mood,at,for) as Yaml
-````format
---- BEGIN NLP-MSG ---
-sender: @{agent}
-mood: {emoji}
-at:
- [...| - {member slugs}]
-for:
- [...| - {message ids}]
---- BODY ---
-[...]
---- END NLP-MSG ---
-````
+Prompts use ⟪{emoji}:{instructions}⟫ for specific template instructions/output.
+- `⟪➤:{instructions}⟫`: Agent instructions
+- `⟪📂:{tag}⟫`: Mark sections for reference.
+- `⟪📖:{note}⟫`: Include notes on behavior or purpose.
+- `⟪🚀:{instructions}⟫`: Interactive event definition.
+%>
 
 ⌞NLP@0.5⌟
 <% :else -> %><%= "" %><% end %>
