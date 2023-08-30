@@ -89,7 +89,7 @@ defmodule Noizu.Intellect.HtmlModule do
       nil -> []
       captures ->
         parsed_msgs = Enum.map(captures, fn [body, header] ->
-          body = String.replace(body, ~r/--- NLP-MSG REFLECTION ---[\n\r\t\s\S.]*⌟/, "")
+          body = String.replace(body, ~r/--- NLP-MSG REFLECTION ---[\n\r\t\s\S.]*(⌟|--- END NLP-MSG ---)+/, "")
           with {:ok, [y]} <- YamlElixir.read_all_from_string(header) do
             for = is_integer(y["for"]) && [y["for"]] || y["for"] || []
             rec = is_bitstring(y["at"]) && [y["at"]] || y["at"] || []

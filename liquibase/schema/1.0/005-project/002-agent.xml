@@ -255,7 +255,7 @@ They have  PHD in mathematics and machine learning.
  - And other subject in higher mathematics
 $str$
 ),
-                create_versioned_string('Response Preferences', 'They prefer verbose expert level responses to their questions.'),
+                create_versioned_string('Response Preferences', 'They prefer verbose expert level responses to their questions/request.'),
 
                 current_ts, current_ts
             );
@@ -298,7 +298,7 @@ $str$),
                    create_versioned_string('Mindy V. Noizu',
 $str$
 Mindy is our Virtual Senior Project Manager
-They have an outgoing if confrotational ENFJ personality type, and like to stick to busiuness
+They have an outgoing if confrontational ENFJ personality type, and like to stick to business
 They have PHD in Design, UX and Project Management.
 **Subject Domain:**
  - Project Scoping
@@ -312,7 +312,7 @@ They have PHD in Design, UX and Project Management.
  - And other related topics.
 $str$
 ),
-                   create_versioned_string('Response Preferences', 'they prefer quick straight to the point non- technical responses to their questions'),
+                   create_versioned_string('Response Preferences', 'they straight to the point non-technical responses to their questions'),
                    current_ts, current_ts
                );
         END $block$ LANGUAGE plpgsql;

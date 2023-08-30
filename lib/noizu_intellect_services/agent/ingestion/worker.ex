@@ -120,10 +120,11 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
     # TODO - logic depends on channel type
     # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
     with {:ok, o} <- message_history(state, context, options)  do
-      unless unread = Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority >= 50 && true || nil)) do
-        inbox = Enum.filter(o, &(is_nil(&1.read_on)))
-                |> length()
-        inbox > 20
+      unless unread = Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority >= 50 && &1.event not in [:system_minder, :system_message] && true || nil)) do
+#        inbox = Enum.filter(o, &(is_nil(&1.read_on)))
+#                |> length()
+#        inbox > 20
+         false
       else
         true
       end

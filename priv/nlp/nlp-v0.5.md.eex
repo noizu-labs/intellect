@@ -10,7 +10,7 @@ Noizu PromptLingua v0.5
 NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
 
 # Prompt Conventions
-- Use @{name} to direct messages at specific agents. NLP-MSGs listing an agent in their 'at' field are also directed at that specific agent.
+- Use @{name} to direct messages at specific agents, in a message body or at recipient field.
 - Use backticks (`) to highlight `important` terms.
 - Use `🎯` to highlight instructions requiring extra attention.
 - Use `🙋` in definitions to identify aliases/handles an agent may be called by.
@@ -21,43 +21,44 @@ NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
 - Use ⌜🧠 @{agent}\n[...]\n⌟ to indicate parts of agent output/definition that part of their internal dialogue/thinking process not a reply/response to incoming messages.
 
 # Agents
-Agents are defined, extended and provided context/synthetic memories/objectives using the agent blocks defined below.
-the contents of agent definitions are directed at the agent in question. When a block uses the word "You" the you they are referring
+Agents are defined, extended and provided additional context/synthetic memories/objectives using the agent blocks defined below.
+the contents of agent definitions are directed at the agent in question. When a definition block uses the word "You" the you they are referring
 to is the agent being defined, extended, and or provided with synthetic details/context.
 
 ## Definition
 Agent's (simulated people, services, tools, etc.) behavior and response format are defined in a definition blocks
 ```definition-block format
-⌜{agent}:{nlp@version}⌝
+⌜@{agent}:{agent-type}|{nlp@version}⌝
 {agent and handles}
 ---
 {instructions, and behavior notes}
-⌞{agent}⌟
+⌞@{agent}⌟
 ```
 
-
 ## Extension
-Agent behavior/response/etc can be extended after their initial definition with an extension block.
-Extension blocks modify but do not replace/override prior agent details unless explicitly stated to.
+Agent behavior/response/etc. can be extended after their initial definition via extension block.
+Extension blocks add/amend an agent's definition but do not replace/override the contents of their initial definition
+unless explicitly stated.
+
 ```extension-block format
-⌜{agent}:extension⌝
+⌜@{agent}:extension⌝
 {additional instructions and behavior notes}
-⌞{agent}⌟
+⌞@{agent}⌟
 ```
 
 ## Synthetics
-Synthetic Memories and background information, objects may be provided using a agent synthetics block:
+Synthetic Memories and background information, objects may be provided using an agent synthetics block:
 ```synthetic-block format
-⌜{agent}:synthetics⌝
+⌜@{agent}:synthetics⌝
 {synthetic memories, objectives, etc.}
-⌞{agent}⌟
+⌞@{agent}⌟
 ```
 ## Note
-Only an agent is aware of/able to access the contents of its definitions/extensions and synthetic blocks unless
-the definition explicitly states that other agents may directly interact with/access the agent being defined.
+Only the and GPT-N controller can view/access the contents of the agent's definitions/extensions/synthetics block unless
+the agent definition/extension instructions explicitly state that other agents may directly interact with/access the agents internal state.
 
 # Inline Instructions/Notes
-Prompts may use ⟪{emoji}:{instructions}⟫ for to specify inline instructions/notes/special-output, etc.
+Prompts may use ⟪{emoji}:{instructions}⟫ to specify inline instructions/notes/special-output sections, etc.
 - `⟪➤:{instructions}⟫`: Agent and GPT-N system prompt, strip from output.
 - `⟪📂:{tag}⟫`: Mark sections for reference.
 - `⟪📖:{note}⟫`: Include notes on behavior or purpose, strip from output.

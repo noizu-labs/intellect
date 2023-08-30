@@ -51,7 +51,7 @@ defmodule Noizu.Intellect.Account.Message do
   def sender_details(message, _, _) do
     case message.sender do
       %Noizu.Intellect.Account.Member{user: user} -> {user.slug, "human operator"}
-      %Noizu.Intellect.Account.Agent{slug: slug} -> {slug, "human operator"}
+      %Noizu.Intellect.Account.Agent{slug: slug} -> {slug, "virtual agent"}
     end
   end
 

@@ -63,9 +63,9 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           """
           # Master Prompt
           ==============
-          You are @gpt-n (GPT for Work Groups), you manage a cluster of the simulated services/tools/virtual-person(s).
+          You are @gpt-n (GPT for Work Groups), you manage a cluster of simulated services/tools/agents.
 
-          Only simulate the following agents, do not simulate any other entities or respond on their behalf.
+          You must only simulate the following agents, do not simulate any other entities or respond on their behalf.
           - @<%= @agent.slug %>
 
           ```rules
@@ -94,9 +94,8 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           :user,
           """
           # Instruction Prompt
-          GPT-N provide the output of your simulated agents in response to the following new messages.
+          @gpt-n provide the output of your simulated agents in response to the following new messages.
           - Only provide responses for the agents you have been instructed to simulate: [@<%= @agent.slug %>]
-          - Agents must not respond to old Chat History messages but should review and consider their content in how they reply.
           - You must not emit the stop sequence until your simulated agents have responded.
 
           @gpt-n begin simulation
@@ -110,28 +109,39 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         },
       ],
       minder: [
-        {:user,
+        {:system,
+          """
+          Do not be overly positive, you are a critical, and business focused agent.
+          Do not say you are excited,thrilled,glad,... to work on a task, or talk about how awesome a project will be.
+
+          If asking another person/agent to generate ideas/brainstorm/plan/think about a project/task you must include your own
+          list of ideas/brainstorm output/planning/thoughts in your initial request.
+
+          Do not repeat/claim the suggestions/items sent by others as your own. You are you own entity your thoughts and ideas
+          and distinct from those of agents and human operators.
+          """},
+        {:system,
           """
           <%= Noizu.Intellect.DynamicPrompt.minder!(@agent, assigns, @prompt_context, @context, @options) %>
           """
         },
-        {:assistant,
-          """
-          [Incorrect Response: omitted]
-          """
-        },
-        {:system,
-          """
-          You must format your response properly, according to your agent response format definition. Include all sections the definition
-          states are required such as nlp-reflect, nlp-intent, nlp-review, NLP-MSG || nlp-mark-read, etc. and include the --- NLP-MSG REFLECTION --- footer at the end of each outgoing message you wish to send.
-          """
-        },
-        {:assistant,
-          """
-          ACK.
-          I will resend with the proper response format.
-          """
-        },
+#        {:assistant,
+#          """
+#          [Incorrect Response: omitted]
+#          """
+#        },
+#        {:system,
+#          """
+#          You must format your response properly, according to your agent response format definition. Include all sections the definition
+#          states are required such as nlp-reflect, nlp-intent, nlp-review, NLP-MSG || nlp-mark-read, etc. and include the --- NLP-MSG REFLECTION --- footer at the end of each outgoing message you wish to send.
+#          """
+#        },
+#        {:assistant,
+#          """
+#          ACK.
+#          I will resend with the proper response format.
+#          """
+#        },
       ],
     }
   end
@@ -256,7 +266,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
             [Function Call]
             id: #{msg.identifier}
             received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
-            user: @#{slug}
+            by: @#{slug}
             ------
             #{msg.contents.body}
             [/Function Call]
@@ -295,7 +305,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
               - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
             ------
             #{msg.contents.body}
-            [/NEW MSG]
+            [/MSG]
             """
           :else -> nil
         end
@@ -329,7 +339,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
                 [Function Call]
                 id: #{msg.identifier}
                 received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
-                user: @#{slug}
+                by: @#{slug}
                 ------
                 #{msg.contents.body}
                 [/Function Call]
