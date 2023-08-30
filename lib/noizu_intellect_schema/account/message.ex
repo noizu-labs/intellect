@@ -11,7 +11,7 @@ defmodule Noizu.Intellect.Schema.Account.Message do
     field :answered_by, Noizu.Entity.Reference
     field :depth, :integer
     field :user_mood, :string # atom
-    field :event, Ecto.Enum, values: [:online,:offline,:message,:function_call,:function_response]
+    field :event, Ecto.Enum, values: [:online,:offline,:message,:function_call,:function_response,:objective_ping,:no_reply_ping,:system_message,:system_minder,:follow_up]
     field :token_size, :integer
     field :contents, Noizu.Entity.Reference
     field :brief, Noizu.Entity.Reference

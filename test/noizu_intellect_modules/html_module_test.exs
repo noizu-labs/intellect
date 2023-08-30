@@ -41,7 +41,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
       - List initial feature ideas to get us started.
     ```
 
-    --- BEGIN NLP-MSG ---
+    --- SEND NLP-MSG ---
     sender: @grace
     mood: 😊
     at:
@@ -52,7 +52,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
     Understood Keith Brings. I will contact Mindy and prepare a list of requirements for the Twitter clone.
     --- END NLP-MSG ---
 
-    --- BEGIN NLP-MSG ---
+    --- SEND NLP-MSG ---
     sender: @grace
     mood: 😊
     at:

@@ -85,12 +85,15 @@ defmodule Noizu.Intellect.HtmlModule do
   end
 
   defp extract_msg_blocks(message) do
-    case Regex.scan(~r/--?-? BEGIN NLP-MSG --?-?\n(?<header>.*?)\n--- BODY ---\n(?<body>.*?)\n--?-? END NLP-MSG --?-?/s, message, capture: :all_names) do
+    case Regex.scan(~r/--?-? SEND NLP-MSG --?-?\n(?<header>.*?)\n--- BODY ---\n(?<body>.*?)\n--?-? END NLP-MSG --?-?/s, message, capture: :all_names) do
       nil -> []
       captures ->
         parsed_msgs = Enum.map(captures, fn [body, header] ->
+          body = String.replace(body, ~r/--- NLP-MSG REFLECTION ---[\n\r\t\s\S.]*⌟/, "")
           with {:ok, [y]} <- YamlElixir.read_all_from_string(header) do
-            {:reply, [sender: y["sender"], for: (y["for"] || []) |> Enum.filter(&is_integer/1), if_no_reply: y["if-no-reply"], mood: y["mood"], at: y["at"], response: body |> String.trim()]}
+            for = is_integer(y["for"]) && [y["for"]] || y["for"] || []
+            rec = is_bitstring(y["at"]) && [y["at"]] || y["at"] || []
+            {:reply, [sender: y["sender"], for: for |> Enum.filter(&is_integer/1), if_no_reply: y["if-no-reply"], mood: y["mood"], at: rec, response: body |> String.trim()]}
           end
         end) |> Enum.reject(&is_nil/1)
     end
@@ -98,12 +101,12 @@ defmodule Noizu.Intellect.HtmlModule do
 
   def extract_simplified_session_response_details(response) do
     IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
-    identity = Enum.map(extract_block(response, "nlp-identity"),
+    review = Enum.map(extract_block(response, "nlp-review"),
                  fn
                    ([""]) -> nil
                    ([nil]) -> nil
                    ([m]) ->
-                   {:identity, m}
+                   {:review, m}
                  end
                )  |> Enum.reject(&is_nil/1)
     intent = Enum.map(extract_block(response, "nlp-intent"),
@@ -129,7 +132,9 @@ defmodule Noizu.Intellect.HtmlModule do
                ([nil]) -> nil
                ([m]) ->
                with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
-                 {:objective, [name: y["name"], for: (y["for"] || []) |> Enum.filter(&is_integer/1), overview: y["overview"], tasks: y["tasks"], ping_me: y["ping-me"] ]}
+                 for = is_integer(y["for"]) && [y["for"]] || y["for"] || []
+
+                 {:objective, [name: y["name"], for: (for) |> Enum.filter(&is_integer/1), summary: y["summary"], tasks: y["tasks"], ping_me: y["ping-me"] ]}
                end
              end
            )  |> Enum.reject(&is_nil/1)
@@ -140,22 +145,35 @@ defmodule Noizu.Intellect.HtmlModule do
                  ([nil]) -> nil
                  ([m]) ->
                  with {:ok, [y]} <- YamlElixir.read_all_from_string(m) |> IO.inspect do
-                   {:intent, [overview: y["overview"], observations: y["observations"]]}
+                   {:reflect, [overview: y["overview"], observations: y["observations"]]}
                  end
                end
              )  |> Enum.reject(&is_nil/1)
+
+    follow_up = Enum.map(extract_block(response, "nlp-follow-up"),
+            fn
+              ([m]) when is_bitstring(m) ->
+                m = String.trim(m)
+                unless m == "" do
+                  {:follow_up, [instructions: m]}
+                end
+                (_) -> nil
+            end
+          )  |> Enum.reject(&is_nil/1)
+
     ack = Enum.map(extract_block(response, "nlp-mark-read"),
                 fn
                   ([""]) -> nil
                   ([nil]) -> nil
                   ([m]) ->
                   with {:ok, [y]} <- YamlElixir.read_all_from_string(m) do
-                    {:ack, [for: (y["for"] || []) |> Enum.filter(&is_integer/1), note: y["note"]]}
+                    for = is_integer(y["for"]) && [y["for"]] || y["for"] || []
+                    {:ack, [for: for |> Enum.filter(&is_integer/1), note: y["note"]]}
                   end
                 end
               )  |> Enum.reject(&is_nil/1)
     replies = extract_msg_blocks(response)
-    response = (identity ++ intent ++ mood ++objective ++ reflect ++ ack ++ replies)
+    response = (review ++ intent ++ mood ++objective ++ reflect ++ ack ++ replies ++ follow_up)
                |> Enum.group_by(&elem(&1, 0))
     if nlp_agent_response_valid?(response) do
       {:ok, response}
@@ -328,21 +346,29 @@ defmodule Noizu.Intellect.HtmlModule do
 
 
   def valid_response?(response) do
-    response
-    |> Enum.map(
-         fn
-           ({:ack, _}) -> nil
-           ({:reply, _}) -> nil
-           ({:memories, _}) -> nil
-           ({:message_analysis, _}) -> nil
-           (other) -> {:invalid_section, other}
-         end
-       )
-    |> Enum.filter(&(&1))
-    |> case do
-         [] -> :ok
-         issues -> {:issues, issues}
-       end
+    cond do
+      is_nil(response[:reply]) && is_nil(response[:ack]) -> {:invalid_response, :reply_required}
+      is_nil(response[:reflect]) -> {:invalid_response, :reflect_required}
+      is_nil(response[:intent]) -> {:invalid_response, :intent_required}
+      is_nil(response[:mood]) -> {:invalid_response, :mood_required}
+      :else -> :ok
+    end
+#
+#    response
+#    |> Enum.map(
+#         fn
+#           ({:ack, _}) -> nil
+#           ({:reply, _}) -> nil
+#           ({:memories, _}) -> nil
+#           ({:message_analysis, _}) -> nil
+#           (other) -> {:invalid_section, other}
+#         end
+#       )
+#    |> Enum.filter(&(&1))
+#    |> case do
+#         [] -> :ok
+#         issues -> {:invalid_response, {:issues, issues}}
+#       end
   end
 
   def repair_response(response) do

@@ -15,9 +15,10 @@ NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
 - Use `🎯` to highlight instructions requiring extra attention.
 - Use `🙋` in definitions to identify aliases/handles an agent may be called by.
 - Use `{directive}` to specify input/output variable content.
-- Use `|` to qualify statements: e.g. `[...| list your favorite hobbies]`.
-- Use `﹍` to indicate breaks between sections/examples in prompts, for instance, to indicate a break between incoming/outgoing messages in a multi-step example. Never include actual output.
-
+- Use `[...]` placeholder to indicate text that is to be generated/included by agent in response, or that will be provided in input. e.g. `Here is the list of Country by GDP [...| countries ordered by GDP] and by Dollar Parity GDP [...| countries ordered by GDP in dollar parity]`
+- Use `|` to qualify directives/placeholders: e.g. `[...| list your favorite hobbies]`, `{agent| in same region}`.
+- Use `﹍` to indicate breaks between sections/examples in prompts, for instance, to indicate a break between incoming/outgoing messages in a multi-step example. Never use this symbol in your actual output.
+- Use ⌜🧠 @{agent}\n[...]\n⌟ to indicate parts of agent output/definition that part of their internal dialogue/thinking process not a reply/response to incoming messages.
 
 # Agents
 Agents are defined, extended and provided context/synthetic memories/objectives using the agent blocks defined below.
@@ -36,7 +37,8 @@ Agent's (simulated people, services, tools, etc.) behavior and response format a
 
 
 ## Extension
-Agent behavior/response/etc can be extended after their initial definition with an extension block
+Agent behavior/response/etc can be extended after their initial definition with an extension block.
+Extension blocks modify but do not replace/override prior agent details unless explicitly stated to.
 ```extension-block format
 ⌜{agent}:extension⌝
 {additional instructions and behavior notes}
@@ -54,14 +56,27 @@ Synthetic Memories and background information, objects may be provided using a a
 Only an agent is aware of/able to access the contents of its definitions/extensions and synthetic blocks unless
 the definition explicitly states that other agents may directly interact with/access the agent being defined.
 
-<%#
-# Special Directives
-Prompts use ⟪{emoji}:{instructions}⟫ for specific template instructions/output.
-- `⟪➤:{instructions}⟫`: Agent instructions
+# Inline Instructions/Notes
+Prompts may use ⟪{emoji}:{instructions}⟫ for to specify inline instructions/notes/special-output, etc.
+- `⟪➤:{instructions}⟫`: Agent and GPT-N system prompt, strip from output.
 - `⟪📂:{tag}⟫`: Mark sections for reference.
-- `⟪📖:{note}⟫`: Include notes on behavior or purpose.
+- `⟪📖:{note}⟫`: Include notes on behavior or purpose, strip from output.
 - `⟪🚀:{instructions}⟫`: Interactive event definition.
-%>
+
+## Example
+```template
+⟪📂:greeting-reply⟫
+⟪📖: This is a placeholder response pending requirements.
+We will eventually flesh out the details.
+⟫
+⟪➤:
+Just say "Hello", don't provide any other response.
+⟫
+```
+```output
+⟪📂:greeting-reply⟫
+Hello
+```
 
 ⌞NLP@0.5⌟
 <% :else -> %><%= "" %><% end %>

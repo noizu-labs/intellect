@@ -114,7 +114,24 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
           """
           <%= Noizu.Intellect.DynamicPrompt.minder!(@agent, assigns, @prompt_context, @context, @options) %>
           """
-        }
+        },
+        {:assistant,
+          """
+          [Incorrect Response: omitted]
+          """
+        },
+        {:system,
+          """
+          You must format your response properly, according to your agent response format definition. Include all sections the definition
+          states are required such as nlp-reflect, nlp-intent, nlp-review, NLP-MSG || nlp-mark-read, etc. and include the --- NLP-MSG REFLECTION --- footer at the end of each outgoing message you wish to send.
+          """
+        },
+        {:assistant,
+          """
+          ACK.
+          I will resend with the proper response format.
+          """
+        },
       ],
     }
   end
@@ -128,13 +145,44 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
 
   defimpl Noizu.Intellect.DynamicPrompt do
 
+    def is_system?(message, agent) do
+      cond do
+        message.event in [:system_minder] && message.priority > 0 -> true
+        #is_nil(message.read_on) && message.event in [:objective_ping, :no_reply_ping, :follow_up] && message.priority > 0 -> true
+        :else -> false
+      end
+    end
+
+    def is_old_message?(message, agent) do
+      cond do
+        message.event in [:system_minder] -> false
+        message.event in [:objective_ping, :no_reply_ping, :follow_up] -> false
+        :else -> !is_new_message?(message, agent)
+      end
+    end
+
+    def is_new_message?(message, agent) do
+      cond do
+        message.event == :system_minder -> false
+        message.event in [:objective_ping, :no_reply_ping, :follow_up] -> message.priority > 50
+        message.read_on -> false
+        message.event in [:online,:offline, :message, :function_call] and message.sender.identifier == agent.identifier -> false
+        message.event in [:system_minder] -> false
+        message.priority > 50 -> true
+        :else -> false
+      end
+    end
+
     def split_messages(messages, agent) do
+
+      # function_call,function_response,objective_ping,no_reply_ping,system_message,follow_up
       # Extract Read, New, and Indirect messages.
-      processed = Enum.filter(messages, & (&1.read_on || &1.sender.identifier == agent.identifier || &1.priority < 50))
-      new = Enum.reject(messages, & (&1.read_on || &1.sender.identifier == agent.identifier || &1.priority < 50))
+      processed = Enum.filter(messages, & is_old_message?(&1, agent))
+      new = Enum.filter(messages, & is_new_message?(&1, agent))
+      system = Enum.filter(messages, & is_system?(&1, agent))
       #new = Enum.filter(x, & &1.priority >= 50)
       #indirect = Enum.reject(x, & &1.priority >= 50)
-      {processed, new}
+      {processed, new, system}
     end
 
     defp expand_prompt(expand_prompt, assigns) do
@@ -182,25 +230,76 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
     end
     def prompt(subject, assigns, prompt_context, context, options) do
       agent = prompt_context.agent
-      {old, new} = split_messages(prompt_context.assigns.message_history.entities, agent)
-
+      {old, new, _} = split_messages(prompt_context.assigns.message_history.entities, agent)
+      #assigns = put_in(assigns || [], :system_prompts, system_prompts)
       chat_history = length(old) > 0 && Enum.map(old, fn(msg) ->
         {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
-        m =
-          """
-          --- MSG ---
-          id: #{msg.identifier}
-          received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
-          from: @#{slug}
-          sender-type: #{type}
-          mood: #{msg.user_mood}
-          at:
-            - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
-          --- BODY ---
-          #{msg.contents.body}
-          --- END OF MSG ---
-          """
-      end)  |> Enum.join("\n")
+
+        cond do
+          msg.event in [:online] ->
+            """
+            [Event]
+            id: #{msg.identifier}
+            received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+            event: @#{slug} Online
+            """
+          msg.event in [:offline] ->
+            """
+            [Event]
+            id: #{msg.identifier}
+            received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+            event: @#{slug} Offline
+            """
+          msg.event in [:function_call] ->
+            if msg.priority > 0 do
+            """
+            [Function Call]
+            id: #{msg.identifier}
+            received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+            user: @#{slug}
+            ------
+            #{msg.contents.body}
+            [/Function Call]
+            """
+            end
+          msg.event in [:function_response] ->
+            if msg.priority > 0 do
+              """
+              [Function Response]
+              id: #{msg.identifier}
+              received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+              ------
+              #{msg.contents.body}
+              [/Function Response]
+              """
+            end
+          msg.event in [:objective_ping, :no_reply_ping, :follow_up] -> nil
+          msg.event in [:system_message] ->
+            if msg.priority > 0 do
+              """
+              [System Prompt]
+              # System Prompt ##{msg.identifier}
+              #{msg.contents.body}
+              [/System Prompt]
+              """
+            end
+          msg.event in [:message] ->
+            """
+            [MSG]
+            id: #{msg.identifier}
+            received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+            from: @#{slug}
+            sender-type: #{type}
+            mood: #{msg.user_mood}
+            at:
+              - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
+            ------
+            #{msg.contents.body}
+            [/NEW MSG]
+            """
+          :else -> nil
+        end
+      end)  |> Enum.reject(&is_nil/1) |> Enum.join("\n")
 
 
       assigns = put_in(assigns, [:chat_history], chat_history)
@@ -209,21 +308,115 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
 
         messages = Enum.map(new, fn(msg) ->
           {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
-          m =
-            """
-            --- MSG ---
-            id: #{msg.identifier}
-            received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
-            from: @#{slug}
-            sender-type: #{type}
-            mood: #{msg.user_mood}
-            at:
-              - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
-            --- BODY ---
-            #{msg.contents.body}
-            --- END OF MSG ---
-            """
-        end)  |> Enum.join("\n")
+          cond do
+            msg.event in [:online] ->
+              """
+              [Event]
+              id: #{msg.identifier}
+              received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+              event: @#{slug} Online
+              """
+            msg.event in [:offline] ->
+              """
+              [Event]
+              id: #{msg.identifier}
+              received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+              event: @#{slug} Offline
+              """
+            msg.event in [:function_call] ->
+              if msg.priority > 0 do
+                """
+                [Function Call]
+                id: #{msg.identifier}
+                received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+                user: @#{slug}
+                ------
+                #{msg.contents.body}
+                [/Function Call]
+                """
+              end
+            msg.event in [:function_response] ->
+              if msg.priority > 0 do
+                """
+                [Function Response]
+                id: #{msg.identifier}
+                received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+                ------
+                #{msg.contents.body}
+                [/Function Response]
+                """
+              end
+            msg.event in [:system_message] ->
+              if msg.priority > 0 do
+                """
+                [System Prompt]
+                id: #{msg.identifier}
+                -------
+                # System Prompt ##{msg.identifier}
+                #{msg.contents.body}
+                [/System Prompt]
+                """
+              end
+
+            msg.event in [:objective_ping] ->
+              if msg.priority > 0 do
+                """
+                [System Prompt]
+                id: #{msg.identifier}
+                -------
+                # Objective Update Prompt ##{msg.identifier}
+                Objective has not been updated since set,
+                You (@#{agent.slug}) have instructed me to tell you to:
+                #{msg.contents.body}
+                [/System Prompt]
+                """
+              end
+
+            msg.event in [:no_reply_ping] ->
+              if msg.priority > 0 do
+                """
+                [System Prompt]
+                id: #{msg.identifier}
+                -------
+                # No Response Prompt ##{msg.identifier}
+                User/Agent has not responded to your previous message.
+                You (@#{agent.slug}) have instructed me to tell you to:
+                #{msg.contents.body}
+                [/System Prompt]
+                """
+              end
+
+
+            msg.event in [:follow_up] ->
+              if msg.priority > 0 do
+                """
+                [Agent Prompt]
+                id: #{msg.identifier}
+                -------
+                # Next Task Prompt ##{msg.identifier}
+                You (@#{agent.slug}) have instructed me to tell you to:
+                #{msg.contents.body}
+                [/Agent Prompt]
+                """
+              end
+
+            msg.event in [:message] ->
+              """
+              [NEW MSG]
+              id: #{msg.identifier}
+              received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+              from: @#{slug}
+              sender-type: #{type}
+              mood: #{msg.user_mood}
+              at:
+                - #{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join("\n  - ")}
+              ------
+              #{msg.contents.body}
+              [/NEW MSG]
+              """
+              :else -> nil
+          end
+        end) |> Enum.reject(&is_nil/1) |> Enum.join("\n")
 
         {:ok, prompts ++ [{:user, messages}]}
       end
@@ -235,9 +428,31 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         _ -> ""
       end
     end
-    def minder(subject, assigns, prompt_context, _context, _options) do
+    def minder(subject, assigns, prompt_context, context, options) do
       # need to allow subject.prompt to be a function if so we need to execute it then pass to expand_prompt
-      expand_prompt(subject.minder, assigns)
+      with {:ok, minders} <- expand_prompt(subject.minder, assigns) do
+        agent = prompt_context.agent
+        {_, _, system_prompts} = split_messages(prompt_context.assigns.message_history.entities, agent)
+        system_minder_message = unless system_prompts == [] do
+          m = Enum.map(system_prompts, fn(msg) ->
+            {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
+            cond do
+              msg.event in [:system_minder] ->
+                """
+                # System (Reminder) Prompt
+                #{msg.contents.body}
+
+                """
+              :else -> nil
+            end
+          end) |> Enum.reject(&is_nil/1) |> Enum.join("\n")
+
+          [{:system, m}]
+        else
+          []
+        end
+        {:ok, system_minder_message ++ minders}
+      end
     end
     def assigns(subject, prompt_context, context, options) do
       cond do

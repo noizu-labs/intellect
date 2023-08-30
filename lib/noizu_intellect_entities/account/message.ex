@@ -615,12 +615,13 @@ defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message]
     sender = case message.sender do
       %Noizu.Intellect.User{name: name} -> name
       %Noizu.Intellect.Account.Agent{slug: name} -> name
-      _ -> "other"
+      %Noizu.Intellect.Account.Member{user: %{name: name}} -> name
+      _ -> "other| #{inspect message.sender}"
     end
 
     %Noizu.IntellectWeb.Message{
       identifier: message.identifier,
-      type: :message, # Pending
+      type: message.event,
       glyph: nil, # Pending
       typing: false,
       timestamp: message.time_stamp.created_on,

@@ -130,8 +130,8 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
       id: #{r.identifier}
       handle: @#{r.handle}
       name: #{r.name}
+      type: human operator
 
-      #{r.name} is a human operator.
       #{r.details}
 
       **response preferences:**

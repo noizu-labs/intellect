@@ -170,12 +170,14 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   def clear_response_acks(response, messages, state, context, options) do
     if ack = response[:ack] do
       Enum.map(ack,
-        fn({:ack, [ids: ids]}) ->
+        fn
+          ({:ack, [for: ids]}) ->
           Enum.map(ids, fn(id) ->
             message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
             IO.inspect(message && {message.identifier, message.read_on}, label: "ACK")
             message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
           end)
+          (_) -> :nop
         end
       )
     end
@@ -313,10 +315,36 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
         with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
              {:ok, response} <- Noizu.Intellect.HtmlModule.extract_simplified_session_response_details(reply)
           do
+
+
+          {response, api_response} = with :ok <- Noizu.Intellect.HtmlModule.valid_response?(response) do
+              {response, api_response}
+          else
+            error ->
+              issues = case error do
+                {:invalid_response, issues} -> issues
+                _ -> "Malformed Response"
+              end
+            correction = %{role: :system, content:
+              """
+              Invalid Response #{inspect issues}
+              You must properly format your response as defined in your agent definition and extension block(s).
+              Please fix reformat your response using your agent response format instructions.
+              """}
+
+            Logger.error("MALFORMED RESPONSE: " <> correction.content)
+            malformed = %{role: :assistant, content: reply}
+            with {:ok, reply} <- Noizu.OpenAI.Api.Chat.chat(api_response[:messages] ++ [malformed, correction], api_response[:settings]),
+                 %{choices: [%{message: %{content: reply_body}}|_]} <- reply,
+                 {:ok, response} <- Noizu.Intellect.HtmlModule.extract_simplified_session_response_details(reply_body) do
+              {response, put_in(api_response, [:messages], api_response[:messages] ++ [malformed, correction])}
+            else
+              _ -> {response, api_response}
+            end
+          end
+
           Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
-
-
-          format_response = Enum.map([:reply, :function_call, :ack, :memory, :intent, :objective, :error], fn(s) ->
+          format_response = Enum.map([:reply, :function_call, :ack, :follow_up, :memory, :intent, :objective, :error], fn(s) ->
             r = if response[s] do
               Enum.map(response[s] || [], fn
                 ({^s, x}) -> x
@@ -327,8 +355,25 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
           end) |> Map.new()
           meta_list = %{"settings" => api_response[:settings], "messages" => api_response[:messages], "raw_reply" => api_response[:reply],  "response" => format_response}
 
+          Enum.map(response[:follow_up] || [],
+            fn
+              ({:follow_up, details}) ->
+                message = %Noizu.Intellect.Account.Message{
+                  sender: state.worker.agent,
+                  channel: state.worker.channel,
+                  depth: 0,
+                  event: :follow_up,
+                  contents: %{title: "follow-up", body: details[:instructions]},
+                  meta: Ymlr.document!(meta_list) |> String.trim(),
+                  time_stamp: Noizu.Entity.TimeStamp.now()
+                }
+                {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
+                Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 100, "self-instruct"}}, message, context, options)
+              (_) -> nil
+            end
+          )
 
-          Enum.map(response[:reply],
+          Enum.map(response[:reply] || [],
             fn
               ({:reply, reply_response}) ->
                 message = %Noizu.Intellect.Account.Message{

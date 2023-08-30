@@ -142,6 +142,19 @@ defmodule Noizu.Intellect.Account.Channel do
   end
 
 
+  def send_channel_agents(channel, message, context, options) do
+    with {:ok, channel} <- Noizu.EntityReference.Protocol.entity(channel, context) |> IO.inspect(label: "Channel"),
+         {:ok, channel_members} <- Noizu.Intellect.Account.Channel.Repo.members(channel, context, options)  |> IO.inspect() do
+      Enum.map(channel_members,
+        fn(member) ->
+          case member do
+            {:ref, Noizu.Intellect.Account.Agent, identifier} -> Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {identifier, 100, "Broadcast"}}, message, context, options)
+            _ -> nil
+          end
+        end)
+    end
+  end
+
   defp set_audience(message, prompt_context, context, options) do
     # Before proceeding scan message for @slugs and set audience, then proceed to generate brief and features.
     audience = Enum.map(prompt_context.channel_members,
@@ -430,7 +443,7 @@ defmodule Noizu.Intellect.Account.Channel do
 
   defimpl Inspect do
     def inspect(subject, _opts) do
-      "#Message<#{subject.identifier}>"
+      "#Channel<#{subject.identifier}>"
     end
   end
 

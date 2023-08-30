@@ -428,6 +428,17 @@ defmodule Noizu.IntellectWeb.CoreComponents do
                         </button>
                     </div>
                     <.mood_selector id={"#{@id}-select-mood"} target={@target} mood={@mood_selector} />
+
+
+                    <div>
+                      <label for="system_message">System Message</label>
+                      <input type="checkbox" name="system_message"/>
+                    </div>
+
+                    <div>
+                      <label for="system_minder">System Minder</label>
+                      <input type="checkbox" name="system_minder"/>
+                    </div>
                 </div>
                 <button type="submit" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Comment</button>
             </div>

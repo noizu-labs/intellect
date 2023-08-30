@@ -14,7 +14,7 @@
                 <li class="chat-message collapsible  relative flex gap-x-4  w-full " aria-expanded="true" >
                     <Noizu.IntellectWeb.Chat.Component.message message={msg} />
                 </li>
-            <% msg.type == :system_message -> %>
+            <% msg.type in [ :system_message , :system_minder  ] -> %>
             <li class="system-message collapsible relative flex gap-x-4 w-full" aria-expanded="false" >
                 <Noizu.IntellectWeb.Chat.Component.message message={msg} />
             </li>

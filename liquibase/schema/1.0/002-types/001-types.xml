@@ -76,7 +76,7 @@
     <changeSet author="you" id="MESSAGE_EVENT_TYPE enum">
         <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
             <param name="enum" value="MESSAGE_EVENT_TYPE"/>
-            <param name="values" value="online,offline,message,function_call,function_response"/>
+            <param name="values" value="online,offline,message,function_call,function_response,objective_ping,no_reply_ping,system_message,system_minder,follow_up"/>
         </customChange>
     </changeSet>
 
