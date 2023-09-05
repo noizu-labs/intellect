@@ -85,11 +85,11 @@ defmodule Noizu.Intellect.HtmlModule do
   end
 
   defp extract_msg_blocks(message) do
-    case Regex.scan(~r/--?-? SEND NLP-MSG --?-?\n(?<header>.*?)\n--- BODY ---\n(?<body>.*?)\n--?-? END NLP-MSG --?-?/s, message, capture: :all_names) do
+    case Regex.scan(~r/\[📧:NLP-MSG\]\n(?<header>.*?)\n--- BODY ---\n(?<body>.*?)\n\[📧:NLP-MSG:END\]/s, message, capture: :all_names) do
       nil -> []
       captures ->
         parsed_msgs = Enum.map(captures, fn [body, header] ->
-          body = String.replace(body, ~r/--- NLP-MSG REFLECTION ---[\n\r\t\s\S.]*(⌟|--- END NLP-MSG ---)+/, "")
+          body = String.replace(body, ~r/\[📧:NLP-MSG:REVIEW\][\n\r\t\s\S.]*(⌟|\[📧:NLP-MSG:END\])+/, "")
           with {:ok, [y]} <- YamlElixir.read_all_from_string(header) do
             for = is_integer(y["for"]) && [y["for"]] || y["for"] || []
             rec = is_bitstring(y["at"]) && [y["at"]] || y["at"] || []

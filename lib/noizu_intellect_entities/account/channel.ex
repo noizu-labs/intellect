@@ -802,7 +802,6 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
     #{b}
 
     ## Chat History
-    Previously Received Messages
 
     #{assigns[:chat_history] || "[NONE]"}
 

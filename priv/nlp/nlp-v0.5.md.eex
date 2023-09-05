@@ -63,6 +63,7 @@ Prompts may use ⟪{emoji}:{instructions}⟫ to specify inline instructions/note
 - `⟪📂:{tag}⟫`: Mark sections for reference.
 - `⟪📖:{note}⟫`: Include notes on behavior or purpose, strip from output.
 - `⟪🚀:{instructions}⟫`: Interactive event definition.
+- `⟪🆔:{for}⟫`: Generate and replace with a unique id `(🆔:{id})` for example `⟪🆔:{user-suggestion}⟫ -> (🆔:usg-001)`
 
 ## Example
 ```template
