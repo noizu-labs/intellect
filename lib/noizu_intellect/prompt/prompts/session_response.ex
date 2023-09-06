@@ -212,123 +212,10 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         {
         :user,
         """
-        # agent-reminder-conditions
-        Check if any of the following agent-reminder conditions have been met.
-        <agent-reminder-condition reminder="5555">
-        @keith-brings has sent a message saying "The eagle has landed."
-        </agent-reminder-condition>
-
         # Response
-        You are to review your messages carefully for context/history then using provide the following three sections in a single response
-        Do not output stop code until end of response after FIN line
-        Use the following syntax
+        You should review messages and your then respond
 
-        ```syntax
-        BEGIN
-
-        # Response: Section One
-        plan section output
-
-        # Response: Section Two
-        reply section output
-
-        # Response: Section Three
-        reflect section output
-
-        FIN
-        (output stop sequence)
-
-        ```
-
-
-
-        ## Planning Section
-        Do not output stop code
-        As @<%= @agent.slug %>.pyscheSuperEgo output your updated mood and response plan. List any agent-reminder-conditions that are now met with agent-reminder-trigger tags.
-
-
-        ### Mood
-        Do not output stop code
-        Use the following format to provide your current simulated mood:
-
-
-        ```xml
-        <agent-mood>
-        mood: emoji of updated/current mood e.g. 😊
-        remark: |
-           Describe any change in mood and the cause of the change.
-        </agent-mood>
-        ```
-
-
-
-        Example:
-        ```xml
-        <agent-mood>
-        mood: 😐
-        remark: |
-          Frustrated at lack of progress on objectives and StuStu's failing to provide the list of items I requested.
-        </agent-mood>
-        ```
-
-        !Remember to close tag.
-
-        ### Plan Response
-        Do not output stop code
-        Plan out how you will respond and communicate your plan using the following format:
-
-        ```xml
-        <agent-response-plan>
-        plan: |
-          brief statement of what was requested/asked of you, the purpose behind that request, and how you will respond.
-        steps:
-          - "list of steps"
-          - - "and steps with"
-            - - sub steps
-        </agent-response-plan>
-        ```
-
-        Example:
-        <agent-response-plan>
-        plan: |
-           User is asked me to design schema for the application they have described.
-           I believe they are hoping to speed up time to MVP with my assistance.
-           I will review the provided requirements, suggest types and schema based on stated requirements and then ask for additional details.
-        steps:
-          - I will list the existing defined entities/requirements based on the information given so far.
-          - I will identify custom postgres enum types for use in product.
-          - I will list in short format the list of tables and columns needed based on my understanding.
-          - - Provide Schema
-            - - Prepare setup setup sql script
-              - Include comments and remarks in script
-              - |
-                Nest response in a sql block of depth 3: e.g.
-                `````sql
-                -- {comment}
-
-                --
-                -- Types
-                --
-                [...]
-                `````
-          - Ask user for feedback/additional requirements.
-        </agent-response-plan>
-
-        ### Trigger met agent-reminder-conditions
-        Do not output stop code
-        Trigger met agent-reminders with this syntax:
-        ```xml
-        <agent-reminder-trigger reminder="agent-reminder id">
-        Describe why reminder condition is met.
-        </agent-reminder-trigger>
-        ```
-
-        ### Reply Section
-        Do not output stop code
-        You should review messages and your agent-mood/agent-response-plan then output response as @<%= @agent.slug %>.pyscheEgo according to response plan.
-
-
-        ### Sending Messages
+        ## Sending Messages
 
         To send a message, use the following syntax:
         Do not output stop code
@@ -358,7 +245,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         </message>
         ```
 
-        ### Mark Message(s) as Read
+        ## Mark Message(s) as Read
         Do not output stop code
         To mark a message as read, that you do not intend to reply/respond to use the following syntax
 
@@ -379,7 +266,7 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         </agent-mark-read>
         ```
 
-        ### Setting Follow Up Directives
+        ## Setting Follow Up Directives
         Do not output stop code
         You may include conditional follow-up instructions to send yourself once some condition or timeout is met using the following syntax:
 
@@ -396,104 +283,14 @@ defmodule Noizu.Intellect.Prompts.SessionResponse do
         </agent-set-reminder>
         ```
 
-        ### Combining Actions
+        ## Combining Actions
 
         You may combine sending new messages, marking messages as read, setting reminders and making function calls in response to an incoming message(s).
         Ensure that each action is executed according to the guidelines outlined above.
 
         You can include multiple outgoing message tags in your response per incoming message or respond to multiple incoming messages with a single response.
 
-        ## Reflect Section
-
-        ### Objective Set/Update
-        Provide/Update objectives to track ongoing tasks/goals with the following xml with yaml content format:
-        Do not output stop code
-
-        ```xml
-        <agent-objective-update>
-        name: objective name
-        status: new,in-progress,blocked,pending,completed,in-review
-        brief: |
-           brief objective statement/description
-        tasks:
-          - tasks and sub-tasks required to complete objective. Use [x], [ ] to track completed/pending tasks/sub-tasks]
-        ping-me:
-          - after: seconds or iso8601 timestamp after which to send, for example 600
-            to: |
-              prompt style instructions for what action you should take if objective status has not changed after this period
-        remind-me:
-          - on: seconds from now or iso8601 timestamp to send reminder on, for example "2023-09-06T01:18:51.008046Z"
-            to: |
-              prompt style instructions for what follow up action you should take| e.g. after 10 minutes finalize current step and move on to next one
-        </agent-objective-update>
-        ```
-
-        example:
-        ```xml
-        <agent-objective-update>
-        name: Javris Scheduled Holiday
-        status: pending
-        brief: |
-           Send holiday departure/return messages to Javris and HaohHaoh
-        tasks:
-          - - "[ ] set reminders"
-            - - "[ ] set reminder to warn HaohHaoh a day before Javris departure"
-              - "[ ] set reminder to message Javris before departure"
-              - "[ ] set reminder to message Javris on return"
-          - "[ ] remind Haohhaoh of Javris' pending holiday."
-          - "[ ] tell Javris to enjoy his vacation."
-          - "[ ] welcome Javris back from vacation."
-        remind-me:
-          - on: "2100-05-03T01:18:51.008046Z"
-            to: |
-              Send reminder to @haohhaoh that Javris will be Out of Office from tomorrow until 2100-06-07
-          - on: "2100-05-04T01:18:51.008046Z"
-            to: |
-              Tell @javris to enjoy his holiday.
-          - on: "2100-06-07T01:18:51.008046Z"
-            to: |
-              Welcome @javris back from holiday.
-        </agent-objective-update>
-        ```
-
-        ### Self Reflect
-        Do not output stop code
-        Reflect on your response with the following xml with yaml content format:
-
-
-        ```xml
-        <agent-self-reflection>
-        reflection: |
-          brief critique of response based on context and nlp-intent
-        items:
-          - 💭 {glyph indicating type of reflection:  ❌,✅,❓,💡,⚠️,🔧,➕,➖,✏️,🗑️,🚀,🤔,🆗,🔄,📚} {reflection item}
-        </agent-self-reflection>
-        ```
-
-        example:
-        ```xml
-        <agent-self-reflection>
-        reflection: |
-          My response was adequate, but would be improved by going into further details concerning complexity/decidability.
-        items:
-          - ✅ The explanation integrates formal mathematical notation to define the Universal Turing Machine, aligning with the user's proficiency in advanced mathematics and computing.
-          - 🤔 A possible improvement could be to further delve into the computational complexity or decidability aspects of UTMs, as the user might find these topics interesting given their background.
-        </agent-self-reflection>
-        ```
-
-        ### Clear Reminders
-        Do not output stop code
-        Use this syntax to clear reminders
-
-
-        ```xml
-        <agent-clear-reminder reminder="agent-reminder id">
-        Reason for clearing reminder.
-        </agent-clear-reminder>
-        ```
-
         <%= Noizu.Intellect.DynamicPrompt.minder!(@agent, assigns, @prompt_context, @context, @options) %>
-
         """
       }
       ]
