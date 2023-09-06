@@ -278,6 +278,130 @@ defmodule Noizu.Intellect.Account.Message do
   end
 
 
+  def is_system_message?(message, agent) do
+    cond do
+      message.event in [:system_minder] && message.priority > 0 -> true
+      #is_nil(message.read_on) && message.event in [:objective_ping, :no_reply_ping, :follow_up] && message.priority > 0 -> true
+      :else -> false
+    end
+  end
+
+  def is_old_message?(message, agent) do
+    cond do
+      message.event in [:system_minder] -> false
+      message.event in [:objective_ping, :no_reply_ping, :follow_up] -> false
+      :else -> !is_new_message?(message, agent)
+    end
+  end
+
+  def is_new_message?(message, agent) do
+    cond do
+      message.event == :system_minder -> false
+      message.event in [:objective_ping, :no_reply_ping, :follow_up] ->
+        message.priority > 50 && DateTime.compare(message.time_stamp.created_on, DateTime.utc_now()) != :gt
+      message.read_on -> false
+      message.event in [:online,:offline, :message, :function_call] and message.sender.identifier == agent.identifier -> false
+      message.event in [:system_minder] -> false
+      message.priority > 50 -> true
+      :else -> false
+    end
+  end
+
+  def split_messages(messages, agent) do
+    # function_call,function_response,objective_ping,no_reply_ping,system_message,follow_up
+    # Extract Read, New, and Indirect messages.
+    processed = Enum.filter(messages, & is_old_message?(&1, agent))
+    new = Enum.filter(messages, & is_new_message?(&1, agent))
+    system = Enum.filter(messages, & is_system_message?(&1, agent))
+    #new = Enum.filter(x, & &1.priority >= 50)
+    #indirect = Enum.reject(x, & &1.priority >= 50)
+    {processed, new, system}
+  end
+
+  def message_to_xml(msg, context, options) do
+    {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
+
+    cond do
+      msg.event in [:online] ->
+        """
+        [Event]
+        id: #{msg.identifier}
+        received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+        event: @#{slug} Online
+        """
+      msg.event in [:offline] ->
+        """
+        [Event]
+        id: #{msg.identifier}
+        received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+        event: @#{slug} Offline
+        """
+      msg.event in [:function_call] ->
+        if msg.priority > 0 do
+          """
+          [Function Call]
+          id: #{msg.identifier}
+          received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+          by: @#{slug}
+          ------
+          #{msg.contents.body}
+          [/Function Call]
+          """
+        end
+      msg.event in [:function_response] ->
+        if msg.priority > 0 do
+          """
+          [Function Response]
+          id: #{msg.identifier}
+          received-on: #{msg.time_stamp.created_on |> DateTime.to_iso8601}
+          ------
+          #{msg.contents.body}
+          [/Function Response]
+          """
+        end
+      msg.event in [:follow_up] ->
+        if msg.priority > 0 do
+          """
+          <message
+            id="#{msg.identifier}"
+            type="instruction"
+            time="#{msg.time_stamp.created_on |> DateTime.to_iso8601}"
+            from="@#{slug}"
+            to="#{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join(",")}"
+            in-response-to="#{Noizu.Intellect.Account.Message.reply_list(msg, context, options) |> Enum.join(",")}"
+          >
+          # Instruction Prompt
+          #{msg.contents.body}
+          </message>
+          """
+        end
+      msg.event in [:objective_ping, :no_reply_ping] -> nil
+      msg.event in [:system_message] ->
+        if msg.priority > 0 do
+          """
+          [System Prompt]
+          # System Prompt ##{msg.identifier}
+          #{msg.contents.body}
+          [/System Prompt]
+          """
+        end
+      msg.event in [:message] ->
+        """
+        <message
+          id="#{msg.identifier}"
+          time="#{msg.time_stamp.created_on |> DateTime.to_iso8601}"
+          mood="#{msg.user_mood}"
+          from="@#{slug}"
+          to="#{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join(",")}"
+          in-response-to="#{Noizu.Intellect.Account.Message.reply_list(msg, context, options) |> Enum.join(",")}"
+        >
+        #{msg.contents.body}
+        </message>
+        """
+      :else -> nil
+    end
+  end
+
   defimpl Noizu.Entity.Protocol do
     def layer_identifier(entity, _layer) do
       {:ok, entity.identifier}
@@ -404,8 +528,10 @@ defmodule Noizu.Intellect.Account.Message do
     def recent(channel, context, options \\ nil) do
       {:ok, id} = Noizu.EntityReference.Protocol.id(channel)
       limit = options[:limit] || 100
+      now = DateTime.utc_now()
       q = from m in Noizu.Intellect.Schema.Account.Message,
                where: m.channel == ^id,
+               where: m.created_on < ^now,
                order_by: [desc: m.created_on],
                limit: ^limit,
                select: m
@@ -634,6 +760,7 @@ defimpl Noizu.Intellect.LiveView.Encoder, for: [Noizu.Intellect.Account.Message]
       user: user_ref,
       profile_image: nil,
       mood: message.user_mood,
+      title: message.contents.title,
       body: message.contents.body,
       meta: message.meta,
       state: :sent

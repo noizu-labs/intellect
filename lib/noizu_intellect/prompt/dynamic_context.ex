@@ -324,8 +324,8 @@ defimpl Noizu.Intellect.DynamicPrompt, for:  Noizu.Intellect.Prompt.DynamicConte
   def request(prompt_context, _, context, options) do
     with {:ok, master_prompt} <- Noizu.Intellect.DynamicPrompt.prompt(prompt_context, prompt_context.assigns, prompt_context, context, options),
          {:ok, master_minder_prompt} <- Noizu.Intellect.DynamicPrompt.minder(prompt_context, prompt_context.assigns, prompt_context, context, options) do
-      prompts = expand_prompts(master_prompt)
-      minders = expand_prompts(master_minder_prompt)
+      prompts = to_openai_message(master_prompt)
+      minders = to_openai_message(master_minder_prompt)
 
       functions = [
         %{
@@ -386,7 +386,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for:  Noizu.Intellect.Prompt.DynamicConte
   end
 
 
-  defp expand_prompts(prompts) do
+  defp to_openai_message(prompts) do
     case prompts do
       v when is_bitstring(v) -> [%Message{type: :system, body: v}]
       {:system, v} when is_bitstring(v) -> [%Message{type: :system, body: v}]

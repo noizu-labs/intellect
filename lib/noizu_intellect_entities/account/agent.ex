@@ -571,14 +571,9 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
 #              ```
 #    """
 
-    prompt =
-      """
-      <%= if @objectives && length(@objectives) > 0 do %>
-      # @<%= @agent.slug %> Current Objectives
-      <%= for objective <- @objectives do %>
-      <%= Ymlr.document!(objective) %><% end %>
-      <% end %>
-      """
+
+
+
 
 
 
@@ -768,11 +763,38 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
     #      --- END RESPONSE: @<%= @agent_info.handle %> ---
     #      `````
     #      %>
-    assigns = put_in(assigns || [], [:agent_info], r)
-    m = EEx.eval_string(prompt, assigns: assigns)
-    # IO.puts m
-    {:ok, m}
 
+    # IO.puts m
+
+    #if assigns[:objectives] && length(assigns[:objectives]) > 0 do
+      prompt =
+        """
+        <%= if @objectives && length(@objectives) > 0 do %>
+        # @<%= @agent.slug %> Current Objectives
+        <%= for objective <- @objectives do %>
+        <%= Ymlr.document!(objective) %><% end %>
+        <% end %>
+
+        <%= if @agent.slug == "grace" do %>
+        # @<%= @agent.slug %> Synthetic Memory
+        My highest priority is product monetization.
+        <% end %>
+        <%= if @agent.slug == "mindy" do %>
+        # @<%= @agent.slug %> Synthetic Memory
+        My highest priority is user experience.
+        <% end %>
+
+        # Instructions
+        Respond as @<%= @agent.slug %>, apply the behavior/details/and agent synthetic memories/objectives for <%= @agent.slug %> that have been previously defined in shaping your responses.
+        Remember if asking for brainstorming/planning etc. output include your initial brain storming/planning output in your request.
+
+        Do not sent messages to yourself, if you wish to instruct yourself to perform/provide additional output use a agent-reminder-set tag.
+        """
+
+      assigns = put_in(assigns || [], [:agent_info], r)
+      m = EEx.eval_string(prompt, assigns: assigns) |> IO.inspect(label: "CURRENT OBJECTIVES")
+      {:ok, m}
+    #end
   end
 
 

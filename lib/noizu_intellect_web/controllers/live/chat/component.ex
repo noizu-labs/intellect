@@ -121,10 +121,18 @@ defmodule Noizu.IntellectWeb.Chat.Component do
               <div class="tab-page tab-1 markdown-body">
                 <%= if @message.type == :system_message do %>[SYSTEM MESSAGE]<% end %>
                 <%= if @message.type == :system_minder do %>[SYSTEM MINDER]<% end %>
-                <%= if @message.type == :follow_up do %>[FOLLOW-UP]<% end %>
+                <%= if @message.type == :follow_up do %>[FOLLOW-UP]
+                <%=  raw(Earmark.as_html!(@message.title, smartypants: false) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %>
+                <% end %>
                 <%=  raw(Earmark.as_html!(@message.body, smartypants: false) |> Noizu.Intellect.HtmlModule.replace_script_tags() ) %>
               </div>
-              <pre class="tab-page tab-2 align-top"><%=  @message.body %></pre>
+              <pre class="tab-page tab-2 align-top">
+<%= if @message.type == :follow_up do %>
+<%=  @message.title %>
+----------------
+<% end %>
+<%=  @message.body %>
+              </pre>
               <div class="tab-page tab-3 align-top">
                  <%= if @message.meta do %>
 

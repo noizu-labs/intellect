@@ -9,6 +9,7 @@ defmodule Noizu.IntellectWeb.Message do
     user: nil,
     profile_image: nil,
     mood: nil,
+    title: nil,
     body: nil,
     meta: nil,
     bookmark: false,

@@ -155,7 +155,7 @@ defmodule Noizu.Intellect.HtmlModule do
               ([m]) when is_bitstring(m) ->
                 m = String.trim(m)
                 unless m == "" do
-                  {:follow_up, [instructions: m]}
+                  {:follow_up, [id: :os.system_time(:millisecond), instructions: m]}
                 end
                 (_) -> nil
             end
@@ -274,11 +274,101 @@ defmodule Noizu.Intellect.HtmlModule do
         ({"agent-objective-update", attrs, contents}) ->
           for = attr_extract__list(attrs, "in-response-to")
           body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-          with {:ok, y = [%{"name" => name, "objective" => objective, "tasks" => tasks}]} <- YamlElixir.read_all_from_string(body) do
+          with {:ok, [y = %{"name" => name, "brief" => objective, "tasks" => tasks}]} <- YamlElixir.read_all_from_string(body) do
             {:objective, [name: name, for: for, summary: objective, tasks: tasks, ping_me: y["ping-me"], remind_me: y["remind-me"] ]}
           else
             _ -> nil
           end
+        ({"agent-reminder-set", attrs, contents}) ->
+          remind_after = attr_extract__value(attrs, "after")
+                         |> case do
+                              "" -> nil
+                              v when is_bitstring(v) ->
+                                cond do
+                                  String.match?(v, ~r/[0-9]-/ ) -> DateTime.from_iso8601(v)
+                                  String.match?(v, ~r/^[0-9]+$/ ) ->
+                                    case Integer.parse(v) do
+                                      {v, _} -> {:ok, Timex.shift(DateTime.utc_now, seconds: v)}
+                                      _ -> nil
+                                    end
+                                  String.match?(v, ~r/^[0-9]+ minutes?$/ ) ->
+                                    case Regex.run(~r/^([0-9]+) minutes?$/, v) do
+                                      [_, m] -> {:ok, Timex.shift(DateTime.utc_now, minutes: String.to_integer(m))}
+                                      _ -> nil
+                                    end
+                                  String.match?(v, ~r/^[0-9]+ hours?$/ ) ->
+                                    case Regex.run(~r/^([0-9]+) hours?$/, v) do
+                                      [_, m] -> {:ok, Timex.shift(DateTime.utc_now, hours: String.to_integer(m))}
+                                      _ -> nil
+                                    end
+                                  String.match?(v, ~r/^[0-9]+ days?$/ ) ->
+                                    case Regex.run(~r/^([0-9]+) days?$/, v) do
+                                      [_, m] -> {:ok, Timex.shift(DateTime.utc_now, days: String.to_integer(m))}
+                                      _ -> nil
+                                    end
+                                  :else -> nil
+                                end
+                              _ -> nil
+                            end
+                         |> case do
+                              {:ok, t} -> t
+                              _ -> nil
+                            end
+
+          remind_until = attr_extract__value(attrs, "until")
+                         |> case do
+                              "infinity" -> :infinity
+                              v when is_bitstring(v) ->
+                                cond do
+                                  String.match?(v, ~r/[0-9]-/ ) -> DateTime.from_iso8601(v)
+                                  String.match?(v, ~r/^[0-9]+$/ ) ->
+                                    case Integer.parse(v) do
+                                      {v, _} -> {:ok, Timex.shift(DateTime.utc_now, seconds: v)}
+                                      _ -> nil
+                                    end
+                                  :else -> nil
+                                end
+                              _ -> nil
+                            end
+                         |> case do
+                              {:ok, t} -> t
+                              _ -> nil
+                            end
+          repeat = attr_extract__value(attrs, "repeat")
+                   |> case do
+                        "infinity" -> {:ok, :infinity}
+                        v when is_bitstring(v) ->
+                          case Integer.parse(v) do
+                            {v, _} -> {:ok, v}
+                            _ -> nil
+                          end
+                        _ -> nil
+                      end
+                   |> case do
+                        {:ok, t} -> t
+                        _ -> nil
+                      end
+          condition = Enum.map(contents,
+                         fn
+                           ({"condition", _, contents}) ->  {:condition, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
+                           _ -> nil
+                         end
+                         ) |> Enum.reject(&is_nil/1)
+          condition = case condition do
+            [] -> nil
+            [{:condition, x}|_] -> x
+          end
+
+          instructions = Enum.map(contents,
+                           fn
+                             ({"condition", _, contents}) ->  nil
+                             (x) -> x
+                           end
+                     ) |> Enum.reject(&is_nil/1)
+
+          body = Floki.raw_html(instructions, pretty: false, encode: false) |> String.trim()
+          {:follow_up, [id: :os.system_time(:millisecond), remind_after: remind_after, remind_until: remind_until, repeat: repeat, condition: condition, instructions: body]} |> IO.inspect(label: "FOLLOW UP")
+
         ({"nlp-agent", attrs, contents}) ->
           agent = attr_extract__list(attrs, "for", false)
           {:agent, [agent: agent, output: extract_nlp_agent_response(contents)]}

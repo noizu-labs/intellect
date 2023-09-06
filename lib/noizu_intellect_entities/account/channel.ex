@@ -627,7 +627,7 @@ defmodule Noizu.Intellect.Account.Channel do
           _ -> messages
         end
         stop = :os.system_time(:millisecond)
-        Logger.info("[RECENT GRAPH] #{stop - start} ms")
+        Logger.info("[RECENT GRAPH] #{stop - start} ms: #{messages && length(messages) || "nil"}")
         {:ok, final}
       end
     end

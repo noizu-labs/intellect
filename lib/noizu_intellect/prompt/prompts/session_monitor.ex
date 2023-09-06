@@ -2,7 +2,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
   @behaviour Noizu.Intellect.Prompt.ContextWrapper
   require Logger
 
-  def assigns(subject, prompt_context, _context, _options) do
+  def prep_assigns(subject, prompt_context, _context, _options) do
     assigns = Map.merge(
                 prompt_context.assigns,
                 %{
@@ -10,7 +10,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
                   members: Map.merge(prompt_context.assigns[:members] || %{}, %{verbose: :brief})
                 })
               |> put_in([:current_message], subject.arguments[:current_message])
-    {:ok, assigns}
+    {:ok, assigns} |> IO.inspect
   end
 
 
@@ -28,7 +28,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
     %Noizu.Intellect.Prompt.ContextWrapper{
       name: __MODULE__,
       arguments: %{current_message: current_message},
-      assigns: &__MODULE__.assigns/4,
+      assigns: &__MODULE__.prep_assigns/4,
       prompt: [system:
         """
         <%= if @message_history.length > 0 do %>
@@ -98,7 +98,7 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
     %Noizu.Intellect.Prompt.ContextWrapper{
       name: __MODULE__,
       arguments: %{current_message: current_message},
-      assigns: &__MODULE__.assigns/4,
+      assigns: &__MODULE__.prep_assigns/4,
       prompt: [user:
         """
         <%= if @message_history.length > 0 do %>

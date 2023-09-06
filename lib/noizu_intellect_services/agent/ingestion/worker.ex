@@ -105,8 +105,9 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   def session_unread_messages?(state, context, options) do
     # TODO - logic depends on channel type
     # Noizu.Intellect.Account.Message.Repo.has_unread?(state.worker.agent, state.worker.channel, context, options)
+    now = DateTime.utc_now()
     with {:ok, o} <- message_history(state, context, options)  do
-      unless unread = Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority >= 50 && true || nil)) do
+      unless unread = Enum.find_value(o, &(is_nil(&1.read_on) && &1.priority && &1.priority >= 50 && DateTime.compare(&1.time_stamp.created_on, now) == :lt  || nil)) do
         false
       else
         true
@@ -306,46 +307,43 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
            state.worker.agent,
            state.worker.channel,
            messages,
-           Noizu.Intellect.Prompt.ContextWrapper.session_response_prompt(state.worker.objectives),
+           Noizu.Intellect.Prompt.ContextWrapper.session_plan_prompt(state.worker.objectives),
            context,
            options),
          {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options)
       do
 
       try do
-        with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
-             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply)
+        with raw1 =%{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
+             :ok <- IO.puts("\n\n**************** PLAN #{state.worker.agent.slug} *******************\n#{reply}\n**************** PLAN *******************\n\n"),
+             options_b <- put_in(options || [], [:pending_message], reply),
+             {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
+               state.worker.agent,
+               state.worker.channel,
+               messages,
+               Noizu.Intellect.Prompt.ContextWrapper.session_reply_prompt(state.worker.objectives),
+               context,
+               options_b),
+             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_b),
+             raw2 = %{choices: [%{message: %{content: reply2}}|_]} <- api_response[:reply],
+             :ok <- IO.puts("\n\n**************** REPLY #{state.worker.agent.slug} *******************\n#{reply2}\n**************** REPLY *******************\n\n"),
+             # TODO after sending messages perform reflect prompt
+             options_c <- put_in(options || [], [:previous_message], reply <> "\n" <> reply2),
+             {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
+               state.worker.agent,
+               state.worker.channel,
+               messages,
+               Noizu.Intellect.Prompt.ContextWrapper.session_reflect_prompt(state.worker.objectives),
+               context,
+               options_c),
+             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_c),
+             raw3 = %{choices: [%{message: %{content: reply3}}|_]} <- api_response[:reply],
+             :ok <- IO.puts("\n\n**************** REFLECT #{state.worker.agent.slug} *******************\n#{reply3}\n**************** REFLECT *******************\n\n"),
+             api_response <- put_in(api_response, [:reply], [raw1,raw2,raw3]),
+             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply <> "\n" <> reply2 <> "\n" <> reply3)
           do
 
-
-          {response, api_response} = with :ok <- Noizu.Intellect.HtmlModule.valid_response?(response) do
-              {response, api_response}
-          else
-          _ -> {response, api_response}
-#            error ->
-#              issues = case error do
-#                {:invalid_response, issues} -> issues
-#                _ -> "Malformed Response"
-#              end
-#            correction = %{role: :system, content:
-#              """
-#              Invalid Response #{inspect issues}
-#              You must properly format your response as defined in your agent definition and extension block(s).
-#              Please fix reformat your response using your agent response format instructions.
-#              """}
-#
-#            Logger.error("MALFORMED RESPONSE: " <> correction.content)
-#            malformed = %{role: :assistant, content: reply}
-#            with {:ok, reply} <- Noizu.OpenAI.Api.Chat.chat(api_response[:messages] ++ [malformed, correction], api_response[:settings]),
-#                 %{choices: [%{message: %{content: reply_body}}|_]} <- reply,
-#                 {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply_body) do
-#              {response, put_in(api_response, [:messages], api_response[:messages] ++ [malformed, correction])}
-#            else
-#              _ -> {response, api_response}
-#            end
-          end
-
-          Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
+          Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n" <> reply2 <> "\n" <> reply3 <> "\n------------------------------------\n\n")
           format_response = Enum.map([:reply, :function_call, :ack, :follow_up, :memory, :intent, :objective, :error], fn(s) ->
             r = if response[s] do
               Enum.map(response[s] || [], fn
@@ -360,14 +358,17 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
           Enum.map(response[:follow_up] || [],
             fn
               ({:follow_up, details}) ->
+                # this should be delayed until after after field - temp hack
+                time_stamp = Noizu.Entity.TimeStamp.now(details[:remind_after]) || Noizu.Entity.TimeStamp.now()
                 message = %Noizu.Intellect.Account.Message{
                   sender: state.worker.agent,
                   channel: state.worker.channel,
                   depth: 0,
                   event: :follow_up,
-                  contents: %{title: "follow-up", body: details[:instructions]},
+                  # Temp hack for condition field - follow ups should be it's own table and injected into request
+                  contents: %{title: details[:condition] || "NO CONDITIONS", body: details[:instructions]},
                   meta: Ymlr.document!(meta_list) |> String.trim(),
-                  time_stamp: Noizu.Entity.TimeStamp.now()
+                  time_stamp: time_stamp
                 }
                 {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
                 Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 100, "self-instruct"}}, message, context, options)

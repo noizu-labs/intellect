@@ -1,7 +1,10 @@
 
 Sept 6th
 ===========
-- [ ] consolidate triple call into single call by breaking agent into components and instructing system to return agent.planner, agent.response, agent.reflect responses.
+- Triple Pass
+  - Set Plan
+  - Response
+  - Update Objectives/Reminders
 
 August 22nd
 =============
