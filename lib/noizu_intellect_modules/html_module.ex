@@ -214,7 +214,21 @@ defmodule Noizu.Intellect.HtmlModule do
        )
   end
 
-  def attr_extract__list(attrs, key, int? \\ true) do
+
+  def attr_extract__integer(attrs, key) do
+    attr_extract__value(attrs, key)
+    |> case do
+         "infinity" -> :infinity
+         v when is_bitstring(v) ->
+           cond do
+             String.match?(v, ~r/^[0-9]+$/ ) -> String.to_integer(v)
+             :else -> nil
+           end
+         _ -> nil
+       end
+  end
+
+  def attr_extract__list(attrs, key, type \\ :int) do
     Enum.find_value(attrs, & elem(&1, 0) == key && elem(&1, 1) || nil)
     |> then(
          fn
@@ -222,11 +236,16 @@ defmodule Noizu.Intellect.HtmlModule do
              v = String.trim(v)
              cond do
                v == "" -> []
-               int? ->
+               type == :int ->
                  v
                  |> String.split(",")
                  |> Enum.map(&String.trim/1)
                  |> Enum.map(&String.to_integer/1)
+               type == :slug ->
+                 v
+                 |> String.split(",")
+                 |> Enum.map(&String.trim/1)
+                 |> Enum.filter(& String.match?(&1, ~r/^@[a-zA-Z][a-zA-Z0-9_\-]*$/))
                :else ->
                  v
                  |> String.split(",")
@@ -248,15 +267,68 @@ defmodule Noizu.Intellect.HtmlModule do
     end
   end
 
+  def extract_time(value, now \\ nil) do
+    now = now || DateTime.utc_now()
+    value
+    |> case do
+         "" -> nil
+         "infinity" -> :infinity
+         v when is_bitstring(v) ->
+           cond do
+             String.match?(v, ~r/[0-9]-/ ) -> DateTime.from_iso8601(v)
+             String.match?(v, ~r/^[0-9]+$/ ) ->
+               case Integer.parse(v) do
+                 {v, _} -> {:ok, Timex.shift(now, seconds: v)}
+                 _ -> nil
+               end
+             String.match?(v, ~r/^[0-9]+ (second|minute|hour|day|week|month|year)s?$/ ) ->
+               case Regex.run(~r/^([0-9]+) (second|minute|hour|day|week|month|year)s?$/, v) do
+                 [_, m, period] ->
+                   period = case period do
+                     "second" -> :seconds
+                     "minute" -> :minutes
+                     "hour" -> :hours
+                     "day" -> :days
+                     "week" -> :weeks
+                     "month" -> :months
+                     "years" -> :years
+                     _ -> nil
+                   end
+                   period && {:ok, Timex.shift(now, [{period, String.to_integer(m)}])}
+                 _ -> nil
+               end
+             :else -> nil
+           end
+         _ -> nil
+       end
+    |> case do
+         {:ok, t} -> t
+         _ -> nil
+       end
+  end
+
+  def attr_extract__time(attrs, field, now \\ nil) do
+    attr_extract__value(attrs, field)
+    |> extract_time(now)
+  end
+
   def extract_nlp_agent_response(contents) do
     o = Enum.map(contents,
       fn
         ({"message", attrs, contents}) ->
           mood = attr_extract__value(attrs, "mood")
           from = attr_extract__value(attrs, "from")
-          to = attr_extract__list(attrs, "to", false)
+          to = attr_extract__list(attrs, "to", :slug)
           in_response_to = attr_extract__list(attrs, "in-response-to")
-          {:reply, [mood: mood, at: to, from: from, in_response_to: in_response_to, response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+          {:reply,
+            [
+              mood: mood,
+              at: to,
+              from: from,
+              in_response_to: in_response_to,
+              response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+            ]
+          }
         ({"agent-mark-read", attrs, contents}) ->
           ids = attr_extract__list(attrs, "messages")
           {:ack, [ids: ids, comment: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
@@ -273,104 +345,90 @@ defmodule Noizu.Intellect.HtmlModule do
           {:mood, [mood: mood, note: body]}
         ({"agent-objective-update", attrs, contents}) ->
           for = attr_extract__list(attrs, "in-response-to")
+          participants = attr_extract__list(attrs, "participants", :slug)
+          id = attr_extract__value(attrs, "objective")
+          id = id not in ["new", ""] && id || nil
           body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+          status = attr_extract__value(attrs, "status")
+                   |> case do
+                        "in-progress" -> :in_progress
+                        "pending" -> :pending
+                        "new" -> :new
+                        "active" -> :active
+                        "blocked" -> :blocked
+                        "completed" -> :completed
+                        "review" -> :review
+                        "stalled" -> :stalled
+                        _ -> nil
+                      end
           with {:ok, [y = %{"name" => name, "brief" => objective, "tasks" => tasks}]} <- YamlElixir.read_all_from_string(body) do
-            {:objective, [name: name, for: for, summary: objective, tasks: tasks, ping_me: y["ping-me"], remind_me: y["remind-me"] ]}
+            [ping_me, remind_me] = Enum.map(["ping-me", "remind-me"],
+              fn(key) ->
+                case y[key] do
+                  %{"name" => name, "after" => remind_after, "to" => instructions} ->
+                    remind_after = extract_time(remind_after)
+                    name && remind_after && instructions && [%{name: name, remind_after: remind_after, instructions: instructions}] || []
+                  v when is_list(v) ->
+                    Enum.map(v,
+                      fn(x) ->
+                        case x do
+                          %{"name" => name, "after" => remind_after, "to" => instructions} ->
+                            remind_after = extract_time(remind_after)
+                            name && remind_after && instructions && %{name: name, remind_after: remind_after, instructions: instructions}
+                          _ -> nil
+                        end
+                      end) |> Enum.reject(&is_nil/1)
+                end
+              end
+            )
+            {:objective,
+              [
+                id: id,
+                participants: participants,
+                status: status,
+                name: name,
+                for: for,
+                brief: objective,
+                tasks: tasks,
+                ping_me: ping_me,
+                remind_me: remind_me
+              ]
+            }
           else
             _ -> nil
           end
         ({"agent-reminder-set", attrs, contents}) ->
-          remind_after = attr_extract__value(attrs, "after")
-                         |> case do
-                              "" -> nil
-                              v when is_bitstring(v) ->
-                                cond do
-                                  String.match?(v, ~r/[0-9]-/ ) -> DateTime.from_iso8601(v)
-                                  String.match?(v, ~r/^[0-9]+$/ ) ->
-                                    case Integer.parse(v) do
-                                      {v, _} -> {:ok, Timex.shift(DateTime.utc_now, seconds: v)}
-                                      _ -> nil
-                                    end
-                                  String.match?(v, ~r/^[0-9]+ minutes?$/ ) ->
-                                    case Regex.run(~r/^([0-9]+) minutes?$/, v) do
-                                      [_, m] -> {:ok, Timex.shift(DateTime.utc_now, minutes: String.to_integer(m))}
-                                      _ -> nil
-                                    end
-                                  String.match?(v, ~r/^[0-9]+ hours?$/ ) ->
-                                    case Regex.run(~r/^([0-9]+) hours?$/, v) do
-                                      [_, m] -> {:ok, Timex.shift(DateTime.utc_now, hours: String.to_integer(m))}
-                                      _ -> nil
-                                    end
-                                  String.match?(v, ~r/^[0-9]+ days?$/ ) ->
-                                    case Regex.run(~r/^([0-9]+) days?$/, v) do
-                                      [_, m] -> {:ok, Timex.shift(DateTime.utc_now, days: String.to_integer(m))}
-                                      _ -> nil
-                                    end
-                                  :else -> nil
-                                end
-                              _ -> nil
-                            end
-                         |> case do
-                              {:ok, t} -> t
-                              _ -> nil
-                            end
-
-          remind_until = attr_extract__value(attrs, "until")
-                         |> case do
-                              "infinity" -> :infinity
-                              v when is_bitstring(v) ->
-                                cond do
-                                  String.match?(v, ~r/[0-9]-/ ) -> DateTime.from_iso8601(v)
-                                  String.match?(v, ~r/^[0-9]+$/ ) ->
-                                    case Integer.parse(v) do
-                                      {v, _} -> {:ok, Timex.shift(DateTime.utc_now, seconds: v)}
-                                      _ -> nil
-                                    end
-                                  :else -> nil
-                                end
-                              _ -> nil
-                            end
-                         |> case do
-                              {:ok, t} -> t
-                              _ -> nil
-                            end
-          repeat = attr_extract__value(attrs, "repeat")
-                   |> case do
-                        "infinity" -> {:ok, :infinity}
-                        v when is_bitstring(v) ->
-                          case Integer.parse(v) do
-                            {v, _} -> {:ok, v}
-                            _ -> nil
-                          end
-                        _ -> nil
-                      end
-                   |> case do
-                        {:ok, t} -> t
-                        _ -> nil
-                      end
           condition = Enum.map(contents,
-                         fn
-                           ({"condition", _, contents}) ->  {:condition, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
+                        fn
+                          ({"condition", _, contents}) ->  {:condition, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
+                          _ -> nil
+                        end
+                      )
+                      |> Enum.reject(&is_nil/1)
+                      |> case do
+                           [{:condition, x}|_] -> x
                            _ -> nil
                          end
-                         ) |> Enum.reject(&is_nil/1)
-          condition = case condition do
-            [] -> nil
-            [{:condition, x}|_] -> x
-          end
-
           instructions = Enum.map(contents,
                            fn
                              ({"condition", _, contents}) ->  nil
                              (x) -> x
                            end
-                     ) |> Enum.reject(&is_nil/1)
-
-          body = Floki.raw_html(instructions, pretty: false, encode: false) |> String.trim()
-          {:follow_up, [id: :os.system_time(:millisecond), remind_after: remind_after, remind_until: remind_until, repeat: repeat, condition: condition, instructions: body]} |> IO.inspect(label: "FOLLOW UP")
+                         ) |> Enum.reject(&is_nil/1)
+                         |> Floki.raw_html([pretty: false, encode: false])
+                         |> String.trim()
+          {:follow_up, [
+            name: attr_extract__value(attrs, "name"),
+            remind_after: attr_extract__time(attrs, "after"),
+            remind_until: attr_extract__time(attrs, "until"),
+            repeat: attr_extract__integer(attrs, "repeat"),
+            condition: condition,
+            instructions: instructions
+          ]
+          }
 
         ({"nlp-agent", attrs, contents}) ->
-          agent = attr_extract__list(attrs, "for", false)
+          agent = attr_extract__list(attrs, "for", :slug)
           {:agent, [agent: agent, output: extract_nlp_agent_response(contents)]}
         ({"nlp-message", attrs, contents}) -> extract_nlp_agent_response(contents)
         ({"nlp-intent", _, contents}) ->

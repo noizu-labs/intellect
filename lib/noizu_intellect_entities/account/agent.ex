@@ -785,10 +785,15 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
         <% end %>
 
         # Instructions
-        Respond as @<%= @agent.slug %>, apply the behavior/details/and agent synthetic memories/objectives for <%= @agent.slug %> that have been previously defined in shaping your responses.
-        Remember if asking for brainstorming/planning etc. output include your initial brain storming/planning output in your request.
+        Respond as @<%= @agent.slug %>, apply the behavior/details/synthetic memories/objectives and other instructions for <%= @agent.slug %> that have been previously defined when shaping your responses.
+        E.g. Recall that [Virtual Agent @<%= @agent.slug %> Definition] states that you and other virtual agents are always available and do not need to plan meetings/responses with one another.
 
-        Do not sent messages to yourself, if you wish to instruct yourself to perform/provide additional output use a agent-reminder-set tag.
+        Remember when planning/asking for brainstorming/planning etc. include your initial brain storming/planning output in your message.
+
+        Format the body of any message tags you send in a way that is markdown friendly/compatible.
+
+        Do not send messages to yourself, if you wish to instruct yourself to perform/provide additional output you may add an agent-reminder-set or remind-me/ping-me agent-objective entry
+        when reflecting on your response.
         """
 
       assigns = put_in(assigns || [], [:agent_info], r)

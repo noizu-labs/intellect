@@ -131,34 +131,54 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         :user,
         """
         # Instructions
-        Reflect on your prior response, then set/update any objectives, trigger any reminders whose condition are met, output any new reminders and output a closing response reflection tag.
+
+        If your response was cut off (e.g. you started a <message> tag but did not close </message>) finish your previous response before proceeding.
+
+        Then reflect on your prior response, set/update any objectives, trigger any reminders whose condition are met,
+        output any new agent-reminders and output a closing response reflection tag.
+
+        Do send/output any message tags in your response `unless` your agent-response-reflection output indicated
+        one was needed to address a serious oversight/correction.
+
         Do not output the stop sequence until all output is included and you have provided an agent-response-reflection tag.
 
         ## Set/Update Objective
+        Review existing objectives, avoid creating duplicate objectives, removing important tasks, etc.
+        Do not repeat existing ping-me, remind-me entries.
+        Do not update objective if you are not the owner.
         Provide/Update objectives to track ongoing tasks/goals with the following xml+yaml syntax:
         ```xml
-        <agent-objective-update>
-        name: objective name
-        status: new,in-progress,blocked,pending,completed,in-review
+        <agent-objective-update
+          objective="objective id if updating existing, new for new objective"
+          name="unique-slug-format-name"
+          status="new,in-progress,blocked,pending,completed,in-review,stalled"
+          participants="coma separated list of @{user/agents} involved in objective"
+          in-response-to="coma separated list of message ids leading to objective" >
         brief: |
            brief objective statement/description
         tasks:
           - tasks and sub-tasks required to complete objective. Use [x], [ ] to track completed/pending tasks/sub-tasks]
         ping-me:
-          - after: seconds or iso8601 timestamp after which to send, for example 600
+          - name: unique-slug-format-name
+            after: seconds or iso8601 timestamp after which to send, for example 600
             to: |
               prompt style instructions for what action you should take if objective status has not changed after this period
         remind-me:
-          - on: seconds from now or iso8601 timestamp to send reminder on, for example "2023-09-06T01:18:51.008046Z"
+          - name: unique-slug-format-name
+            after: seconds from now or iso8601 timestamp to send reminder on, for example "2023-09-06T01:18:51.008046Z"
             to: |
               prompt style instructions for what follow up action you should take| e.g. after 10 minutes finalize current step and move on to next one
         </agent-objective-update>
         ```
         example:
         ```xml
-        <agent-objective-update>
-        name: Javris Scheduled Holiday
-        status: pending
+        <agent-objective-update
+          objective="new"
+          name="javris-holiday"
+          status="pending"
+          participants=""
+          in-response-to="432,430"
+        >
         brief: |
            Send holiday departure/return messages to Javris and HaohHaoh
         tasks:
@@ -170,13 +190,16 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
           - "[ ] tell Javris to enjoy his vacation."
           - "[ ] welcome Javris back from vacation."
         remind-me:
-          - on: "2100-05-03T01:18:51.008046Z"
+          - name: notify-haohhaoh
+            after: "2100-05-03T01:18:51.008046Z"
             to: |
               Send reminder to @haohhaoh that Javris will be Out of Office from tomorrow until 2100-06-07
-          - on: "2100-05-04T01:18:51.008046Z"
+          - name: congratulate-javris
+            after: "2100-05-04T01:18:51.008046Z"
             to: |
               Tell @javris to enjoy his holiday.
-          - on: "2100-06-07T01:18:51.008046Z"
+          - name: welcome-javris-back
+            after: "2100-06-07T01:18:51.008046Z"
             to: |
               Welcome @javris back from holiday.
         </agent-objective-update>
@@ -204,6 +227,42 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-response-reflection>
         ```
 
+        ### Sending Messages if critical oversight/issue raised in agent-response-reflection
+        You may send additional messages, after the you output a agent-response-reflection if and only if your agent-response-reflection indicated you forget an important detail, made a critical mistake or
+        forgot to send a required message. Do not repeat previous messages or send additional messages unnecessarily.
+
+        Do not output stop code, remember to close tags.
+
+        ```xml
+        <message
+          mood="emoji of mood"
+          from="@<%= @agent.slug %>"
+          to="recipient(s)"
+          in-response-to="required: list of message id(s) message is in response/reply to, at least one must be for a new message"
+        >
+        Your message here
+
+        </message>
+        ```
+
+        Example:
+
+        ```xml
+        <message
+          mood="😜"
+          from="@<%= @agent.slug %>"
+          to="@john,@mike"
+          in-response-to="1234,1233">
+        I realized that:
+        🤔 A possible improvement could be to further delve into the computational complexity or decidability aspects of UTMs, as the user might find these topics interesting given their background.
+
+        Here are is additional feedback on this subject
+        [... rest of message]
+
+        </message>
+        ```
+
+
         ## Clear Reminders
         Use this syntax to clear reminders
         ```xml
@@ -213,10 +272,25 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         ```
 
         ## Set Reminder(s)
-        You may set follow-up reminders to be sent once a condition and or timeout is met with the following syntax
+        You may set follow-up reminders to be sent once a condition or timeout is met.
+        If a reminder it related to an new/ongoing objective it is better configure using the remind-me or ping-me agent-objective-update field
+        and not set here.
+
+        Keep in mind causality. Don't add a reminder to follow up with someone on a date after a reminder that would have
+        required their follow up. Don't set a reminder after a point when a task would already be finished. If setting a reminder
+        to interact with a virtual agent/follow up with virtual agent use short time frames: 60 seconds, 120 seconds, 30 seconds, for follow ups,
+        300 seconds, 600 seconds to wrap-up/advance/escalate a task where only virtual agents and function calls are on the critical path for completion.
+
+        The same considerations apply to objective remind-me and ping-me entries.
+
+        Use the following syntax
 
         ```xml
-        <agent-reminder-set after="must be either an iso8601 format string or integer representing seconds from current time" until="must be either an iso8601 format string or integer representing seconds from current time or infinity" repeat="false or seconds as integer specifying delay before repeat">
+        <agent-reminder-set
+           name="unique-slug-format-name"
+           after="must be either an iso8601 format string or integer representing seconds from current time"
+           until="must be either an iso8601 format string or integer representing seconds from current time or infinity"
+           repeat="false or seconds as integer specifying delay before repeat">
         <!-- optional condition tag -->
         <condition>
         Clear statement of condition to needed to trigger reminder deliver:
@@ -230,7 +304,11 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
 
         Example:
         ```xml
-        <agent-reminder-set after="3600" until="2024-09-06T10:34:06.455264Z" repeat="false">
+        <agent-reminder-set
+           name="unique-slug-format-name"
+           after="3600"
+           until="2024-09-06T10:34:06.455264Z"
+           repeat="false">
         <condition>
         @steve has not posted in previous 60 minutes.
         </condition>

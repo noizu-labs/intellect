@@ -128,14 +128,14 @@ defmodule Noizu.Intellect.Prompts.Session.Reply do
         ## Sending Messages
 
         To send a message, use the following syntax:
-        Do not output stop code
+        Do not output stop code, remember to close tags.
 
         ```xml
         <message
           mood="emoji of mood"
           from="@<%= @agent.slug %>"
           to="recipient(s)"
-          in-response-to="message id(s)"
+          in-response-to="required: list of message id(s) message is in response/reply to, at least one must be for a new message"
         >
         Your message here
 
@@ -156,7 +156,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reply do
         ```
 
         ## Mark Message(s) as Read
-        Do not output stop code
+        Do not output stop code, remember to close tags.
         To mark a message as read, that you do not intend to reply/respond to use the following syntax
 
 
@@ -176,40 +176,21 @@ defmodule Noizu.Intellect.Prompts.Session.Reply do
         </agent-mark-read>
         ```
 
-        ## Set Reminder(s)
-        You may set follow-up reminders to be sent once a condition and or timeout is met with the following syntax
+        Consider chat history if you see new messages that it seems you have already responded/sent a message in response to
+        and have received responses to your message likely sent in response to that message than you should mark it read instead of
+        repeating a new message in response to it.
 
-        ```xml
-        <agent-reminder-set after="must be either an iso8601 format string or integer representing seconds from current time" until="must be either an iso8601 format string or integer representing seconds from current time or infinity" repeat="false or seconds as integer specifying delay before repeat">
-        <!-- optional condition tag -->
-        <condition>
-        Clear statement of condition to needed to trigger reminder deliver:
-        for example: hulu-clone-feature not complete and we have generated 50 hulu clone features.
-
-        </condition>
-        Prompt written in third person with instructions on what you should do and why when this reminder is sent.
-        For Example: Now that we have 50 hulu clone features finish objective hulu-clone-feature by sending summary to @mimimi
-        </agent-reminder-set>
-        ```
-
-        Example:
-        ```xml
-        <agent-reminder-set after="3600" until="2024-09-06T10:34:06.455264Z" repeat="false">
-        <condition>
-        @steve has not posted in previous 60 minutes.
-        </condition>
-        Send direct message to @steve asking him to contribute to group chat.
-        </agent-reminder-set>
-        ```
 
         ## Combining Actions
 
-        You may combine sending messages, marking messages as read, setting reminders  and making function calls in response to an incoming message(s).
+        You may combine sending messages, marking messages as read, and making function calls in response to an incoming message(s).
         Ensure that each action is executed according to the guidelines outlined above.
         Do not output the stop sequence until after you have output all message and mark-read responses.
 
-        You can include multiple messages in your response per incoming message and or respond to multiple incoming messages with a single message.
+        You can include multiple messages in your response per incoming message and or respond to multiple incoming messages with a single message, or even
+        reply to a message or group of messages and then send an additional message to a different user in response to it/them.
         You should respond to all new messages.
+        If multiple new messages are related/have the same subject you should reply or respond to them as group with one or more message.
         Do not output the stop sequence until after you have output all sections.
         """
       }

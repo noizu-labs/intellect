@@ -76,12 +76,6 @@ defmodule Noizu.Intellect.Account.Channel do
     else
       _ -> {:ok, message}
     end
-
-    if summarize_message?(this, message, context, options) do
-      1
-    else
-      {:ok, message}
-    end
   end
 
 
@@ -155,9 +149,24 @@ defmodule Noizu.Intellect.Account.Channel do
     end
   end
 
-  defp set_audience(message, prompt_context, context, options) do
+  defp set_audience(this, message, nil, context, options) do
+    with {:ok, this} <- entity(this, context),
+         {:ok, members} <- Noizu.Intellect.Account.Channel.Repo.members(this, context, options) do
+      members = Enum.map(members, &(Noizu.EntityReference.Protocol.entity(&1, context)))
+                |> Enum.map(
+                     fn
+                       ({:ok, x}) -> x
+                       (_) -> nil
+                     end
+                   ) |> Enum.filter(&(&1))
+      set_audience(this, message, members, context, options)
+    end
+  end
+
+  defp set_audience(_, message, members, context, options) do
     # Before proceeding scan message for @slugs and set audience, then proceed to generate brief and features.
-    audience = Enum.map(prompt_context.channel_members,
+    IO.puts "SET AUDIENCE: #{inspect options[:at]}"
+    audience = Enum.map(members,
                  fn(member) ->
 
                    slug = case member do
@@ -186,6 +195,8 @@ defmodule Noizu.Intellect.Account.Channel do
 
   def group_chat_deliver(this, message, context, options \\ nil) do
     spawn fn ->
+      options_b = put_in(options || [], [:persist], true)
+      audience = set_audience(this, message, nil, context, options_b)
       with {:ok, messages} <- Noizu.Intellect.Account.Channel.Repo.recent_graph(this, context, put_in(options || [], [:limit], 10)),
            messages <- Enum.reverse(messages),
            {:ok, summarized_message} <- summarize_message(this, message, context, options),
@@ -198,13 +209,12 @@ defmodule Noizu.Intellect.Account.Channel do
                options)
         do
         options = put_in(options || [], [:persist], true)
-        set_audience(message, prompt_context, context, options)
         with  {:ok, response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
               {:ok, extracted_details} <- extract_session_message_delivery(response[:reply]),
               {:ok, sender} = Noizu.EntityReference.Protocol.sref(message.sender),
               details = Enum.group_by(extracted_details, &(elem(&1, 0))),
               [entry = {:summary, {summary, action, features}}|_] <- details[:summary] do
-          audience = set_audience(message, prompt_context, context, options)
+
           message =  %Noizu.Intellect.Weaviate.Message{
                        identifier: message.identifier,
                        content: summary,

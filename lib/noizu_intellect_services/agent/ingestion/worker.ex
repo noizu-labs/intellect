@@ -232,11 +232,22 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
             # Block so we don't reload and resend.
             Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
 
-            Enum.map(attr[:ids], fn(id) ->
+            responding_to = case attr[:in_response_to] do
+              x = [_h|_t] -> x
+              _ ->
+                cond do
+                  length(messages) == 1 ->
+                    Enum.map(messages, & &1.identifier)
+                  :else ->
+                    # More of a hack
+                    Enum.map(messages, & &1.identifier)
+                end
+            end
+
+            Enum.map(responding_to, fn(id) ->
               is_integer(id) && Noizu.Intellect.Schema.Account.Message.RespondingTo.record({:responding_to, {id, 100, {nil, nil}, "agent reply"}}, message, context, options)
             end)
-
-            if read = attr[:ids] do
+            if read = responding_to do
               read_messages = Enum.filter(messages, & &1.identifier in read && is_nil(&1.read_on))
               Enum.map(read_messages, & Noizu.Intellect.Account.Message.mark_read(&1, state.worker.agent, context, options))
             end
@@ -256,10 +267,9 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
               Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
             end
 
-            at = (attr[:at] || "")
-                 |> String.split(",")
-                 |> Enum.map(&String.trim/1)
+            at = (attr[:at] || [])
             options = put_in(options || [], [:at], at)
+            #IO.inspect(at, label: "MESSAGE RECIPIENT LIST")
             Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
 #          else
 #            # clear ids regardless to avoid continuous loop.
@@ -295,6 +305,238 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
   end
 
 
+
+
+  def session_process_message_queue__multi_step_call(state, messages, context, options) do
+    with  {:ok, prompt_context} <-
+            Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
+              state.worker.agent, state.worker.channel, messages, Noizu.Intellect.Prompt.ContextWrapper.session_plan_prompt(state.worker.objectives), context, options
+            ),
+          {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options),
+
+          raw1 =%{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
+          :ok <- IO.puts("\n\n**************** PLAN #{state.worker.agent.slug} *******************\n#{reply}\n**************** PLAN *******************\n\n"),
+          options_b <- put_in(options || [], [:pending_message], reply),
+          {:ok, prompt_context} <-
+            Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
+            state.worker.agent, state.worker.channel, messages, Noizu.Intellect.Prompt.ContextWrapper.session_reply_prompt(state.worker.objectives), context, options_b
+            ),
+          {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_b),
+
+          raw2 = %{choices: [%{message: %{content: reply2}}|_]} <- api_response[:reply],
+          :ok <- IO.puts("\n\n**************** REPLY #{state.worker.agent.slug} *******************\n#{reply2}\n**************** REPLY *******************\n\n"),
+          options_c <- put_in(options || [], [:previous_message], reply <> "\n" <> reply2),
+          {:ok, prompt_context} <-
+            Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
+            state.worker.agent, state.worker.channel, messages, Noizu.Intellect.Prompt.ContextWrapper.session_reflect_prompt(state.worker.objectives), context, options_c
+            ),
+          {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_c),
+
+          raw3 = %{choices: [%{message: %{content: reply3}}|_]} <- api_response[:reply],
+          :ok <- IO.puts("\n\n**************** REFLECT #{state.worker.agent.slug} *******************\n#{reply3}\n**************** REFLECT *******************\n\n"),
+          api_response <- put_in(api_response, [:reply], [raw1,raw2,raw3]),
+          {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply <> "\n" <> reply2 <> "\n" <> reply3)
+      do
+      reply = reply <> "\n" <> reply2 <> "\n" <> reply3
+      {:ok, {reply, response, api_response}}
+    end
+  end
+
+  def session_process_message_queue__format_response(response) do
+    [:reply, :function_call, :ack, :follow_up, :memory, :intent, :objective, :error]
+    |> Enum.map(fn(s) ->
+      r = if response[s] do
+        Enum.map(response[s] || [], fn
+          ({^s, x}) -> x
+          (_) -> nil
+        end)
+        |> Enum.reject(&is_nil/1)
+      end
+      {s, r}
+    end)
+    |> Map.new()
+  end
+
+  def session_process_message_queue__follow_up(state, value, context, options) do
+    Enum.map(value || [],
+      fn
+        ({:follow_up, details}) ->
+          remind_until = unless details[:remind_until] in [:infinity, nil] do
+            details[:remind_until]
+          end
+          repeat = unless details[:repeat] in [:infinity] do
+            details[:repeat]
+          end
+          name = case details[:name] do
+            v when v in ["", nil] -> "auto-#{state.worker.agent.slug}-#{:os.system_time(:second)}"
+            v when is_bitstring(v) -> v
+            _ -> "auto-#{state.worker.agent.slug}-#{:os.system_time(:second)}"
+          end
+
+          %Noizu.Intellect.Account.Agent.Reminder{
+            agent: state.worker.agent,
+            name: name,
+            parent: nil,
+            type: :reminder,
+            condition: details[:condition],
+            condition_met: is_nil(details[:condition]),
+            instructions: details[:instructions],
+            remind_after: details[:remind_after] || DateTime.utc_now(),
+            remind_until: remind_until,
+            repeat: repeat,
+            condition_checked_on: nil,
+            sent_on: nil,
+            time_stamp: Noizu.Entity.TimeStamp.now()
+          } |> Noizu.Intellect.Entity.Repo.create(context)
+        (_) -> nil
+      end
+    )
+  end
+
+  def session_process_message_queue__send(state, value, messages, meta_list, context, options) do
+    Enum.map(value || [],
+      fn
+        ({:reply, reply_response}) ->
+          message = %Noizu.Intellect.Account.Message{
+            sender: state.worker.agent,
+            channel: state.worker.channel,
+            depth: 0,
+            user_mood: reply_response[:mood],
+            event: :message,
+            contents: %{title: "response", body: reply_response[:response]},
+            meta: Ymlr.document!(meta_list) |> String.trim(),
+            time_stamp: Noizu.Entity.TimeStamp.now()
+          }
+          {:ok, message} = monitor_agent_response(state, message, context, options)
+          {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
+          # Block so we don't reload and resend.
+          Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+          Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 10, "sender"}}, message, context, options)
+
+          # Mark messages responding to as read.
+          Enum.map(reply_response[:in_response_to], fn(msg_id) ->
+            if message = Enum.find_value(messages, fn(message) -> message.identifier == msg_id && message || nil end) do
+              Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+            end
+          end)
+
+          with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
+            # need a from message method.
+            m = case Ymlr.document!(meta_list) |> String.trim() |> YamlElixir.read_from_string() do
+              {:ok, m} -> m
+              _ -> "[NONE]"
+            end
+            push = %Noizu.IntellectWeb.Message{
+              identifier: message.identifier,
+              type: :message,
+              timestamp: message.time_stamp.created_on,
+              user_name: state.worker.agent.slug,
+              profile_image: state.worker.agent.profile_image,
+              mood: reply_response[:mood] && String.trim(reply_response[:mood]),
+              meta: m,
+              body: message.contents.body
+            }
+            Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
+          end
+
+          spawn fn ->
+            options = put_in(options || [], [:at], reply_response[:at])
+            IO.inspect(reply_response[:at], label: "MESSAGE RECIPIENT LIST")
+            Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
+          end
+          (_) -> nil
+      end
+    )
+  end
+
+  def session_process_message_queue__objectives(state, value, context, options) do
+    Enum.map(value || [],
+      fn
+        ({:objective, details}) ->
+
+          # @todo owner check, existing check
+          existing = case details[:id] do
+            v when is_integer(v) ->
+              with {:ok, v} <- Noizu.Intellect.Account.Agent.Objective.entity(v, context) do
+                v
+              else
+                _ -> nil
+              end
+            _ -> nil
+          end
+          now = DateTime.utc_now()
+
+          if existing do
+            existing
+            |> update_in([Access.key(:brief)], & details[:brief] || &1)
+            |> update_in([Access.key(:tasks)], & details[:tasks] && (Ymlr.document!(details[:tasks]) |> String.trim_leading("---\n")) || &1)
+            |> update_in([Access.key(:status)], & details[:status] || &1)
+            |> put_in([Access.key(:time_stamp), Access.key(:modified_on)], now)
+            |> Noizu.Intellect.Entity.Repo.update(context)
+          else
+            %Noizu.Intellect.Account.Agent.Objective{
+              owner: state.worker.agent,
+              name: details[:name],
+              brief: details[:brief],
+              tasks: Ymlr.document!(details[:tasks]) |> String.trim_leading("---\n"),
+              status: details[:status] || :new,
+              time_stamp: Noizu.Entity.TimeStamp.now()
+            } |> Noizu.Intellect.Entity.Repo.create(context)
+          end
+          |> case do
+               {:ok, entity} ->
+                 # TODO deal with dupes.
+                 digest_msg = """
+                 #{entity.status}
+                 #{entity.tasks}
+                 """
+                 digest = :erlang.md5(["#{entity.identifier}", digest_msg]) |> Base.encode16()
+                 Enum.map([:ping_me, :remind_me],
+                   fn(n) ->
+                     type = %{ping_me: :objective_pinger, remind_me: :objective_reminder}[n]
+                     Enum.map(details[n] || [],
+                       fn
+                         %{name: name, remind_after: remind_after, instructions: instructions} ->
+                           if name && remind_after && instructions do
+                             %Noizu.Intellect.Account.Agent.Reminder{
+                               agent: state.worker.agent,
+                               type: type,
+                               digest: digest,
+                               name: name,
+                               parent: entity,
+                               condition_met: true,
+                               instructions: instructions,
+                               remind_after: remind_after,
+                               time_stamp: Noizu.Entity.TimeStamp.now()
+                             } |> Noizu.Intellect.Entity.Repo.create(context)
+                           end
+                         _ -> nil
+                       end
+                     )
+                   end
+                 )
+               _ -> nil
+             end
+        (_) -> nil
+      end
+    )
+  end
+
+  def session_process_message_queue__mark_read(state, values, messages, context, options) do
+    (values || [])
+    |> Enum.uniq()
+    |> Enum.map(
+         fn
+           ({:ack, [for: ids]}) ->
+             Enum.map(ids, fn(id) ->
+               message = Enum.find_value(messages, fn(message) -> message.identifier == id && message || nil end)
+               message && is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+             end)
+           (_) -> :nop
+         end
+       )
+  end
+
   def session_process_message_queue(state, context, options) do
     # TODO - logic depends on channel type, if session we get all unread messages and filter others by nearby object
     # weaviate search. Prompt returns a list of messages not a composite message and expects a single return.
@@ -303,171 +545,55 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
          {:ok, messages} <- message_history(state, context, options),
          messages <- messages |> Enum.reverse(),
          true <- (length(messages) > 0) || {:error, :no_messages},
-         {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
-           state.worker.agent,
-           state.worker.channel,
-           messages,
-           Noizu.Intellect.Prompt.ContextWrapper.session_plan_prompt(state.worker.objectives),
-           context,
-           options),
-         {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options)
+         {:ok, {reply, response, api_response}} <-
+           session_process_message_queue__multi_step_call(state, messages, context, options)
       do
+          Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
+          meta_list = %{
+            "settings" => api_response[:settings],
+            "messages" => api_response[:messages],
+            "raw_reply" => api_response[:reply],
+            "response" => session_process_message_queue__format_response(response)
+          }
+          session_process_message_queue__objectives(state, response[:objective], context, options)
+          session_process_message_queue__follow_up(state, response[:follow_up], context, options)
+          session_process_message_queue__send(state, response[:reply], messages, meta_list, context, options)
+          session_process_message_queue__mark_read(state, response[:acks], messages, context, options)
 
-      try do
-        with raw1 =%{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
-             :ok <- IO.puts("\n\n**************** PLAN #{state.worker.agent.slug} *******************\n#{reply}\n**************** PLAN *******************\n\n"),
-             options_b <- put_in(options || [], [:pending_message], reply),
-             {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
-               state.worker.agent,
-               state.worker.channel,
-               messages,
-               Noizu.Intellect.Prompt.ContextWrapper.session_reply_prompt(state.worker.objectives),
-               context,
-               options_b),
-             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_b),
-             raw2 = %{choices: [%{message: %{content: reply2}}|_]} <- api_response[:reply],
-             :ok <- IO.puts("\n\n**************** REPLY #{state.worker.agent.slug} *******************\n#{reply2}\n**************** REPLY *******************\n\n"),
-             # TODO after sending messages perform reflect prompt
-             options_c <- put_in(options || [], [:previous_message], reply <> "\n" <> reply2),
-             {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_custom_prompt_context(
-               state.worker.agent,
-               state.worker.channel,
-               messages,
-               Noizu.Intellect.Prompt.ContextWrapper.session_reflect_prompt(state.worker.objectives),
-               context,
-               options_c),
-             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_c),
-             raw3 = %{choices: [%{message: %{content: reply3}}|_]} <- api_response[:reply],
-             :ok <- IO.puts("\n\n**************** REFLECT #{state.worker.agent.slug} *******************\n#{reply3}\n**************** REFLECT *******************\n\n"),
-             api_response <- put_in(api_response, [:reply], [raw1,raw2,raw3]),
-             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply <> "\n" <> reply2 <> "\n" <> reply3)
-          do
+      # Hack - form mark-read until in-response-to reliably set.
+          Enum.map(messages, fn(message) ->
+            is_nil(message.read_on) && Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
+          end)
 
-          Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n" <> reply2 <> "\n" <> reply3 <> "\n------------------------------------\n\n")
-          format_response = Enum.map([:reply, :function_call, :ack, :follow_up, :memory, :intent, :objective, :error], fn(s) ->
-            r = if response[s] do
-              Enum.map(response[s] || [], fn
-                ({^s, x}) -> x
-                (_) -> nil
-              end) |> Enum.reject(&is_nil/1)
-            end
-            {s, r}
-          end) |> Map.new()
-          meta_list = %{"settings" => api_response[:settings], "messages" => api_response[:messages], "raw_reply" => api_response[:reply],  "response" => format_response}
-
-          Enum.map(response[:follow_up] || [],
-            fn
-              ({:follow_up, details}) ->
-                # this should be delayed until after after field - temp hack
-                time_stamp = Noizu.Entity.TimeStamp.now(details[:remind_after]) || Noizu.Entity.TimeStamp.now()
-                message = %Noizu.Intellect.Account.Message{
-                  sender: state.worker.agent,
-                  channel: state.worker.channel,
-                  depth: 0,
-                  event: :follow_up,
-                  # Temp hack for condition field - follow ups should be it's own table and injected into request
-                  contents: %{title: details[:condition] || "NO CONDITIONS", body: details[:instructions]},
-                  meta: Ymlr.document!(meta_list) |> String.trim(),
-                  time_stamp: time_stamp
-                }
-                {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
-                Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 100, "self-instruct"}}, message, context, options)
-              (_) -> nil
-            end
-          )
-
-          Enum.map(response[:reply] || [],
-            fn
-              ({:reply, reply_response}) ->
-                message = %Noizu.Intellect.Account.Message{
-                  sender: state.worker.agent,
-                  channel: state.worker.channel,
-                  depth: 0,
-                  user_mood: reply_response[:mood],
-                  event: :message,
-                  contents: %{title: "response", body: reply_response[:response]},
-                  meta: Ymlr.document!(meta_list) |> String.trim(),
-                  time_stamp: Noizu.Entity.TimeStamp.now()
-                }
-
-                {:ok, message} = monitor_agent_response(state, message, context, options)
-
-                {:ok, message} = Noizu.Intellect.Entity.Repo.create(message, context)
-                # Block so we don't reload and resend.
-                Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-                Noizu.Intellect.Schema.Account.Message.Audience.record({:audience, {state.worker.agent.identifier, 10, "sender"}}, message, context, options)
-
-
-                # mark any unread as read.
-                Enum.map(messages, fn(message) ->
-                  if is_nil(message.read_on) do
-                    Noizu.Intellect.Account.Message.mark_read(message, state.worker.agent, context, options)
-                  end
-                end)
-
-                with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
-                  # need a from message method.
-                  m = case Ymlr.document!(meta_list) |> String.trim() |> YamlElixir.read_from_string() do
-                    {:ok, m} -> m
-                    _ -> "[NONE]"
-                  end
-                  push = %Noizu.IntellectWeb.Message{
-                    identifier: message.identifier,
-                    type: :message,
-                    timestamp: message.time_stamp.created_on,
-                    user_name: state.worker.agent.slug,
-                    profile_image: state.worker.agent.profile_image,
-                    mood: reply_response[:mood] && String.trim(reply_response[:mood]),
-                    meta: m,
-                    body: message.contents.body
-                  }
-                  Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
-                end
-
-                spawn fn ->
-                  options = put_in(options || [], [:at], reply_response[:at])
-                  Noizu.Intellect.Account.Channel.deliver(state.worker.channel, message, context, options)
-                end
-              (other) ->
-                Logger.warn("Invalid response: #{inspect other}")
-            end
-          )
-
-          # Temp extract objectives store, store locally for now.
-          #IO.inspect(response[:objective], label: "RESPONSE OBJECTIVE")
-          with [{:objective, obj}|_] <- response[:objective] do
-            state = if index = Enum.find_index(state.worker.objectives, & &1[:name] == obj[:name]) do
-                      put_in(state, [Access.key(:worker),Access.key(:objectives), Access.at(index)], obj)
-                      |> tap(fn(_) -> obj[:name] |> IO.inspect(label: "[#{state.worker.agent.slug}: Update Objective: #{index}]") end)
-                    else
-                      update_in(state, [Access.key(:worker),Access.key(:objectives)], & [obj|&1])
-                      |> tap(fn(_) -> obj[:name] |> IO.inspect(label: "[#{state.worker.agent.slug}: Add Objective]") end)
-                    end
-                    |> shallow_persist(context, options)
-
-            clear_response_acks(response, messages, state, context, options)
-
-            {:ok, state}
-          else
-            _ -> {:ok, state}
-          end
-
-
-        else
-          _ -> {:ok, state}
-        end
-
-
-      rescue error ->
-        Logger.error(Exception.format(:error, error, __STACKTRACE__))
-        {:ok, state}
-      catch error ->
-        Logger.error(Exception.format(:error, error, __STACKTRACE__))
-        {:ok, state}
-      end
+      #
+#
+#          # Temp extract objectives store, store locally for now.
+#          #IO.inspect(response[:objective], label: "RESPONSE OBJECTIVE")
+#          with [{:objective, obj}|_] <- response[:objective] do
+#            state = if index = Enum.find_index(state.worker.objectives, & &1[:name] == obj[:name]) do
+#                      put_in(state, [Access.key(:worker),Access.key(:objectives), Access.at(index)], obj)
+#                      |> tap(fn(_) -> obj[:name] |> IO.inspect(label: "[#{state.worker.agent.slug}: Update Objective: #{index}]") end)
+#                    else
+#                      update_in(state, [Access.key(:worker),Access.key(:objectives)], & [obj|&1])
+#                      |> tap(fn(_) -> obj[:name] |> IO.inspect(label: "[#{state.worker.agent.slug}: Add Objective]") end)
+#                    end
+#                    |> shallow_persist(context, options)
+#
+#            clear_response_acks(response, messages, state, context, options)
+#
+#            {:ok, state}
+#          else
+#            _ -> {:ok, state}
+#          end
     else
       _ -> {:ok, state}
     end
+  rescue error ->
+    Logger.error(Exception.format(:error, error, __STACKTRACE__))
+    {:ok, state}
+  catch error ->
+    Logger.error(Exception.format(:error, error, __STACKTRACE__))
+    {:ok, state}
   end
 
   #---------------------

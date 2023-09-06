@@ -80,6 +80,22 @@
         </customChange>
     </changeSet>
 
+
+    <changeSet author="you" id="OBJECTIVE_STATUS_TYPE enum">
+        <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
+            <param name="enum" value="OBJECTIVE_STATUS_TYPE"/>
+            <param name="values" value="new,in_progress,blocked,pending,completed,review,stalled"/>
+        </customChange>
+    </changeSet>
+
+    <changeSet author="you" id="REMINDER_TYPE enum">
+        <customChange class="noizu.liquibase.postgres.enums.CreateOperation">
+            <param name="enum" value="REMINDER_TYPE"/>
+            <param name="values" value="objective_reminder,objective_pinger,reminder,other"/>
+        </customChange>
+    </changeSet>
+
+
     <changeSet author="kebrings" id="NOIZU_ASSERT function">
         <sql dbms="postgresql" splitStatements="false" stripComments="false">
 CREATE OR REPLACE FUNCTION NOIZU_ASSERT(assert_check BOOL, assert_message TEXT DEFAULT 'Assertion Failed')

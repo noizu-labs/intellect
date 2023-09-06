@@ -372,6 +372,7 @@ defmodule Noizu.Intellect.Account.Message do
           >
           # Instruction Prompt
           #{msg.contents.body}
+
           </message>
           """
         end
@@ -396,6 +397,7 @@ defmodule Noizu.Intellect.Account.Message do
           in-response-to="#{Noizu.Intellect.Account.Message.reply_list(msg, context, options) |> Enum.join(",")}"
         >
         #{msg.contents.body}
+
         </message>
         """
       :else -> nil
