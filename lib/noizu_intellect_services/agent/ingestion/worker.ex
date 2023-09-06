@@ -309,24 +309,12 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
            Noizu.Intellect.Prompt.ContextWrapper.session_response_prompt(state.worker.objectives),
            context,
            options),
-         prompt_context <- put_in(prompt_context, [Access.key(:assigns), :stage], :prepare),
          {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options)
       do
 
       try do
         with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
-             :ok <- IO.puts("FIRST REPLY: ====================\n#{reply}\n=============================\n\n"),
-             options_b <- put_in(options || [], [:pending_message], {:assistant, reply}),
-             prompt_context <- put_in(prompt_context, [Access.key(:assigns), :stage], :reply),
-             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_b),
-             %{choices: [%{message: %{content: reply2}}|_]} <- api_response[:reply],
-             :ok <- IO.puts("SECOND REPLY: ====================\n#{reply2}\n=============================\n\n"),
-             options_b <- put_in(options || [], [:pending_message], {:assistant, reply <> "\n" <> reply2}),
-             prompt_context <- put_in(prompt_context, [Access.key(:assigns), :stage], :reflect),
-             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_b),
-             %{choices: [%{message: %{content: reply3}}|_]} <- api_response[:reply],
-             :ok <- IO.puts("THIRD REPLY: ====================\n#{reply3}\n=============================\n\n"),
-             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply <> "\n" <> reply2 <> "\n" <> reply3)
+             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply)
           do
 
 
@@ -418,6 +406,10 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
 
                 with {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
                   # need a from message method.
+                  m = case Ymlr.document!(meta_list) |> String.trim() |> YamlElixir.read_from_string() do
+                    {:ok, m} -> m
+                    _ -> "[NONE]"
+                  end
                   push = %Noizu.IntellectWeb.Message{
                     identifier: message.identifier,
                     type: :message,
@@ -425,7 +417,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
                     user_name: state.worker.agent.slug,
                     profile_image: state.worker.agent.profile_image,
                     mood: reply_response[:mood] && String.trim(reply_response[:mood]),
-                    meta: meta_list,
+                    meta: m,
                     body: message.contents.body
                   }
                   Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
