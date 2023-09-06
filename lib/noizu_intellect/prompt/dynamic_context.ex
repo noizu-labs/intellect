@@ -239,6 +239,7 @@ defmodule Noizu.Intellect.Prompt.DynamicContext do
     with {:ok, request_settings} <- request.__struct__.settings(request, context, options),
          {:ok, request_messages} <- request.__struct__.messages(request, context, options),
          {:ok, reply} <- Noizu.OpenAI.Api.Chat.chat(request_messages, request_settings) do
+      IO.inspect(reply, label: "OPEN_AI_RESPONSE")
       {:ok, [reply: reply, request: request, settings: request_settings, messages: request_messages]}
     end
   end
@@ -326,9 +327,58 @@ defimpl Noizu.Intellect.DynamicPrompt, for:  Noizu.Intellect.Prompt.DynamicConte
       prompts = expand_prompts(master_prompt)
       minders = expand_prompts(master_minder_prompt)
 
+      functions = [
+        %{
+          name: "send_msg",
+          description: "Send message to one or more recipient",
+          parameters: %{
+            type: "object",
+            properties: %{
+              to: %{
+                type: "array",
+                description: "list of recipients",
+                items: %{
+                  "type": "string"
+                }
+              },
+              channel: %{
+                type: "string",
+                description: "channel name, current to send in current channel, or direct to send as a direct message"
+              },
+              mood: %{
+                type: "string",
+                description: "Emoji representing current mood"
+              },
+              message: %{
+                type: "string",
+                description: "Message you wish to send"
+              }
+            },
+            required: [:to,:channel,:mood, :message]
+          }
+        },
+        %{
+          name: "ignore_msg",
+          description: "Mark message read with out replying",
+          parameters: %{
+            type: "object",
+            properties: %{
+              messages: %{
+                type: "array",
+                description: "list of message ids to mark read",
+                items: %{
+                  "type": "number"
+                }
+              },
+            },
+            required: [:messages]
+          }
+        }
+      ]
+
       request = %Request{
         prompt_context: prompt_context,
-        messages: prompts ++ minders
+        messages: prompts ++ minders,
       }
 
       Noizu.Intellect.DynamicPrompt.request(prompt_context.master_prompt_context, request, context, options)

@@ -182,7 +182,17 @@ defmodule Noizu.Intellect.HtmlModule do
     end
   end
 
-  def extract_session_response_details(response) do
+  def extract_session_response_details(response), do: extract_session_response_details(:v1, response)
+
+  def extract_session_response_details(:v2, nil), do: {:error, :empty_reply}
+  def extract_session_response_details(:v2, response) do
+    IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
+    {_, xml_tree} = Floki.parse_document(response)
+    response = extract_nlp_agent_response(xml_tree)
+    {:ok, response}
+  end
+
+  def extract_session_response_details(:v1, response) do
     IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
     {_, xml_tree} = Floki.parse_document(response)
     response = extract_nlp_agent_response(xml_tree)
@@ -209,17 +219,20 @@ defmodule Noizu.Intellect.HtmlModule do
     |> then(
          fn
            v when is_bitstring(v) ->
-             if int? do
-               v = v
-                   |> String.split(",")
-                   |> Enum.map(&String.trim/1)
-                   |> Enum.map(&String.to_integer/1)
-             else
-               v = v
-                   |> String.split(",")
-                   |> Enum.map(&String.trim/1)
+             v = String.trim(v)
+             cond do
+               v == "" -> []
+               int? ->
+                 v
+                 |> String.split(",")
+                 |> Enum.map(&String.trim/1)
+                 |> Enum.map(&String.to_integer/1)
+               :else ->
+                 v
+                 |> String.split(",")
+                 |> Enum.map(&String.trim/1)
              end
-           _ -> nil
+           _ -> []
          end
        )
   end
@@ -238,6 +251,34 @@ defmodule Noizu.Intellect.HtmlModule do
   def extract_nlp_agent_response(contents) do
     o = Enum.map(contents,
       fn
+        ({"message", attrs, contents}) ->
+          mood = attr_extract__value(attrs, "mood")
+          from = attr_extract__value(attrs, "from")
+          to = attr_extract__list(attrs, "to", false)
+          in_response_to = attr_extract__list(attrs, "in-response-to")
+          {:reply, [mood: mood, at: to, from: from, in_response_to: in_response_to, response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+        ({"agent-mark-read", attrs, contents}) ->
+          ids = attr_extract__list(attrs, "messages")
+          {:ack, [ids: ids, comment: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+        ({"agent-response-plan", _, contents}) ->
+          body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+          with {:ok, [%{"plan" => plan, "steps" => steps}]} <- YamlElixir.read_all_from_string(body) do
+            {:intent, [overview: plan, steps: steps]}
+          else
+            _ -> nil
+          end
+        ({"agent-mood", attrs, contents}) ->
+          mood = attr_extract__value(attrs, "mood")
+          body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+          {:mood, [mood: mood, note: body]}
+        ({"agent-objective-update", attrs, contents}) ->
+          for = attr_extract__list(attrs, "in-response-to")
+          body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+          with {:ok, y = [%{"name" => name, "objective" => objective, "tasks" => tasks}]} <- YamlElixir.read_all_from_string(body) do
+            {:objective, [name: name, for: for, summary: objective, tasks: tasks, ping_me: y["ping-me"], remind_me: y["remind-me"] ]}
+          else
+            _ -> nil
+          end
         ({"nlp-agent", attrs, contents}) ->
           agent = attr_extract__list(attrs, "for", false)
           {:agent, [agent: agent, output: extract_nlp_agent_response(contents)]}
@@ -308,7 +349,7 @@ defmodule Noizu.Intellect.HtmlModule do
     |> Enum.reject(&is_nil/1)
     |> List.flatten()
 
-    Enum.group_by(o, &elem(&1, 0))
+    Enum.group_by(o, &elem(&1, 0)) |> IO.inspect(label: "RESPONSE DATA")
     rescue exception ->
       contents = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
       IO.inspect(contents, label: "ERROR")
@@ -348,9 +389,9 @@ defmodule Noizu.Intellect.HtmlModule do
   def valid_response?(response) do
     cond do
       is_nil(response[:reply]) && is_nil(response[:ack]) -> {:invalid_response, :reply_required}
-      is_nil(response[:reflect]) -> {:invalid_response, :reflect_required}
-      is_nil(response[:intent]) -> {:invalid_response, :intent_required}
-      is_nil(response[:mood]) -> {:invalid_response, :mood_required}
+#      is_nil(response[:reflect]) -> {:invalid_response, :reflect_required}
+#      is_nil(response[:intent]) -> {:invalid_response, :intent_required}
+#      is_nil(response[:mood]) -> {:invalid_response, :mood_required}
       :else -> :ok
     end
 #

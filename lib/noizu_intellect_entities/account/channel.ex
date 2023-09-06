@@ -788,6 +788,10 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
       []
     end |> Enum.join("\n")
 
+    #    ## Chat History
+    #
+    #    #{assigns[:chat_history] || "[NONE]"}
+
     prompt =
     """
     # Chat Room
@@ -800,10 +804,6 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
 
     ## Channel Members:
     #{b}
-
-    ## Chat History
-
-    #{assigns[:chat_history] || "[NONE]"}
 
     [/Channel]
     """

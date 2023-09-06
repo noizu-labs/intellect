@@ -55,6 +55,11 @@ defmodule Noizu.Intellect.Account.Message do
     end
   end
 
+  def reply_list(message, context, options \\ nil) do
+    (message.responding_to || [])
+    |> Enum.map(fn({k,v}) -> k  end)
+  end
+
   def audience_list(message, context, options \\ nil) do
     (message.audience || [])
     |> Enum.filter(fn({k,v}) -> v.confidence >= 0 end)

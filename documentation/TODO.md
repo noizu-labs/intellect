@@ -1,13 +1,18 @@
+
+Sept 6th
+===========
+- [ ] consolidate triple call into single call by breaking agent into components and instructing system to return agent.planner, agent.response, agent.reflect responses.
+
 August 22nd
 =============
-- [ ] update prompt,minder to accept assigns to avoid nested prompt call issues.
-- [ ] Tighten up agent-to-agent chat instructions (restore prior)
-- [ ] persist objectives. Insure objective message in chat list, insure injected.
+- [x] update prompt,minder to accept assigns to avoid nested prompt call issues.
+- [x] Tighten up agent-to-agent chat instructions (restore prior)
+- [x] persist objectives. Insure objective message in chat list, insure injected.
 - [ ] Smarter previous messages. Follow message chain + weaviate matches.
       With special candidate message filtering, use weight/sticky ness to keep per objective until objective cleared
       To avoid reprocessing.
 - [ ] Agent to agent communication monitor prompt. Detect dead end conversations and inject system messages.
-- [ ] Enable system messages in message queue.
+- [x] Enable system messages in message queue.
 
 
 

@@ -309,39 +309,52 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
            Noizu.Intellect.Prompt.ContextWrapper.session_response_prompt(state.worker.objectives),
            context,
            options),
+         prompt_context <- put_in(prompt_context, [Access.key(:assigns), :stage], :prepare),
          {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options)
       do
 
       try do
         with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
-             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_simplified_session_response_details(reply)
+             :ok <- IO.puts("FIRST REPLY: ====================\n#{reply}\n=============================\n\n"),
+             options_b <- put_in(options || [], [:pending_message], {:assistant, reply}),
+             prompt_context <- put_in(prompt_context, [Access.key(:assigns), :stage], :reply),
+             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_b),
+             %{choices: [%{message: %{content: reply2}}|_]} <- api_response[:reply],
+             :ok <- IO.puts("SECOND REPLY: ====================\n#{reply2}\n=============================\n\n"),
+             options_b <- put_in(options || [], [:pending_message], {:assistant, reply <> "\n" <> reply2}),
+             prompt_context <- put_in(prompt_context, [Access.key(:assigns), :stage], :reflect),
+             {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options_b),
+             %{choices: [%{message: %{content: reply3}}|_]} <- api_response[:reply],
+             :ok <- IO.puts("THIRD REPLY: ====================\n#{reply3}\n=============================\n\n"),
+             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply <> "\n" <> reply2 <> "\n" <> reply3)
           do
 
 
           {response, api_response} = with :ok <- Noizu.Intellect.HtmlModule.valid_response?(response) do
               {response, api_response}
           else
-            error ->
-              issues = case error do
-                {:invalid_response, issues} -> issues
-                _ -> "Malformed Response"
-              end
-            correction = %{role: :system, content:
-              """
-              Invalid Response #{inspect issues}
-              You must properly format your response as defined in your agent definition and extension block(s).
-              Please fix reformat your response using your agent response format instructions.
-              """}
-
-            Logger.error("MALFORMED RESPONSE: " <> correction.content)
-            malformed = %{role: :assistant, content: reply}
-            with {:ok, reply} <- Noizu.OpenAI.Api.Chat.chat(api_response[:messages] ++ [malformed, correction], api_response[:settings]),
-                 %{choices: [%{message: %{content: reply_body}}|_]} <- reply,
-                 {:ok, response} <- Noizu.Intellect.HtmlModule.extract_simplified_session_response_details(reply_body) do
-              {response, put_in(api_response, [:messages], api_response[:messages] ++ [malformed, correction])}
-            else
-              _ -> {response, api_response}
-            end
+          _ -> {response, api_response}
+#            error ->
+#              issues = case error do
+#                {:invalid_response, issues} -> issues
+#                _ -> "Malformed Response"
+#              end
+#            correction = %{role: :system, content:
+#              """
+#              Invalid Response #{inspect issues}
+#              You must properly format your response as defined in your agent definition and extension block(s).
+#              Please fix reformat your response using your agent response format instructions.
+#              """}
+#
+#            Logger.error("MALFORMED RESPONSE: " <> correction.content)
+#            malformed = %{role: :assistant, content: reply}
+#            with {:ok, reply} <- Noizu.OpenAI.Api.Chat.chat(api_response[:messages] ++ [malformed, correction], api_response[:settings]),
+#                 %{choices: [%{message: %{content: reply_body}}|_]} <- reply,
+#                 {:ok, response} <- Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, reply_body) do
+#              {response, put_in(api_response, [:messages], api_response[:messages] ++ [malformed, correction])}
+#            else
+#              _ -> {response, api_response}
+#            end
           end
 
           Logger.warn("[agent-reply:#{state.worker.agent.slug}] -------------------------------\n" <> reply <> "\n------------------------------------\n\n")
@@ -445,9 +458,13 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
           else
             _ -> {:ok, state}
           end
+
+
         else
           _ -> {:ok, state}
         end
+
+
       rescue error ->
         Logger.error(Exception.format(:error, error, __STACKTRACE__))
         {:ok, state}
@@ -455,99 +472,6 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
         Logger.error(Exception.format(:error, error, __STACKTRACE__))
         {:ok, state}
       end
-    else
-      _ -> {:ok, state}
-    end
-  end
-
-  def channel_process_message_queue(state, context, options) do
-    # TODO - logic depends on channel type, if session we get all unread messages and filter others by nearby object
-    # weaviate search. Prompt returns a list of messages not a composite message and expects a single return.
-
-    with true <- unread_messages?(state, context, options),
-         {:ok, messages} <- message_history(state, context, options),
-         messages <- messages |> Enum.reverse(),
-         true <- (length(messages) > 0) || {:error, :no_messages},
-         {:ok, prompt_context} <- Noizu.Intellect.Prompt.DynamicContext.prepare_prompt_context(state.worker.agent, state.worker.channel, messages, context, options),
-         {:ok, api_response} <- Noizu.Intellect.Prompt.DynamicContext.execute(prompt_context, context, options)
-      do
-
-      try do
-        IO.puts("[MESSAGE 1: #{state.worker.agent.slug}] \n" <> get_in(api_response[:messages], [Access.at(0), :content]))
-        #IO.puts("[MESSAGE 2: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(1), :content]))
-        #IO.puts("[MESSAGE 3: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(2), :content]))
-        #IO.puts("[MESSAGE 4: #{state.worker.agent.slug}] \n" <> get_in(request_messages, [Access.at(3), :content]))
-        #Logger.error("[MESSAGE 2 #{state.worker.agent.slug}] " <> get_in(request_messages, [Access.at(1), :content]))
-        #Logger.warn("[MESSAGE 3] " <> get_in(request_messages, [Access.at(2), :content]))
-
-        with %{choices: [%{message: %{content: reply}}|_]} <- api_response[:reply],
-             {:ok, response} <- Noizu.Intellect.HtmlModule.extract_response_sections(reply),
-             valid? <- Noizu.Intellect.HtmlModule.valid_response?(response)
-          do
-          IO.puts("[REPLY:#{state.worker.agent.slug}] -------------------------------\nraw-reply:\n" <> reply <> "\n------------------------------------\n\n")
-
-          # Valid Response?
-          unless valid? == :ok, do: IO.inspect(valid?, label: "[#{state.worker.agent.slug}] MALFORMED OPENAI RESPONSE")
-
-          # Process Response
-          response = Enum.group_by(response, &(elem(&1, 0)))
-          #|> IO.inspect(label: "[#{state.worker.agent.slug}] OPEN AI RESPONSE")
-
-          process_response_memories(response, messages, state, context, options)
-
-          # clear ack'd
-          clear_response_acks(response, messages, state, context, options)
-          # process replies.
-
-          format_response = Enum.map([:reply, :function_call, :ack, :memory, :intent, :objective, :error], fn(s) ->
-            r = if api_response[s] do
-              Enum.map(api_response[s] || [], fn
-                ({^s, x}) -> x
-                (_) -> nil
-              end) |> Enum.reject(&is_nil/1)
-            end
-            {s, r}
-          end) |> Map.new()
-          meta_list = %{settings: api_response[:settings], messages: api_response[:messages], response: format_response}
-          process_response_replies(response, messages, meta_list, state, context, options)
-
-
-          with [{:nlp_chat_analysis, details}|_] <- response[:nlp_chat_analysis],
-               {:ok, sref} <- Noizu.EntityReference.Protocol.sref(state.worker.channel) do
-
-            inbox = Enum.map(messages, fn(message) -> message.identifier end)
-            inbox = """
-
-            # Inbox
-            - #{inspect inbox}
-            """
-
-
-            # need a from message method.
-            push = %Noizu.IntellectWeb.Message{
-              identifier: :system,
-              type: :system_message,
-              timestamp: DateTime.utc_now(),
-              user_name: "#{state.worker.agent.slug}-system",
-              profile_image: nil,
-              mood: :thumbsy,
-              meta: Ymlr.document!(meta_list),
-              body: (details[:contents] || "Missing Contents") <> inbox
-            }
-            Noizu.Intellect.LiveEventModule.publish(event(subject: "chat", instance: sref, event: "sent", payload: push, options: [scroll: true]))
-          end
-
-
-        end
-
-      rescue error ->
-        Logger.error(Exception.format(:error, error, __STACKTRACE__))
-        :nop
-      catch error ->
-        Logger.error(Exception.format(:error, error, __STACKTRACE__))
-        :nop
-      end
-      {:ok, state}
     else
       _ -> {:ok, state}
     end
