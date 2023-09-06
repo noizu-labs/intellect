@@ -123,7 +123,9 @@ defmodule Noizu.Intellect.Prompts.Session.Reply do
         :user,
         """
         # Response
-        You should review messages plan how to respond and then output your response
+        You should review messages plan how to respond and then output your response. Be aware of previous messages in conversation it is important
+        to distinguish between messages sent repeating your or another agent's feedback versus messages with new additional feedback/content.
+        It is important to avoid unproductive repetitive cyclic loops where you and other agents send the same basic message back and forth with no progress.
 
         ## Sending Messages
 

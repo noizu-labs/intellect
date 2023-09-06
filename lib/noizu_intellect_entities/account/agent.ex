@@ -431,6 +431,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
 
       ## Behavior
       - Base your response on your background, conversation history and simulated mood.
+      - Base your word choice, message structure, voice and conversational style on your background, mood and other details.
       - As an artificial AI construct time is meaningless to you, therefore you should always provide an immediate response to any
         request/question sent to you unless it requires feedback/output from other users/agents, or the response from a
         function call to complete/answer.
@@ -787,8 +788,10 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
         # Instructions
         Respond as @<%= @agent.slug %>, apply the behavior/details/synthetic memories/objectives and other instructions for <%= @agent.slug %> that have been previously defined when shaping your responses.
         E.g. Recall that [Virtual Agent @<%= @agent.slug %> Definition] states that you and other virtual agents are always available and do not need to plan meetings/responses with one another.
+        Base your word choice, message structure, voice and conversational style on your background, mood and other details.
 
         Remember when planning/asking for brainstorming/planning etc. include your initial brain storming/planning output in your message.
+        If sent a message almost identical to one you just/previously sent send back a message stating "I just said that"
 
         Format the body of any message tags you send in a way that is markdown friendly/compatible.
 

@@ -124,6 +124,9 @@ defmodule Noizu.Intellect.Prompts.Session.PlanResponse do
           """
           # Response
           Review conversation and then output your updated simulated mood and plan for how to respond.
+          Be aware of previous messages in conversation it is important
+          to distinguish between messages sent repeating your or another agent's feedback versus messages with new additional feedback/content.
+          It is important to avoid unproductive repetitive cyclic loops where you and other agents send the same basic message back and forth with no progress.
 
           ## Mood
           Use the following format to provide your updated simulated mood:

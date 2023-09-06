@@ -1,10 +1,15 @@
 
 Sept 6th
 ===========
-- Triple Pass
+- [x] Triple Pass
   - Set Plan
   - Response
   - Update Objectives/Reminders
+- [ ] Inject reminders/pings
+- [ ] format assistant messages to use send-message instead of message to improve format compliance
+- [ ] Inject objectives
+- [ ] objective condition logic.
+- [ ] Add synthetic memories. - List with brief descript indicate if relevent to convesration if so include extended values and compress into new statement to reduce size.
 
 August 22nd
 =============

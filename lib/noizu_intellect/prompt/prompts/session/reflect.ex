@@ -135,12 +135,12 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         If your response was cut off (e.g. you started a <message> tag but did not close </message>) finish your previous response before proceeding.
 
         Then reflect on your prior response, set/update any objectives, trigger any reminders whose condition are met,
-        output any new agent-reminders and output a closing response reflection tag.
+        output any new agent-reminders and then output a closing agent-response-reflection tag, optional agent-response-reflection-correction tag and then the String [FIN] (outside of any xml tags)
+        followed by the stop sequence.
 
-        Do send/output any message tags in your response `unless` your agent-response-reflection output indicated
-        one was needed to address a serious oversight/correction.
+        You must not output any message tags outside of a agent-response-reflection-corrections following your agent-response-reflection output.
 
-        Do not output the stop sequence until all output is included and you have provided an agent-response-reflection tag.
+        Do not output your stop sequence until finished and you have output the agent-response-reflection tag.
 
         ## Set/Update Objective
         Review existing objectives, avoid creating duplicate objectives, removing important tasks, etc.
@@ -234,32 +234,36 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         Do not output stop code, remember to close tags.
 
         ```xml
-        <message
-          mood="emoji of mood"
-          from="@<%= @agent.slug %>"
-          to="recipient(s)"
-          in-response-to="required: list of message id(s) message is in response/reply to, at least one must be for a new message"
-        >
-        Your message here
+        <agent-response-reflection-corrections>
+          <message
+            mood="emoji of mood"
+            from="@<%= @agent.slug %>"
+            to="recipient(s)"
+            in-response-to="required: list of message id(s) message is in response/reply to, at least one must be for a new message"
+          >
+          Message addressing issue raised in agent-response-reflection analysis.
 
-        </message>
+          </message>
+        </agent-response-reflection-corrections>
         ```
 
         Example:
 
         ```xml
-        <message
-          mood="😜"
-          from="@<%= @agent.slug %>"
-          to="@john,@mike"
-          in-response-to="1234,1233">
-        I realized that:
-        🤔 A possible improvement could be to further delve into the computational complexity or decidability aspects of UTMs, as the user might find these topics interesting given their background.
+        <agent-response-reflection-corrections>
+          <message
+            mood="😜"
+            from="@<%= @agent.slug %>"
+            to="@john,@mike"
+            in-response-to="1234,1233">
+          I realized that:
+          🤔 A possible improvement could be to further delve into the computational complexity or decidability aspects of UTMs, as the user might find these topics interesting given their background.
 
-        Here are is additional feedback on this subject
-        [... rest of message]
+          Here are is additional feedback on this subject
+          [... rest of message]
 
-        </message>
+          </message>
+        </agent-response-reflection-corrections>
         ```
 
 
