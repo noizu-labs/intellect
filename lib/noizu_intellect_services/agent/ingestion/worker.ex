@@ -485,6 +485,52 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
           end
           |> case do
                {:ok, entity} ->
+               # Setup Participants
+                 with {:ok, agent_ref} <- Noizu.EntityReference.Protocol.ref(state.worker.agent),
+                      {:ok, objective_ref} <- Noizu.EntityReference.Protocol.ref(entity),
+                      {:ok, channel} <- entity(state.worker.channel, context),
+                      {:ok, members} <- Noizu.Intellect.Account.Channel.Repo.members(channel, context, options) do
+                   slug_lookup = Enum.map(members,
+                                   fn (member) ->
+                                     with {:ok, member} <- Noizu.EntityReference.Protocol.entity(member, context),
+                                          {:ok, member_ref} <- Noizu.EntityReference.Protocol.ref(entity) do
+                                       member
+                                       |> case do
+                                            %Noizu.Intellect.Account.Member{user: user} -> {:ok, user.slug}
+                                            %Noizu.Intellect.Account.Agent{slug: slug, details: %{title: name}} -> {:ok, slug}
+                                            _ -> nil
+                                          end
+                                       |> case do
+                                            {:ok, slug} -> {"@#{slug}", member_ref}
+                                            _ -> nil
+                                          end
+                                     end
+
+                                   end)
+                                 |> Enum.reject(&is_nil/1)
+                                 |> Map.new()
+                   now = DateTime.utc_now()
+                   (details[:participants] || [] ++ ["@#{state.worker.agent.slug}"])
+                   |> Enum.uniq()
+                   |> Enum.map(
+                     fn(p) ->
+                       if member_ref = slug_lookup[p] do
+                         %Noizu.Intellect.Schema.Account.Agent.Objective.Participant{
+                           objective: objective_ref,
+                           participant: member_ref,
+                           created_on: now,
+                           modified_on: now,
+                           deleted_on: nil,
+                         } |> Noizu.Intellect.Repo.insert(on_conflict: [set: [deleted_on: nil, modified_on: now]], conflict_target: [:objective, :participant])
+                       end
+                     end
+                   )
+                 end
+
+
+
+
+
                  # TODO deal with dupes.
                  digest_msg = """
                  #{entity.status}
@@ -496,10 +542,11 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
                      type = %{ping_me: :objective_pinger, remind_me: :objective_reminder}[n]
                      Enum.map(details[n] || [],
                        fn
-                         %{name: name, remind_after: remind_after, instructions: instructions} ->
+                         %{name: name, brief: brief, remind_after: remind_after, instructions: instructions} ->
                            if name && remind_after && instructions do
                              %Noizu.Intellect.Account.Agent.Reminder{
                                agent: state.worker.agent,
+                               brief: brief,
                                type: type,
                                digest: digest,
                                name: name,
@@ -507,6 +554,7 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
                                condition_met: true,
                                instructions: instructions,
                                remind_after: remind_after,
+                               repeat: 300,
                                time_stamp: Noizu.Entity.TimeStamp.now()
                              } |> Noizu.Intellect.Entity.Repo.create(context)
                            end
@@ -535,6 +583,15 @@ defmodule Noizu.Intellect.Service.Agent.Ingestion.Worker do
            (_) -> :nop
          end
        )
+  end
+
+
+  def load_objectives(state, context, options) do
+    with {:ok, objectives} <- Noizu.Intellect.Account.Agent.objectives(state.worker.agent, context, options) do
+      put_in(state, [Access.key(:worker), Access.key(:objectives)], objectives)
+    else
+      _ -> state
+    end
   end
 
   def session_process_message_queue(state, context, options) do

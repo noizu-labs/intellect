@@ -110,6 +110,11 @@ defmodule Noizu.Intellect.Account.Agent do
     super(entity, settings, context, options)
   end
 
+  def objectives(this, context, options) do
+    Noizu.Intellect.Account.Agent.Objective.Repo.objectives(this,context,options)
+  end
+
+
   defimpl Noizu.Entity.Protocol do
     def layer_identifier(entity, _layer) do
       {:ok, entity.identifier}
@@ -771,9 +776,9 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Agent] do
       prompt =
         """
         <%= if @objectives && length(@objectives) > 0 do %>
-        # @<%= @agent.slug %> Current Objectives
+        # @<%= @agent.slug %> Objectives
         <%= for objective <- @objectives do %>
-        <%= Ymlr.document!(objective) %><% end %>
+        <%= Ymlr.document!(%{identifier: objective.identifier}) %><% end %>
         <% end %>
 
         <%= if @agent.slug == "grace" do %>

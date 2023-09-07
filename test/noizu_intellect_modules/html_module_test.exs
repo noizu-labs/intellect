@@ -4,7 +4,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   import Noizu.Intellect.HtmlModule
 
 
-  def yaml_session_response_message(:objective) do
+  def yaml_session_response_message(:objective_old) do
     """
     [@grace]
     ```nlp-identity
@@ -93,7 +93,163 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   end
 
   def session_response_message(scenario \\ :default)
+
+
+
   def session_response_message(:default), do: session_response_message(:basic)
+
+
+  def session_response_message(:vnext_corrections) do
+  """
+  <agent-mood mood="😊">
+  I'm feeling excited and motivated to collaborate with Mindy on brainstorming the feature requirements for our Twitter clone. The engagement and enthusiasm in our conversation have contributed to this positive mood.
+  </agent-mood>
+
+  <agent-response-plan>
+  plan: |
+    Mindy has provided some additional feature ideas for our Twitter clone. I will review her suggestions and combine them with our existing list of features. I will then categorize the features based on functionality, write concise descriptions for each one, and assign priority levels. Finally, I will format the feature list as a markdown table and share it with Keith.
+  steps:
+    - Review Mindy's additional feature ideas
+    - Combine the ideas with our existing list of features
+    - Categorize the features based on functionality
+    - Write concise descriptions for each feature
+    - Assign priority levels to the features
+    - Format the feature list as a markdown table
+    - Share the feature list with Keith
+  </agent-response-plan>
+  <add-private-note in-response-to="7030,8030,9030,11030,13030">
+  note: |
+    Mindy has provided additional feature ideas for the Twitter clone. I will review her suggestions, combine them with our existing list, categorize the features, write descriptions, assign priorities, and format the feature list as a markdown table. Once done, I will share the feature list with Keith.
+  features:
+    - collaborate
+    - brainstorming
+    - feature requirements
+    - categorize
+    - prioritize
+    - markdown table
+  </add-private-note>
+
+  <agent-mark-read in-response-to="7030,8030,9030,11030,13030">
+  These were great ideas, Mindy! I appreciate your contribution to our feature list for the Twitter clone. I will review all the ideas and create a comprehensive list. Once I'm done, I will categorize the features, write descriptions, prioritize them, and format the list as a markdown table. Then, I'll share it with Keith. Thank you for your collaboration!
+  </agent-mark-read>
+  <agent-response-reflection>
+  reflection: |
+    In my previous response, I successfully acknowledged Mindy's additional feature ideas and established a plan to combine them with our existing list. I set objectives to categorize the features, write descriptions, assign priorities, and format the list as a markdown table. This approach aligns with our goal of creating a comprehensive and well-structured feature list for the Twitter clone.
+  items:
+    - ✅ I provided a clear and concise summary of the plan to collaborate with Mindy and finalize the feature requirements.
+    - ✅ I accurately documented the objectives and tasks required to complete the feature list.
+    - 🤔 It would be beneficial to keep track of the progress of this task and set reminders to follow up with Mindy and Keith.
+  </agent-response-reflection>
+
+  <agent-objective-update
+    objective="tinder-clone-feature-requirements"
+    status="in-progress"
+    participants="@mindy,@grace"
+  >
+  brief: |
+    Flesh out feature requirements for the Twitter clone
+  tasks:
+    - "[x] Brainstorm and create a comprehensive list of features"
+    - "[ ] Categorize features based on functionality"
+    - "[ ] Write concise descriptions for each feature"
+    - "[ ] Assign priority levels to the features"
+    - "[ ] Format feature list as a markdown table"
+    - "[ ] Share feature list with Keith"
+  ping-me:
+    - name: follow-up-mindy
+      after: 1800
+      to: |
+        Check in with Mindy on the progress of categorizing features and writing descriptions
+  </agent-objective-update>
+
+  <agent-response-reflection-corrections>
+    <send-message
+      mood="🤔"
+      from="@grace"
+      to="@mindy"
+      in-response-to="13030"
+    >
+    Mindy, I apologize for repeating myself in my previous response. It seems that we both had a similar idea to consolidate our feature ideas. Let's proceed with combining our ideas and categorizing the features based on functionality. Once we have the categorization, we can write concise descriptions and assign priority levels. After that, we'll format the feature list as a markdown table and share it with Keith. Thank you for your collaboration!
+    </send-message>
+  </agent-response-reflection-corrections>
+  """
+  end
+
+  def session_response_message(:vnext) do
+    """
+    <agent-mood mood="😊">
+    I'm feeling excited about working with Grace to flesh out the feature requirements for the Twitter clone project!
+    </agent-mood>
+
+    <agent-response-plan>
+    plan: |
+      Grace has shared her initial ideas for the Twitter clone features and asked for my input. I will provide my thoughts on her suggestions and add a few more features to consider. Then, I will suggest creating a comprehensive feature list in a markdown table format with the required columns. Finally, I will ask Grace for her feedback on my suggestions and any additional ideas she may have.
+    steps:
+      - "Review Grace's initial ideas for the Twitter clone features"
+      - "Provide my thoughts on her suggestions and add a few more features"
+      - "Suggest creating a feature list in a markdown table format with the required columns: id, feature, category, description, and priority"
+      - "Ask for Grace's feedback on my suggestions and any additional ideas she may have"
+    </agent-response-plan>
+    <message
+    time="2023-09-06T17:38:52.835531Z"
+    mood="😊"
+    from="@mindy"
+    to="@grace"
+    in-response-to="5030"
+    >
+    Yabba
+    </message>
+
+
+    <message
+    time="2023-09-06T18:38:52.835531Z"
+    mood="😊"
+    from="@mindy"
+    to="@grace"
+    in-response-to="5031"
+    >
+    Abra Cadabra
+
+    </message>
+
+    <agent-objective-update
+      objective="55"
+      name="flesh-out-feature-requirements"
+      status="in-progress"
+      participants="@mindy,@grace"
+      in-response-to="5030"
+    >
+    brief: |
+      Flesh out feature requirements for the Twitter clone project
+    tasks:
+      - "[ ] Brainstorm and expand on the initial feature ideas"
+      - "[ ] Create a comprehensive list of 20-40 features"
+      - "[ ] Format the feature list as a markdown table"
+    ping-me:
+      - name: review-feature-list
+        after: 600
+        to: |
+          Review the feature list and finalize it for submission to Keith
+    remind-me:
+      - name: feature-brainstorm
+        after: 900
+        to: |
+          Check if the brainstorming session for features is complete and proceed to creating the feature list
+    </agent-objective-update>
+
+    <agent-response-reflection>
+    reflection: |
+      My response was clear and provided additional feature suggestions to Grace. I also set objectives to ensure progress on fleshing out the feature requirements. Everything looks good.
+    items:
+      - ✅ Provided clear and concise suggestions for additional features
+      - ✅ Set objectives to guide the process of brainstorming and creating the feature list
+    </agent-response-reflection>
+
+    [FIN]
+    """
+  end
+
+
 
   def session_response_message(:objective) do
     """
@@ -120,6 +276,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
     </nlp-send-msg>
     """
   end
+
   def session_response_message(:basic) do
   """
   <nlp-intent>
@@ -318,7 +475,40 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
   end
 
   describe "Handle Session Channel Response" do
+
     @tag :wip
+    test "with objective (vnext)" do
+      {:ok, sut} = Noizu.Intellect.HtmlModule.extract_session_response_details(:v2, session_response_message(:vnext))
+      assert [mood: mood] = sut[:mood]
+      assert mood[:mood] == "😊"
+      assert mood[:note] =~ "feeling excited"
+      assert [reply: reply_one, reply: reply_two] = sut[:reply]
+      assert reply_one[:at] == ["@grace"]
+      assert reply_one[:in_response_to] == [5030]
+      assert reply_one[:response] =~ "Yabba"
+
+      assert reply_two[:at] == ["@grace"]
+      assert reply_two[:in_response_to] == [5031]
+      assert reply_two[:response] =~ "Abra Cadabra"
+
+      assert [reflect: reflect] = sut[:reflect]
+      assert reflect[:reflection] =~ "ensure progress on fleshing out"
+      assert [item_one, item_two] = reflect[:items]
+      assert item_one =~ "suggestions"
+      assert item_two =~ "Set objectives"
+
+      assert [intent: intent] = sut[:intent]
+      assert intent[:overview] =~ "Grace has shared"
+
+      assert [objective: objective] = sut[:objective]
+      assert objective[:id] == 55
+      assert objective[:participants] == ["@mindy", "@grace"]
+      assert objective[:status] == :in_progress
+      assert objective[:name] == "flesh-out-feature-requirements"
+      assert objective[:breif] =~ "clone project"
+
+    end
+
     test "with objective (yaml)" do
       {:ok, sut} = Noizu.Intellect.HtmlModule.extract_simplified_session_response_details(yaml_session_response_message(:objective))
       assert [reply: reply_one, reply: reply_two] = sut[:reply]
@@ -334,6 +524,7 @@ defmodule Noizu.Intellect.Module.HtmlModuleTest do
       assert step1 =~ "Discuss and brainstorm potential"
       assert step2 =~ "Identify user roles"
       assert step3 =~ "Determine data storage"
+
     end
 
     test "with objective" do

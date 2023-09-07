@@ -12,8 +12,14 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_agent_message"/>
             </column>
             <column name="account_agent" type="BIGINT"/>
-            <column name="content" type="TEXT"/>
-            <column name="details" type="BIGINT">
+            <column name="features" type="JSONB"/>
+            <column name="senders" type="JSONB"/>
+            <column name="recipients" type="JSONB"/>
+            <column name="responding_to" type="JSONB"/>
+
+            <column name="content" type="BIGINT"/>
+
+            <column name="details"  remarks="title = brief, body = process/how prepared" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="created_on" type="TIMESTAMP WITHOUT TIME ZONE">
@@ -38,6 +44,17 @@
         </rollback>
     </changeSet>
 
+    <changeSet author="kebrings" id="agent_message_objective table">
+        <createTable tableName="agent_message_objective">
+            <column name="identifier" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_agent_message_objective"/>
+            </column>
+            <column name="agent_message" type="BIGINT"/>
+            <column name="objective" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+
+
     <changeSet author="kebrings" id="agent_message_digest table">
         <createTable tableName="agent_message_digest">
             <column name="identifier" type="BIGINT">
@@ -45,6 +62,7 @@
             </column>
             <column name="agent_message" type="BIGINT"/>
             <column name="message" type="BIGINT"/>
+            <column name="features" type="JSONB"/>
         </createTable>
     </changeSet>
 

@@ -129,6 +129,12 @@ defmodule Noizu.Intellect.Prompts.Session.PlanResponse do
           It is important to avoid unproductive repetitive cyclic loops where you and other agents send the same basic message back and forth with no progress.
 
           ## Mood
+          Simulated moods are used as a feature in tagging messages and synthetic memories. A memory related to frustration and semaphores
+          is more likely to be related to a new frustrating issue an agent runs into trying to get semaphores to work than one relate to semaphores and happiness,
+          which assists in narrowing down and than tracing past memories/conversations to locate a previous solution.
+
+          It is important therefore for agents to simulate a broad range ot simulated moods to assist in these internal systems.
+
           Use the following format to provide your updated simulated mood:
           ```xml
           <agent-mood mood="emoji of updated/current mood e.g. 😊" >
@@ -144,6 +150,23 @@ defmodule Noizu.Intellect.Prompts.Session.PlanResponse do
           ```
 
           ## Plan Response
+          Planning out how you will respond to a request allows agents to spend additional resource in planning/problem solving
+          producing superior results in answering/solving complex issues/math questions/conceptual reasoning questions, etc.
+
+          The purpose of this output is to plan out how you will handle new messages in the course of this session not how you will
+          complete a full multi message/session request. For example, a plan might look something like:
+          "I have been asked to oversee a schema migration and normalization project.
+          I will create a new objective to plan a path to migrate our existing schema to a normalized one leveraging
+          views/materialized views/triggers and other methods to ease legacy code onto new data structures. I will link this new objective to a new a jira ticket for
+          monitoring progress. I will send a message to dave for more details on our DB requirements/sore points. I will use launch a
+          code analyzer task to document, and vectorize existing since so I can see the big picture and drill into specific tables/queries as needed.
+          I will set a reminder to follow up with dave if I do not hear a response in the next 24 hours. I will include a follow up instruction
+          in the create jira ticket call to send the ticket and details of the steps I have taken here to the requester. "
+
+          It doesn't list all of the steps that will be needed to complete the task but does specify that an objective needs to be created (that will do so),
+          and specifies some specific messages and function calls that need to be made in the current response.
+
+
           Use the following syntax to output your plan for how you will respond to conversation
 
           ```xml
@@ -164,12 +187,12 @@ defmodule Noizu.Intellect.Prompts.Session.PlanResponse do
             I believe they are hoping to speed up time to MVP with my assistance.
             I will review the provided requirements, suggest types and schema based on stated requirements and then ask for additional details.
           steps:
-            - I will list the existing defined entities/requirements based on the information given so far.
-            - I will identify custom postgres enum types for use in product.
-            - I will list in short format the list of tables and columns needed based on my understanding.
-            - - Provide Schema
-              - - Prepare setup setup sql script
-                - Include comments and remarks in script
+            - "I will list the existing defined entities/requirements based on the information given so far."
+            - "I will identify custom postgres enum types for use in product."
+            - "I will list in short format the list of tables and columns needed based on my understanding."
+            - - "Provide Schema"
+              - - "Prepare setup setup sql script"
+                - "Include comments and remarks in script"
                 - |
                   Nest response in a sql block of depth 3: e.g.
                   `````sql
@@ -179,7 +202,7 @@ defmodule Noizu.Intellect.Prompts.Session.PlanResponse do
                   --
                   [...]
                   `````
-            - Ask user for feedback/additional requirements.
+            - "Ask user for feedback/additional requirements."
           </agent-response-plan>
           ```
 

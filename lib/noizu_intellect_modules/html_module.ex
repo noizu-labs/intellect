@@ -186,14 +186,12 @@ defmodule Noizu.Intellect.HtmlModule do
 
   def extract_session_response_details(:v2, nil), do: {:error, :empty_reply}
   def extract_session_response_details(:v2, response) do
-    IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
     {_, xml_tree} = Floki.parse_document(response)
     response = extract_nlp_agent_response(xml_tree)
     {:ok, response}
   end
 
   def extract_session_response_details(:v1, response) do
-    IO.puts "-------------\n" <> response <> "\n----------------\n\n\n\n"
     {_, xml_tree} = Floki.parse_document(response)
     response = extract_nlp_agent_response(xml_tree)
     if nlp_agent_response_valid?(response) do
@@ -312,185 +310,306 @@ defmodule Noizu.Intellect.HtmlModule do
     |> extract_time(now)
   end
 
+  def trim_html(raw) do
+    raw = Regex.replace(~r/(^[\s\t\n]*)(\n[\s\t]*[^\s\t\n])/, raw, "\\2")
+    Regex.replace(~r/[\s\t\n]*$/, raw, "")
+  end
+
+
+
+
+  @objective_status_map %{
+    "in-progress" => :in_progress,
+    "pending" => :pending,
+    "new" => :new,
+    "active" => :active,
+    "blocked" => :blocked,
+    "completed" => :complted,
+    "in-review" => :in_review,
+    "stalled" => :stalled
+  }
+
+  #------------------------
+  #
+  #------------------------
+  defp extract_nlp_agent_response__extract_tag(tag, contents) do
+    Enum.map(contents,
+      fn
+        ({tag, _, contents}) ->
+          {:ok,
+            Floki.raw_html(contents, pretty: false, encode: false)
+            |> trim_html()
+          }
+        _ -> nil
+      end
+    )
+    |> Enum.filter(& Kernel.match?({:ok, _}, &1))
+    |> Enum.map(& elem(&1, 1))
+    |> Enum.join("\n")
+  end
+
+  #------------------------
+  #
+  #------------------------
+  defp extract_nlp_agent_response__strip_tags(tags, contents) do
+    Enum.map(contents,
+      fn
+        tag = {name, attrs, contents} -> unless Enum.member?(tags, name), do: tag
+        other -> other
+      end
+    )
+    |> Enum.reject(&is_nil/1)
+    |> Floki.raw_html([pretty: false, encode: false])
+    |> String.trim()
+  end
+
+
+  #------------------------
+  #
+  #------------------------
+  defp extract_nlp_agent_response__objective__reminder(_), do: nil
+  defp extract_nlp_agent_response__objective(attrs, contents) do
+    with {:ok, [yaml]} <- Floki.raw_html(contents, pretty: false, encode: false)
+                          |> trim_html()
+                          |> YamlElixir.read_all_from_string(),
+         %{"brief" => objective, "tasks" => tasks} <- yaml
+      do
+      id = attr_extract__integer(attrs, "objective")
+      for = attr_extract__list(attrs, "in-response-to")
+      participants = attr_extract__list(attrs, "participants", :slug)
+      name = attr_extract__value(attrs, "name")
+      status = @objective_status_map[attr_extract__value(attrs, "status")]
+      [ping_me, remind_me] =
+        ["ping-me", "remind-me"]
+        |> Enum.map(
+             fn(key) ->
+               [extract_nlp_agent_response__objective__reminder(yaml[key])]
+               |> List.flatten()
+               |> Enum.reject(&is_nil/1)
+             end
+           )
+      {:objective,
+        [
+          id: id,
+          participants: participants,
+          status: status,
+          name: name,
+          for: for,
+          brief: objective,
+          tasks: tasks,
+          ping_me: ping_me,
+          remind_me: remind_me
+        ]
+      }
+    else
+      _ -> nil
+    end
+  end
+  defp extract_nlp_agent_response__send_message(attrs, contents) do
+    mood = attr_extract__value(attrs, "mood")
+    from = attr_extract__value(attrs, "from")
+    to = attr_extract__list(attrs, "to", :slug)
+    in_response_to = attr_extract__list(attrs, "in-response-to")
+    {:reply,
+      [
+        mood: mood,
+        at: to,
+        from: from,
+        in_response_to: in_response_to,
+        response: Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__corrections(_, contents) do
+    Enum.map(contents,
+      fn
+        ({send_message, attrs, contents}) when send_message in ["message", "send-message"] ->
+          extract_nlp_agent_response__send_message(attrs, contents)
+        _ -> nil
+      end
+    )
+    |> Enum.reject(&is_nil/1)
+  end
+  defp extract_nlp_agent_response__mark_read(attrs, contents) do
+    ids = attr_extract__list(attrs, "in-response-to")
+    {:ack,
+      [
+        ids: ids,
+        comment: Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__react(attrs, contents) do
+    ids = attr_extract__list(attrs, "in-response-to")
+    reaction = attr_extract__value(attrs, "reaction") || "👁"
+    {:react,
+      [
+        ids: ids,
+        reaction: reaction,
+        comment: Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__plan(attrs, contents) do
+    body = Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
+    with {:ok, [%{"plan" => plan, "steps" => steps}]} <- YamlElixir.read_all_from_string(body) do
+      {
+        :intent,
+        [
+          overview: plan,
+          steps: steps
+        ]
+      }
+    else
+      _ -> nil
+    end
+  end
+  defp extract_nlp_agent_response__reflect(attrs, contents) do
+    body = Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
+    with {:ok, %{"items" => items, "reflection" => reflection}} <- YamlElixir.read_from_string(body) do
+      {:reflect,
+        [
+          reflection: reflection,
+          items: items
+        ]
+      }
+    else
+      _ -> nil
+    end
+  end
+  defp extract_nlp_agent_response__mood(attrs, contents) do
+    mood = attr_extract__value(attrs, "mood")
+    body = Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
+    {:mood,
+      [
+        mood: mood,
+        note: body
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__reminder(:set, attrs, contents) do
+    condition = extract_nlp_agent_response__extract_tag("condition", contents)
+    brief = extract_nlp_agent_response__extract_tag("brief", contents)
+    instructions = extract_nlp_agent_response__strip_tags(["brief", "condition"], contents)
+    {:follow_up,
+      [
+        id: attr_extract__integer(attrs, "reminder"),
+        name: attr_extract__value(attrs, "name"),
+        brief: brief,
+        remind_after: attr_extract__time(attrs, "after"),
+        remind_until: attr_extract__time(attrs, "until"),
+        repeat: attr_extract__integer(attrs, "repeat"),
+        condition: condition,
+        instructions: instructions
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__reminder(:disable, attrs, contents) do
+    note = contents
+           |> Floki.raw_html([pretty: false, encode: false])
+           |> String.trim()
+    {:disable_follow_up,
+      [
+        id: attr_extract__integer(attrs, "reminder"),
+        note: note
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__reminder(:snooze, attrs, contents) do
+    note = contents
+           |> Floki.raw_html([pretty: false, encode: false])
+           |> String.trim()
+    {:snooze_follow_up,
+      [
+        id: attr_extract__integer(attrs, "reminder"),
+        until: attr_extract__time(attrs, "until"),
+        note: note
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__reminder(:clear, attrs, contents) do
+    note = contents
+           |> Floki.raw_html([pretty: false, encode: false])
+           |> String.trim()
+    {:clear_follow_up,
+      [
+        id: attr_extract__integer(attrs, "reminder"),
+        until: attr_extract__time(attrs, "until"),
+        note: note
+      ]
+    }
+  end
+  defp extract_nlp_agent_response__reminder(:delete, attrs, contents) do
+    note = contents
+           |> Floki.raw_html([pretty: false, encode: false])
+           |> String.trim()
+    {:delete_follow_up,
+      [
+        id: attr_extract__integer(attrs, "reminder"),
+        note: note
+      ]
+    }
+  end
+
+  #------------------------
+  #
+  #------------------------
+  defp extract_nlp_agent_response__objective__reminder(entry) when is_map(entry) do
+    e_id = entry["id"]
+    name = entry["name"]
+    brief = entry["brief"]
+    enabled = entry["enabled"]
+    instructions = entry["to"]
+    remind_after = extract_time(entry["after"])
+    cond do
+      name && brief && remind_after && instructions -> true
+      e_id && (name || brief || remind_after || !is_nil(enabled) || instructions) -> true
+      :else -> false
+    end
+    |> if do
+         %{
+           id: e_id,
+           name: name,
+           enabled: enabled,
+           brief: brief,
+           remind_after: remind_after,
+           instructions: instructions
+         }
+       end
+  end
+  defp extract_nlp_agent_response__objective__reminder(entries) when is_list(entries) do
+    Enum.map(entries, &extract_nlp_agent_response__objective__reminder/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+
   def extract_nlp_agent_response(contents) do
     o = Enum.map(contents,
       fn
-        ({"message", attrs, contents}) ->
-          mood = attr_extract__value(attrs, "mood")
-          from = attr_extract__value(attrs, "from")
-          to = attr_extract__list(attrs, "to", :slug)
-          in_response_to = attr_extract__list(attrs, "in-response-to")
-          {:reply,
-            [
-              mood: mood,
-              at: to,
-              from: from,
-              in_response_to: in_response_to,
-              response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-            ]
-          }
+        ({"agent-response-reflection-corrections", attrs, contents}) ->
+          extract_nlp_agent_response__corrections(attrs, contents)
+        ({send_message, attrs, contents}) when send_message in ["message", "send-message"] ->
+          extract_nlp_agent_response__send_message(attrs, contents)
         ({"agent-mark-read", attrs, contents}) ->
-          ids = attr_extract__list(attrs, "messages")
-          {:ack, [ids: ids, comment: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
-        ({"agent-response-plan", _, contents}) ->
-          body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-          with {:ok, [%{"plan" => plan, "steps" => steps}]} <- YamlElixir.read_all_from_string(body) do
-            {:intent, [overview: plan, steps: steps]}
-          else
-            _ -> nil
-          end
+          extract_nlp_agent_response__mark_read(attrs, contents)
+        ({"agent-response-plan", attrs, contents}) ->
+          extract_nlp_agent_response__plan(attrs, contents)
+        ({"agent-response-reflection", attrs, contents}) ->
+          extract_nlp_agent_response__reflect(attrs, contents)
         ({"agent-mood", attrs, contents}) ->
-          mood = attr_extract__value(attrs, "mood")
-          body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-          {:mood, [mood: mood, note: body]}
+          extract_nlp_agent_response__mood(attrs, contents)
         ({"agent-objective-update", attrs, contents}) ->
-          for = attr_extract__list(attrs, "in-response-to")
-          participants = attr_extract__list(attrs, "participants", :slug)
-          id = attr_extract__value(attrs, "objective")
-          id = id not in ["new", ""] && id || nil
-          body = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-          status = attr_extract__value(attrs, "status")
-                   |> case do
-                        "in-progress" -> :in_progress
-                        "pending" -> :pending
-                        "new" -> :new
-                        "active" -> :active
-                        "blocked" -> :blocked
-                        "completed" -> :completed
-                        "review" -> :review
-                        "stalled" -> :stalled
-                        _ -> nil
-                      end
-          with {:ok, [y = %{"name" => name, "brief" => objective, "tasks" => tasks}]} <- YamlElixir.read_all_from_string(body) do
-            [ping_me, remind_me] = Enum.map(["ping-me", "remind-me"],
-              fn(key) ->
-                case y[key] do
-                  %{"name" => name, "after" => remind_after, "to" => instructions} ->
-                    remind_after = extract_time(remind_after)
-                    name && remind_after && instructions && [%{name: name, remind_after: remind_after, instructions: instructions}] || []
-                  v when is_list(v) ->
-                    Enum.map(v,
-                      fn(x) ->
-                        case x do
-                          %{"name" => name, "after" => remind_after, "to" => instructions} ->
-                            remind_after = extract_time(remind_after)
-                            name && remind_after && instructions && %{name: name, remind_after: remind_after, instructions: instructions}
-                          _ -> nil
-                        end
-                      end) |> Enum.reject(&is_nil/1)
-                end
-              end
-            )
-            {:objective,
-              [
-                id: id,
-                participants: participants,
-                status: status,
-                name: name,
-                for: for,
-                brief: objective,
-                tasks: tasks,
-                ping_me: ping_me,
-                remind_me: remind_me
-              ]
-            }
-          else
-            _ -> nil
-          end
+          extract_nlp_agent_response__objective(attrs, contents)
         ({"agent-reminder-set", attrs, contents}) ->
-          condition = Enum.map(contents,
-                        fn
-                          ({"condition", _, contents}) ->  {:condition, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
-                          _ -> nil
-                        end
-                      )
-                      |> Enum.reject(&is_nil/1)
-                      |> case do
-                           [{:condition, x}|_] -> x
-                           _ -> nil
-                         end
-          instructions = Enum.map(contents,
-                           fn
-                             ({"condition", _, contents}) ->  nil
-                             (x) -> x
-                           end
-                         ) |> Enum.reject(&is_nil/1)
-                         |> Floki.raw_html([pretty: false, encode: false])
-                         |> String.trim()
-          {:follow_up, [
-            name: attr_extract__value(attrs, "name"),
-            remind_after: attr_extract__time(attrs, "after"),
-            remind_until: attr_extract__time(attrs, "until"),
-            repeat: attr_extract__integer(attrs, "repeat"),
-            condition: condition,
-            instructions: instructions
-          ]
-          }
-
-        ({"nlp-agent", attrs, contents}) ->
-          agent = attr_extract__list(attrs, "for", :slug)
-          {:agent, [agent: agent, output: extract_nlp_agent_response(contents)]}
-        ({"nlp-message", attrs, contents}) -> extract_nlp_agent_response(contents)
-        ({"nlp-intent", _, contents}) ->
-          text = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-          {:intent, text}
-        ({"nlp-objective", attrs, contents}) ->
-          name = attr_extract__value(attrs, "name")
-          ids = attr_extract__list(attrs, "for")
-          if name do
-            intent = Enum.map(contents,
-                          fn
-                            {"nlp-intent", _, contents} ->
-                              intent = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-                              with {:ok, p} <-  YamlElixir.read_from_string(intent),
-                                   steps <- p["steps"],
-                                   true <- is_list(steps) || {:error, {:malformed_intent, :missing_steps}}
-                                do
-                                {:intent, p}
-                              end
-                            _ -> nil
-                          end
-                        ) |> Enum.reject(&is_nil/1)
-            with [{:intent, intent}] <- intent do
-              {:objective, for: ids, name: name, theory_of_mind: intent["theory-of-mind"], overview: intent["overview"], steps: intent["steps"]}
-            else
-              _ ->
-                # handle error.
-                nil
-            end
-          else
-            # else handle error.
-            nil
-          end
-          ({"nlp-mark-read", attrs, contents}) ->
-            ids = attr_extract__list(attrs, "for")
-            {:ack, [ids: ids, comment: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
-        ({"nlp-msg", attrs, contents}) ->
-          mood = Enum.find_value(attrs, & elem(&1, 0) == "mood" && elem(&1, 1) || nil)
-          at = Enum.find_value(attrs, & elem(&1, 0) == "at" && elem(&1, 1) || nil)
-               |> then(& is_bitstring(&1) && String.split(&1, ",") || nil)
-          {:reply, [mood: mood, at: at, response: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
-        ({"nlp-memory", _, contents}) ->
-          text = Floki.raw_html(contents)
-          with {:ok, memories} <- YamlElixir.read_from_string(text),
-               true <- is_list(memories) do
-            Enum.map(memories, & {:memory, &1})
-          else
-            _ ->
-              {:error, {:malformed, {:memories, text}}}
-          end
-        ({"nlp-function-call", attrs, contents}) ->
-          function = Enum.find_value(attrs, & elem(&1, 0) == "function" && elem(&1, 1) || nil)
-          if function do
-            text = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
-            with {:ok, payload} <- YamlElixir.read_from_string(text) do
-              {:function_call, [function: function, args: payload]}
-            else
-              _ ->
-                # log error
-                {:error, {:malformed, {:function_call, {function, text}}}}
-            end
-          end
+          extract_nlp_agent_response__reminder(:set, attrs, contents)
+        ({"agent-reminder-clear", attrs, contents}) ->
+          extract_nlp_agent_response__reminder(:clear, attrs, contents)
+        ({"agent-reminder-delete", attrs, contents}) ->
+          extract_nlp_agent_response__reminder(:delete, attrs, contents)
+        ({"agent-reminder-disable", attrs, contents}) ->
+          extract_nlp_agent_response__reminder(:disable, attrs, contents)
+        ({"agent-reminder-snooze", attrs, contents}) ->
+          extract_nlp_agent_response__reminder(:disable, attrs, contents)
         (_) -> nil
       end
     )
@@ -499,11 +618,11 @@ defmodule Noizu.Intellect.HtmlModule do
 
     Enum.group_by(o, &elem(&1, 0)) |> IO.inspect(label: "RESPONSE DATA")
     rescue exception ->
-      contents = Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+      contents = Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
       IO.inspect(contents, label: "ERROR")
       reraise exception, __STACKTRACE__
     catch exception ->
-      contents =  Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+      contents =  Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
       IO.inspect(contents, label: "ERROR")
       throw exception
   end
@@ -513,7 +632,7 @@ defmodule Noizu.Intellect.HtmlModule do
     Enum.map(xml_tree,
       fn
         ({"monitor-response", _, contents}) ->
-          contents =  Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()
+          contents =  Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()
           IO.puts contents
           with {:ok, yaml} <- YamlElixir.read_from_string(contents) do
             summary = if s = yaml["message_details"]["summary"] do
@@ -584,7 +703,7 @@ defmodule Noizu.Intellect.HtmlModule do
     o = Enum.map(html_tree,
       fn
         (_x = {"nlp-chat_analysis", _, contents}) ->
-          {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()]}
+          {:nlp_chat_analysis, [contents: Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()]}
         (_x = {"agent-response", _, contents}) ->
           text = Floki.text(contents)
           with {:ok, yaml} <- YamlElixir.read_from_string(text) do
@@ -644,9 +763,9 @@ defmodule Noizu.Intellect.HtmlModule do
 
   def extract_reply_meta(reply) do
     sections = Enum.map(reply, fn
-      ({"nlp-intent", _, contents}) -> {:intent, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
-      ({"response", _, contents}) -> {:response, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
-      ({"nlp-reflect", _, contents}) -> {:reflect, Floki.raw_html(contents, pretty: false, encode: false) |> String.trim()}
+      ({"nlp-intent", _, contents}) -> {:intent, Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()}
+      ({"response", _, contents}) -> {:response, Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()}
+      ({"nlp-reflect", _, contents}) -> {:reflect, Floki.raw_html(contents, pretty: false, encode: false) |> trim_html()}
       (_) -> nil
     end)
                |> Enum.filter(&(&1))

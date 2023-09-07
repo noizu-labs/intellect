@@ -10,6 +10,7 @@ Sept 6th
 - [ ] Inject objectives
 - [ ] objective condition logic.
 - [ ] Add synthetic memories. - List with brief descript indicate if relevent to convesration if so include extended values and compress into new statement to reduce size.
+- [ ] hook up reactions, internal notes, digests, additional fields.
 
 August 22nd
 =============

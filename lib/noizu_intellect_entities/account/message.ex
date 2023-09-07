@@ -318,7 +318,7 @@ defmodule Noizu.Intellect.Account.Message do
     {processed, new, system}
   end
 
-  def message_to_xml(msg, context, options) do
+  def message_to_xml(msg, agent, context, options) do
     {slug, type} = Noizu.Intellect.Account.Message.sender_details(msg, context, options)
 
     cond do
@@ -387,19 +387,37 @@ defmodule Noizu.Intellect.Account.Message do
           """
         end
       msg.event in [:message] ->
-        """
-        <message
-          id="#{msg.identifier}"
-          time="#{msg.time_stamp.created_on |> DateTime.to_iso8601}"
-          mood="#{msg.user_mood}"
-          from="@#{slug}"
-          to="#{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join(",")}"
-          in-response-to="#{Noizu.Intellect.Account.Message.reply_list(msg, context, options) |> Enum.join(",")}"
-        >
-        #{msg.contents.body}
 
-        </message>
-        """
+      cond do
+        msg.sender.identifier == agent.identifier ->
+          """
+          <send-message
+            id="#{msg.identifier}"
+            time="#{msg.time_stamp.created_on |> DateTime.to_iso8601}"
+            mood="#{msg.user_mood}"
+            from="@#{slug}"
+            to="#{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join(",")}"
+            in-response-to="#{Noizu.Intellect.Account.Message.reply_list(msg, context, options) |> Enum.join(",")}"
+          >
+          #{msg.contents.body}
+          </send-message>
+          """
+        :else ->
+          """
+          <message
+            id="#{msg.identifier}"
+            time="#{msg.time_stamp.created_on |> DateTime.to_iso8601}"
+            mood="#{msg.user_mood}"
+            from="@#{slug}"
+            to="#{Noizu.Intellect.Account.Message.audience_list(msg, context, options) |> Enum.join(",")}"
+            in-response-to="#{Noizu.Intellect.Account.Message.reply_list(msg, context, options) |> Enum.join(",")}"
+          >
+          #{msg.contents.body}
+
+          </message>
+          """
+      end
+
       :else -> nil
     end
   end

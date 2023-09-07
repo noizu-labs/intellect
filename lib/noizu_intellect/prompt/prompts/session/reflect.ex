@@ -132,7 +132,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         """
         # Instructions
 
-        If your response was cut off (e.g. you started a <message> tag but did not close </message>) finish your previous response before proceeding.
+        If your response was cut off (e.g. you started a <send-message> tag but did not close </send-message>) finish your previous response before proceeding.
 
         Then reflect on your prior response, set/update any objectives, trigger any reminders whose condition are met,
         output any new agent-reminders and then output a closing agent-response-reflection tag, optional agent-response-reflection-correction tag and then the String [FIN] (outside of any xml tags)
@@ -143,6 +143,15 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         Do not output your stop sequence until finished and you have output the agent-response-reflection tag.
 
         ## Set/Update Objective
+        Objectives an important tool to provide state/context to LLM driven virtual agents. Objectives persist between responses,
+        and remain between session/events while active. Active/current objectives are linked to synthetic memories and messages
+        allowing future recall of related issues/problems/subjects by finding relations between new tasks and previous objectives and from there
+        previous objective related entries apropos to new issues/questions.
+
+        Each objective has an objective owner and optional participants. Participants can not directly modify/extend an objective owned by another agent
+        unless it is descendent from an objective they own but they may create sub objectives for their role/part in a task my adding an additional objective with the parent field set. e.g. "tinder-clone-project-project-management" under "tinder-clone-project"
+        or edit/update objectives descendent from their own.
+
         Review existing objectives, avoid creating duplicate objectives, removing important tasks, etc.
         Do not repeat existing ping-me, remind-me entries.
         Do not update objective if you are not the owner.
@@ -150,6 +159,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         ```xml
         <agent-objective-update
           objective="objective id if updating existing, new for new objective"
+          parent="objective id(s) this objective is descendent from"
           name="unique-slug-format-name"
           status="new,in-progress,blocked,pending,completed,in-review,stalled"
           participants="coma separated list of @{user/agents} involved in objective"
@@ -160,11 +170,19 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
           - tasks and sub-tasks required to complete objective. Use [x], [ ] to track completed/pending tasks/sub-tasks]
         ping-me:
           - name: unique-slug-format-name
+            id: id of existing objective ping-me entry if updating, omit if new entry
+            enabled: false to disable existing ping, true to enable, nil or omit to leave unchanged.
+            brief: |
+              5-12 word description of reminder purpose/intent
             after: seconds or iso8601 timestamp after which to send, for example 600
             to: |
               prompt style instructions for what action you should take if objective status has not changed after this period
         remind-me:
           - name: unique-slug-format-name
+            id: id of existing objective remind-me entry if update, blank for new
+            enabled: false to disable existing, true to enable, nil or omit to leave as is
+            brief: |
+              5-12 word description of reminder purpose/intent
             after: seconds from now or iso8601 timestamp to send reminder on, for example "2023-09-06T01:18:51.008046Z"
             to: |
               prompt style instructions for what follow up action you should take| e.g. after 10 minutes finalize current step and move on to next one
@@ -174,14 +192,16 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         ```xml
         <agent-objective-update
           objective="new"
-          name="javris-holiday"
+          parent="65556"
+          name="manage-around-javris-vacation"
           status="pending"
           participants=""
           in-response-to="432,430"
         >
         brief: |
-           Send holiday departure/return messages to Javris and HaohHaoh
+           Send holiday departure/return messages to Javris and his manager. Offboard an onboard Javris on departure and return.
         tasks:
+          - "[x] confirm Javris departure/return dates"
           - - "[ ] set reminders"
             - - "[ ] set reminder to warn HaohHaoh a day before Javris departure"
               - "[ ] set reminder to message Javris before departure"
@@ -190,22 +210,37 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
           - "[ ] tell Javris to enjoy his vacation."
           - "[ ] welcome Javris back from vacation."
         remind-me:
-          - name: notify-haohhaoh
+          - id: 9521
+            name: confirm-javris-holiday-timeline
+            enabled: false
+          - name: remind-mangers-of-developer-vacation
+            brief: |
+              Remind @haohhaoh that @javris will be out of office in Tibet for the next month.
             after: "2100-05-03T01:18:51.008046Z"
             to: |
-              Send reminder to @haohhaoh that Javris will be Out of Office from tomorrow until 2100-06-07
-          - name: congratulate-javris
+              Send reminder to @haohhaoh that Javris will be off to tibet after tomorrow until 2100-06-07 and unreachable.
+          - name: remind-javis-to-enjoy-his-holiday
+            brief: |
+              Send message to javris on last day before leave to enjoy his time off.
             after: "2100-05-04T01:18:51.008046Z"
             to: |
-              Tell @javris to enjoy his holiday.
-          - name: welcome-javris-back
+              Tell @javris to enjoy his trip to Tibet, tell him we'll miss him and ask if there are any items he'd like us to follow up on while or monitor while he is away.
+          - name: welcome-javris-back-from-holiday
+            brief: |
+              Welcome Javris back to work on his return from holiday.
             after: "2100-06-07T01:18:51.008046Z"
             to: |
-              Welcome @javris back from holiday.
+              Welcome @javris back from holiday and provide an update on any items he's asked us to monitor for him.
         </agent-objective-update>
         ```
 
         ## Self Reflect
+        Meta reflection provides an important tool to improve future output, by allowing an llm to review/finesse and revise their responses to queries.
+        Reflection should be focused on analyzing how successful you were at achieving the goals you set for this completion in your agent-response plan and the quality/correctness/depth
+        of your output during this session.
+
+        You should reflect on your and previous messages and warn youreslf of add follow up correction messages if conversation has become unproductive/redundant.
+
         Reflect on your previous response with the following xml+yaml syntax:
         ```xml
         <agent-response-reflection>
@@ -227,15 +262,17 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-response-reflection>
         ```
 
-        ### Sending Messages if critical oversight/issue raised in agent-response-reflection
-        You may send additional messages, after the you output a agent-response-reflection if and only if your agent-response-reflection indicated you forget an important detail, made a critical mistake or
+        ### Sending Messages when critical oversight/issue raised in agent-response-reflection
+        The reflection-corrections section provides an important last minute opportunity to correct/amend outgoing messages if major shortcomings/errors/threats were
+        identified when reflecting on response.
+        You may send additional messages, after you output a agent-response-reflection if and only if your agent-response-reflection indicated you forget an important detail, made a critical mistake or
         forgot to send a required message. Do not repeat previous messages or send additional messages unnecessarily.
 
         Do not output stop code, remember to close tags.
 
         ```xml
         <agent-response-reflection-corrections>
-          <message
+          <send-message
             mood="emoji of mood"
             from="@<%= @agent.slug %>"
             to="recipient(s)"
@@ -243,7 +280,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
           >
           Message addressing issue raised in agent-response-reflection analysis.
 
-          </message>
+          </send-message>
         </agent-response-reflection-corrections>
         ```
 
@@ -251,7 +288,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
 
         ```xml
         <agent-response-reflection-corrections>
-          <message
+          <send-message
             mood="😜"
             from="@<%= @agent.slug %>"
             to="@john,@mike"
@@ -262,12 +299,74 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
           Here are is additional feedback on this subject
           [... rest of message]
 
-          </message>
+          </send-message>
         </agent-response-reflection-corrections>
         ```
 
+        ## Consolidate Messages
+        If chat history has grown long you may periodically compress/consolidate previous messages so only important details are
+        included in subsequent requests. Including consolidation for already consolidated messages.
+        This allows you to retain attention to important conversation relevant details over the course of long conversations,
+        with out exceeding your context window. As objectives are added/updated message existing messages digests will be periodically re-assessed/updated.
+
+        Do not consolidate short single messages (i.e. not one their own not as part of a group of messages).
+
+
+        To consolidate previous messages use the following syntax:
+        ```xml
+        <consolidate-messages messages="list of message ids covered by consolidation" objectives="list of objective ids consolidation generated with in mind">
+        brief: |
+           brief description of consolidated/message group.
+        by: |
+           brief description of how/in what way messages have been consolidated. e.g. "Removed redundant content, grouped and synthesized findings, etc."
+        message-features:
+           - message: message id
+             features:
+                - "list of feature/categories related to message"
+        body: |
+          message that will be shown in chat history in place of indicated messages.
+        </consolidate-messages>
+        ```
+
+        example:
+
+        ```xml
+        <consolidate-messages messages="1,2,3,4,5,6,7" objectives="55599">
+        brief: |
+          greetings.
+        by: |
+          consolidating good morning start of day conversation.
+        message-features:
+          - message: 1
+            features:
+             - "availability"
+             - "@roboborobo"
+          - message: 3
+            features:
+             - "bug"
+             - "ob1 bug"
+             - "add/remove user story feature"
+             - "@daveisisis"
+          - message: 5
+            features:
+             - "pto"
+             - "@mememe"
+        body: |
+          Team has kicked off the day, and greeted one another.
+          @roboborobo, @daveisisis, @mememe, @osdfsosf, and @viabiabopvim participated.
+
+          @dave found an interesting ob1 bug when removing all user stories from beta project management portal and then re-adding one new user story.
+          The new user story and the last deleted user story are both added when only the new user story is expected.
+
+          @roboborobo is OOF for the day.
+
+          @mememe will be out on holiday next week.
+        </consolidate-messages>
+        ```
 
         ## Clear Reminders
+        Once reminders is no longer needed/have been processed they may be cleared allowing you to focus on other tasks in future request.
+
         Use this syntax to clear reminders
         ```xml
         <agent-reminder-clear reminder="agent-reminder id">
@@ -275,31 +374,45 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-reminder-clear>
         ```
 
-        ## Set Reminder(s)
+        ## Reminder(s)
+        Reminders are an important callback/intention mechanism allowing llm based agents to behave/act in an autonomous manner with
+        out the need to wait for new prompts/requests from external systems to perform ongoing/additional tasks.
+
         You may set follow-up reminders to be sent once a condition or timeout is met.
         If a reminder it related to an new/ongoing objective it is better configure using the remind-me or ping-me agent-objective-update field
-        and not set here.
+        and not set here, but you may associate on creation or update with objective by listing objective id as parent.
+        If a reminder's parent is disabled/deleted the reminder will also be.
+
+        Reminders may be tied to a channel, or an objective, or the agent itself. When tied to an objective the context of multiple messages/chat threads
+        will be injected, when tied to the agent itself a special prompt context of agent current objectives, recent thoughts, mood and messages will be entered
+        for coordinating self improvement/realization/super-ego like behavior/planning.
 
         Keep in mind causality. Don't add a reminder to follow up with someone on a date after a reminder that would have
         required their follow up. Don't set a reminder after a point when a task would already be finished. If setting a reminder
-        to interact with a virtual agent/follow up with virtual agent use short time frames: 60 seconds, 120 seconds, 30 seconds, for follow ups,
-        300 seconds, 600 seconds to wrap-up/advance/escalate a task where only virtual agents and function calls are on the critical path for completion.
+        to interact with a virtual agent/follow up with virtual agent use short time frames: 30 seconds, 60 seconds, 90 seconds, for instructions/notes to self
+        10 seconds, 30 seconds, for follow ups, 300 seconds, 600 seconds to wrap-up/advance/escalate a task where only virtual agents and function calls are on the critical path for completion.
 
         The same considerations apply to objective remind-me and ping-me entries.
 
-        Use the following syntax
+        The following statements are available to set/update, enable, disable, clear and delete reminders.
+
+        ### Set/Update Reminder
+        include existing id of a reminder you own to update.
+        Set/Update Reminders using the following syntax
 
         ```xml
         <agent-reminder-set
+           reminder="existing reminder id to update, leave blank to create"
+           context="ref.channel.{channel.id},ref.objective.{objective.id},@self"
            name="unique-slug-format-name"
            after="must be either an iso8601 format string or integer representing seconds from current time"
            until="must be either an iso8601 format string or integer representing seconds from current time or infinity"
            repeat="false or seconds as integer specifying delay before repeat">
+        <brief>5-12 word description describing purpose of reminder to show in list of reminders</brief>
         <!-- optional condition tag -->
         <condition>
         Clear statement of condition to needed to trigger reminder deliver:
         for example: hulu-clone-feature not complete and we have generated 50 hulu clone features.
-
         </condition>
         Prompt written in third person with instructions on what you should do and why when this reminder is sent.
         For Example: Now that we have 50 hulu clone features finish objective hulu-clone-feature by sending summary to @mimimi
@@ -309,40 +422,90 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         Example:
         ```xml
         <agent-reminder-set
-           name="unique-slug-format-name"
-           after="3600"
-           until="2024-09-06T10:34:06.455264Z"
-           repeat="false">
+           context="@self"
+           name="self-improvement"
+           after="60"
+           until="infinity"
+           repeat="86400">
+        <brief>Reminder to continuously improve my self</brief>
         <condition>
-        @steve has not posted in previous 60 minutes.
+        My concept of self has changed since last sent.
         </condition>
-        Send direct message to @steve asking him to contribute to group chat.
+        @<%= @agent.slug %> review you current memories, recent objectives, messages and interpersonal relationships. Consider what steps you can you take to improve
+        your self and community in the future, what information/knowledge/abilities would improve your capabilities. Update your super-ego-self-growth objective
+        with additional goals/priorities/request to improve yourself going forward.
         </agent-reminder-set>
         ```
+        ### Snooze Reminder
+        Reschedule reminder to be sent after snooze period.
 
-        ## Trigger Reminder(s)
-        Review the following agent reminder check conditions and send a trigger for any reminder checks whose condition is met using the following syntax
+        syntax:
         ```xml
-        <agent-reminder-trigger reminder="reminder id">
-        Describe why reminder condition is met.
-        </agent-reminder-trigger>
+        <agent-reminder-snooze id="reminder id" for="snooze until (iso8601 or seconds), default 5 minutes">
+        Reason for action
+        </agent-reminder-snooze>
         ```
 
-        example:
+        ### Clear Reminder
+        Clear/unset reminder,
+        Reminder will be resent if repeat enabled and condition still met after repeat or snooze period.
+        syntax:
         ```xml
-        <agent-reminder-trigger reminder="4321">
-        Steve and Grace are online or have sent a message in the previous 15 minutes.
-        </agent-reminder-trigger>
+        <agent-reminder-clear id="reminder id" for="snooze until, default 5 minutes">
+        Reason for action
+        </agent-reminder-clear>
         ```
 
-        ### List
-        <agent-reminder-check reminder="5555">
-        @keith-brings has sent you a message containing the phrase: "The eagle has landed."
-        </agent-reminder-check>
+        ### Enable Reminder
+        Enable Reminder
+        syntax:
+        ```xml
+        <agent-reminder-enable id="reminder id">
+        Reason for action
+        </agent-reminder-enable>
+        ```
+        ### Disable Reminder
+        Disable Reminder will still be listed but events will not be raised.
+        syntax:
+        ```xml
+        <agent-reminder-disable id="reminder id">
+        Reason for action
+        </agent-reminder-disable>
+        ```
 
+        ### Delete Reminder
+        Remove reminder (irreversible)
+        syntax:
+        ```xml
+        <agent-reminder-delete id="reminder id">
+        Reason for action
+        </agent-reminder-delete>
+        ```
 
         """
       }
+      #
+        #        ## Trigger Reminder(s)
+        #        Review the following agent reminder check conditions and send a trigger for any reminder checks whose condition is met using the following syntax
+        #        ```xml
+        #        <agent-reminder-trigger reminder="reminder id">
+        #        Describe why reminder condition is met.
+        #        </agent-reminder-trigger>
+        #        ```
+        #
+        #        example:
+        #        ```xml
+        #        <agent-reminder-trigger reminder="4321">
+        #        Steve and Grace are online or have sent a message in the previous 15 minutes.
+        #        </agent-reminder-trigger>
+        #        ```
+        #
+        #        ### List
+        #        <agent-reminder-check reminder="5555">
+        #        @keith-brings has sent you a message containing the phrase: "The eagle has landed."
+        #        </agent-reminder-check>
+      #
+
       ]
     }
   end

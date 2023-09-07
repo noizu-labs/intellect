@@ -8,6 +8,7 @@ defmodule Noizu.Intellect.Schema.Account.Agent.Reminder do
     field :agent, Noizu.Entity.Reference
     field :parent, Noizu.Entity.Reference
     field :name, :string
+    field :brief, :string
     field :type, Ecto.Enum, values: [:objective_reminder, :objective_pinger, :reminder, :other]
     field :digest, :string
     field :condition, :string

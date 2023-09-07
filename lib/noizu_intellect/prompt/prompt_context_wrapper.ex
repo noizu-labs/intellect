@@ -208,7 +208,7 @@ defmodule Noizu.Intellect.Prompt.ContextWrapper do
   end
   def prepare_messages(agent, context, options, [msg|t], self, que, acc) do
     to_self = msg.sender.identifier == agent.identifier
-    p = Noizu.Intellect.Account.Message.message_to_xml(msg, context, options)
+    p = Noizu.Intellect.Account.Message.message_to_xml(msg, agent, context, options)
     if to_self != self do
       if que != [] do
         q = Enum.reject(que, &is_nil/1) |> Enum.join("\n")

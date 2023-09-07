@@ -2,6 +2,7 @@ defmodule Noizu.Intellect.Schema.Account.Agent.Objective do
   use Ecto.Schema
   import Ecto.Changeset
 
+
   @derive Noizu.EntityReference.Protocol
   @primary_key {:identifier, :integer, autogenerate: false}
   schema "account_agent_objective" do
@@ -9,9 +10,11 @@ defmodule Noizu.Intellect.Schema.Account.Agent.Objective do
     field :name, :string
     field :brief, :string
     field :tasks, :string
-    field :status, Ecto.Enum, values: [:new,:active,:blocked,:pending,:completed,:review,:stalled]
+    field :status, Ecto.Enum, values: [:new,:in_progress,:blocked,:pending,:completed,:in_review,:stalled]
     #field :remind_after, :utc_datetime_usec
+
     #field :remind_instructions, :string
+
 
     field :participants, :map, virtual: true
     field :reminders, :map, virtual: true

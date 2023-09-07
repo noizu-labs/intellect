@@ -20,6 +20,7 @@ defmodule Noizu.Intellect.Account.Agent.Reminder do
     field :agent, nil, Noizu.Entity.Reference
     field :parent, nil, Noizu.Entity.Reference
     field :name
+    field :brief
     field :type
     field :digest
     field :condition
