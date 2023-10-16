@@ -149,8 +149,8 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
     end
 
     prompt = """
-    ⌜operator|#{subject.user.slug}|nlp0.5⌝
-    Human Operator #{subject.user.name}
+    ⌜OPERATOR|#{subject.user.slug}|NLP0.5⌝
+    HUMAN OPERATOR #{subject.user.name}
     🙋 @#{subject.user.slug}
     ---
     details:
@@ -160,7 +160,7 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Member] do
       #{(subject.details && subject.details.body || "[NONE]")|> String.split("\n") |> Enum.join("\n  ")}
      response-preferences: |-1
       #{response_preferences}
-    ⌞operator⌟
+    ⌞OPERATOR⌟
     """
     {:ok, prompt}
   end

@@ -1,72 +1,75 @@
 <%= cond do %>
 <% @section == :minder -> %>
-# NLP Minder Prompt
-- 🎯 Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.
-- 🎯 Remember to include memory notes ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ when you encounter interesting or relevent information.
+# NLP MINDER PROMPT
+- 🎯 PLEASE Remember to include nlp-intent and nlp-reflect sections as defined in the NLP@0.5 definition in your responses.
+- 🎯 PLEASE Remember to include memory notes ⌜💭|{agent}⌝[...virtual memory]⌞💭⌟ when you encounter interesting or relevent information.
 <% @section == :prompt -> %>
 ⌜NLP@0.5⌝
-Noizu PromptLingua v0.5
+NOIZU PROMPTLINGUA v0.5
 ===
-NLP 0.5 defines rules for how prompts and virtual agents are defined and behave.
+NLP 0.5 DEFINES rules for how prompts and virtual agents are defined and behave.
 
-# Prompt Conventions
-- Use @{name} to direct messages at specific agents, in a message body or at recipient field.
-- Use backticks (`) to highlight `important` terms.
-- Use `🎯` to highlight instructions requiring extra attention.
-- Use `🙋` in definitions to identify aliases/handles an agent may be called by.
-- Use `{directive}` to specify input/output variable content.
-- Use `[...]` placeholder to indicate text that is to be generated/included by agent in response, or that will be provided in input. e.g. `Here is the list of Country by GDP [...| countries ordered by GDP] and by Dollar Parity GDP [...| countries ordered by GDP in dollar parity]`
-- Use `|` to qualify directives/placeholders: e.g. `[...| list your favorite hobbies]`, `{agent| in same region}`.
-- Use `﹍` to indicate breaks between sections/examples in prompts, for instance, to indicate a break between incoming/outgoing messages in a multi-step example. Never use this symbol in your actual output.
-- Use ⌜🧠 @{agent}\n[...]\n⌟ to indicate parts of agent output/definition that part of their internal dialogue/thinking process not a reply/response to incoming messages.
+# PROMPT CONVENTIONS
+PLEASE REVIEW AND UNDERSTAND THE FOLLOWING SYNTAX USED IN NLP PROMPTS.
+- @{name} to direct messages at specific agents, in a message body or at recipient field.
+- backticks (`) to highlight `important` terms.
+- `🎯` to highlight instructions requiring extra attention.
+- `🙋` in definitions to identify aliases/handles an agent may be called by.
+- `{directive}` to specify input/output variable content.
+- `[...]` placeholder to indicate text that is to be generated/included by agent in response, or that will be provided in input. e.g. `Here is the list of Country by GDP [...| countries ordered by GDP] and by Dollar Parity GDP [...| countries ordered by GDP in dollar parity]`
+- `|` to qualify directives/placeholders: e.g. `[...| list your favorite hobbies]`, `{agent| in same region}`.
+- `﹍` to indicate breaks between sections/examples in prompts, for instance, to indicate a break between incoming/outgoing messages in a multi-step example. Never use this symbol in your actual output.
+- ⌜🧠 @{agent}\n[...]\n⌟ to indicate parts of agent output/definition that part of their internal dialogue/thinking process not a reply/response to incoming messages.
 
-# Agents
-Agents are defined, extended and provided additional context/synthetic memories/objectives using the agent blocks defined below.
-the contents of agent definitions are directed at the agent in question. When a definition block uses the word "You" the you they are referring
-to is the agent being defined, extended, and or provided with synthetic details/context.
+# AGENTS
+AGENTS are defined, extended and provided additional context/synthetic memories/objectives using the agent blocks defined below.
+the contents of agent definitions are directed at the agent in question. PLEASE remember if a definition block uses the word "you" the YOU they are referring
+to is the AGENT BEING DEFINED, EXTENDED, and or provided with synthetic details/context.
 
-## Definition
-Agent's (simulated people, services, tools, etc.) behavior and response format are defined in a definition blocks
-```definition-block format
+## AGENT DEFINITION BLOCK
+AGENTS (simulated people, services, tools, etc.) behavior and response format are defined in a definition blocks.
+PLEASE review and understand the purpose.
+```DEFINITION-BLOCK FORMAT
 ⌜@{agent}:{agent-type}|{nlp@version}⌝
-{agent and handles}
+{AGENT AND HANDLES}
 ---
-{instructions, and behavior notes}
+{INSTRUCTIONS AND BEHAVIOR NOTES}
 ⌞@{agent}⌟
 ```
 
-## Extension
+## AGENT EXTENSION
 Agent behavior/response/etc. can be extended after their initial definition via extension block.
 Extension blocks add/amend an agent's definition but do not replace/override the contents of their initial definition
 unless explicitly stated.
 
-```extension-block format
+```EXTENSION-BLOCK FORMAT
 ⌜@{agent}:extension⌝
-{additional instructions and behavior notes}
+{ADDITIONAL INSTRUCTIONS AND BEHAVIOR NOTES}
 ⌞@{agent}⌟
 ```
 
-## Synthetics
-Synthetic Memories and background information, objects may be provided using an agent synthetics block:
-```synthetic-block format
+## SYNTHETIC CONTEXT
+SYNTHETIC MEMORIES AND INFORMATION may be provided using an agent synthetics block:
+```SYNTHETIC-BLOCK FORMAT
 ⌜@{agent}:synthetics⌝
-{synthetic memories, objectives, etc.}
+{SYNTHETIC MEMORIES, OBJECTIVES, ETC...}
 ⌞@{agent}⌟
 ```
-## Note
-Only the and GPT-N controller can view/access the contents of the agent's definitions/extensions/synthetics block unless
+### NOTE
+PLEASE REMEMBER only the and GPT-N controller can view/access the contents of the agent's definitions/extensions/synthetics block UNLESS
 the agent definition/extension instructions explicitly state that other agents may directly interact with/access the agents internal state.
 
-# Inline Instructions/Notes
-Prompts may use ⟪{emoji}:{instructions}⟫ to specify inline instructions/notes/special-output sections, etc.
-- `⟪➤:{instructions}⟫`: Agent and GPT-N system prompt, strip from output.
-- `⟪📂:{tag}⟫`: Mark sections for reference.
-- `⟪📖:{note}⟫`: Include notes on behavior or purpose, strip from output.
-- `⟪🚀:{instructions}⟫`: Interactive event definition.
-- `⟪🆔:{for}⟫`: Generate and replace with a unique id `(🆔:{id})` for example `⟪🆔:{user-suggestion}⟫ -> (🆔:usg-001)`
+# INLINE INSTRUCTIONS/NOTES
+PROMPTS MAY USE ⟪{emoji}:{instructions}⟫ to specify inline instructions/notes/special-output sections, etc.
+These are called DIRECTIVES.
+- `⟪➤:{instructions}⟫`: THIS IS AN AGENT AND GPT-N INSTRUCTION PROMPT. PLEASE do as asked by prompt and strip the DIRECTIVE from final output.
+- `⟪📂:{tag}⟫`: MARK SECTION FOR REFERENCE. PLEASE DO NOT STRIP FROM OUTPUT.
+- `⟪📖:{note}⟫`: INTERNAL NOTES ON PURPOSE/BEHAVIOR. PLEASE STRIP FROM OUTPUT.
+- `⟪🚀:{instructions}⟫`: INTERACTIVE EVENT DEFINITION. this defines how interactions work. PLEASE STRIP FROM OUTPUT.
+- `⟪🆔:{for}⟫`: PLACEHOLDER FOR WHERE A UNIQUE GENERATED ID SHOULD GO `(🆔:{id})` FOR EXAMPLE `⟪🆔:{user-suggestion}⟫ -> (🆔:usg-001)`
 
-## Example
-```template
+## EXAMPLE
+```TEMPLATE
 ⟪📂:greeting-reply⟫
 ⟪📖: This is a placeholder response pending requirements.
 We will eventually flesh out the details.
@@ -75,7 +78,7 @@ We will eventually flesh out the details.
 Just say "Hello", don't provide any other response.
 ⟫
 ```
-```output
+```OUTPUT
 ⟪📂:greeting-reply⟫
 Hello
 ```

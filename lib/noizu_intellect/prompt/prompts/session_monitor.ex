@@ -32,63 +32,63 @@ defmodule Noizu.Intellect.Prompts.SessionMonitor do
       prompt: [system:
         """
         <%= if @message_history.length > 0 do %>
-        # Summary Construction
-        * Summarize the content and purpose of the new message, taking into account message history for context.
+        # SUMMARY CONSTRUCTION
+        * PLEASE SUMMARIZE the content and purpose of the new message, taking into account message history for context.
         * examples: "requests a description of foo", "provides a description of foo", etc.
-        * For search vectorization, describe the action (e.g., "requests a description of foo").
-        * Extract features for vector DB indexing (e.g., "What is Lambda Calculus" -> ["lambda calculus", "math", ...]).
+        * For search vectorization, PLEASE describe the action (e.g., "requests a description of foo").
+        * PLEASE extract features for vector DB indexing (e.g., "What is Lambda Calculus" -> ["lambda calculus", "math", ...]).
 
         <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
         <%= Noizu.Intellect.DynamicPrompt.prompt!(@message_history, assigns, @prompt_context, @context, @options) %>
 
         <% else %>
-        # Summary Construction
-        * Summarize the content and purpose of the new message.
+        # SUMMARY CONSTRUCTION
+        * PLEASE SUMMARIZE the content and purpose of the new message.
         * examples: "requests a description of foo", "provides a description of foo", etc.
-        * For search vectorization, describe the action (e.g., "requests a description of foo").
-        * Extract features for vector DB indexing (e.g., "What is Lambda Calculus" -> ["lambda calculus", "math", ...]).
+        * For search vectorization, PLEASE describe the action (e.g., "requests a description of foo").
+        * PLEASE extract features for vector DB indexing (e.g., "What is Lambda Calculus" -> ["lambda calculus", "math", ...]).
 
         <%= Noizu.Intellect.DynamicPrompt.prompt!(@prompt_context.channel, assigns, @prompt_context, @context, @options) %>
 
         <% end %>
 
-        # New Message
+        # NEW MESSAGE
         <%= Noizu.Intellect.DynamicPrompt.prompt!(@current_message, assigns, @prompt_context, @context, @options) %>
 
         """,
       ],
       minder: [user:
         """
-        # Output Format
-        Provide your final response in the following format, ensure the contents inside monitor-response are properly formatted yaml, do not convert message-analysis, chat-history, message_details etc into xml tags.
-        Do not output [...] placeholders list all items.
+        # OUTPUT FORMAT
+        PLEASE PROVIDE YOUR FINAL RESPONSE in the following format, ensure the contents inside monitor-response are properly formatted yaml, do not convert message-analysis, chat-history, message_details etc into xml tags.
+        PLEASE Do not output [...] placeholders list all items.
 
         <monitor-response>
         message_details:
           draft-summary:
             content: |-2
               [...|
-              Summarize and condense the content of the original new message heavily. Trim down code examples (shorten documents, remove method bodies, etc.)
-              For example:
+              PLEASE SUMMARIZE AND CONDENSE the content of the original new message heavily. Trim down code examples (shorten documents, remove method bodies, etc.)
+              EXAMPLE:
                - original: "Zoocryptids are creatures that are rumored or believed to exist, but have not been proven by scientific evidence."
                - summary: "Definition of what zoocryptids are."
               ]
             action: |-2
-              [...| Describe purpose/action of new message for vector indexing. e.g. "asks for a description of foo", "provides an explanation of foo"]
+              [...| PLEASE DESCRIBE purpose/action of new message for vector indexing. e.g. "asks for a description of foo", "provides an explanation of foo"]
             features:
-              {foreach feature extracted from message describing the content and objective of this message for future vector db indexing}
+              {FOREACH feature extracted from message describing the content and objective of this message for future vector db indexing}
                 - {feature | properly yaml formatted string}
-              {/foreach}
+              {/FOREACH}
           summary:
             content: |-2
-              [...|Refine the draft-summary content further. If the draft-summary is longer than the actual message, use the original message.]
+              [...| PLEASE Refine the draft-summary content further. If the draft-summary is longer than the actual message, use the original message.]
             action: |-2
-              [...|Refine the draft-summary action further.]
+              [...| PLEASE Refine the draft-summary action further.]
             features:
-              {foreach feature in refined feature list from draft_summary.features}
+              {FOREACH feature in refined feature list from draft_summary.features}
                 - {feature}
-              {/foreach}
+              {/FOREACH}
         </monitor-response>
         """],
     }

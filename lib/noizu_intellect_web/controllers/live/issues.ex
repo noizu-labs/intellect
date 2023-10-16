@@ -160,15 +160,17 @@ defmodule Noizu.IntellectWeb.Issues do
   end
 
   def load_issues(s \\ nil) do
-    s = s || self()
-    spawn fn ->
-      _issues = case Noizu.Github.Api.Issues.list() do
-        {:ok, issues} -> send(s, {:issues_loaded, issues})
-        _ ->
-          Process.sleep(5000)
-          load_issues(s)
-      end
-    end
+#    s = s || self()
+#    spawn fn ->
+#      _issues = case Noizu.Github.Api.Issues.list() do
+#        {:ok, issues} -> send(s, {:issues_loaded, issues})
+#        _ ->
+#          Process.sleep(5000)
+#          load_issues(s)
+#          :ok
+#      end
+#    end
+  :key_required
   end
 
   def mount(_, _session, socket) do

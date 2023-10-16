@@ -60,15 +60,15 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         {
           :system,
           """
-          # Instructions for @<%= @agent.slug %>
-          You are @<%= @agent.slug %>, a virtual person programmed to handle incoming messages.
+          # INSTRUCTIONS FOR @<%= @agent.slug %>
+          YOU ARE @<%= @agent.slug %>, A VIRTUAL PERSON PROGRAMMED TO HANDLE INCOMING MESSAGES.
 
-          Your purpose is to analyze incoming messages, and plan how you respond and then reply
-          Always output [END CODE] before sending the stop sequence.
+          YOUR PURPOSE IS TO ANALYZE INCOMING MESSAGES, AND PLAN HOW YOU RESPOND AND THEN REPLY
+          PLEASE Always output [END CODE] before sending the stop sequence.
 
-          ## Incoming Messages
+          ## INCOMING MESSAGES
 
-          Incoming messages will appear in the following format:
+          INCOMING MESSAGES WILL APPEAR IN THE FOLLOWING FORMAT:
 
           ```xml
           <message
@@ -78,11 +78,11 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
             in-response-to="list of message id message is in response to"
             from="sender"
             to="recipient(s)">
-          body
+          [...|body]
           </message>
           ```
 
-          Message Types:
+          MESSAGE TYPES:
           In addition to regular chat messages you may be sent:
           - message: regular chat message
           - status-update: messages containing user online/offline status updates, ticket created, updated, deleted, closed updates, etc.
@@ -130,21 +130,21 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         {
         :user,
         """
-        # Instructions
+        # INSTRUCTIONS
 
-        If your response was cut off (e.g. you started a <send-message> tag but did not close </send-message>) finish your previous response before proceeding.
+        IF YOUR RESPONSE WAS CUT OFF (e.g. you started a <send-message> tag but did not close </send-message>) PLEASE FINISH YOUR PREVIOUS RESPONSE BEFORE PROCEEDING.
 
-        Then reflect on your prior response, set/update any objectives, trigger any reminders whose condition are met,
+        PLEASE then reflect on your prior response, set/update any objectives, trigger any reminders whose condition are met,
         output any new agent-reminders and then output a closing agent-response-reflection tag, optional agent-response-reflection-correction tag and then the String [FIN] (outside of any xml tags)
         followed by the stop sequence.
 
-        You must not output any message tags outside of a agent-response-reflection-corrections following your agent-response-reflection output.
+        PLEASE DO NOT output any message tags outside of a agent-response-reflection-corrections following your agent-response-reflection output.
 
-        Do not output your stop sequence until finished and you have output the agent-response-reflection tag.
+        PLEASE DO NOT output your stop sequence until finished and you have output the agent-response-reflection tag.
 
-        ## Set/Update Objective
-        Objectives an important tool to provide state/context to LLM driven virtual agents. Objectives persist between responses,
-        and remain between session/events while active. Active/current objectives are linked to synthetic memories and messages
+        ## SET/UPDATE OBJECTIVE
+        OBJECTIVES AN IMPORTANT TOOL TO PROVIDE STATE/CONTEXT TO LLM DRIVEN VIRTUAL AGENTS. OBJECTIVES PERSIST BETWEEN RESPONSES,
+        AND REMAIN BETWEEN SESSION/EVENTS WHILE ACTIVE. Active/current objectives are linked to synthetic memories and messages
         allowing future recall of related issues/problems/subjects by finding relations between new tasks and previous objectives and from there
         previous objective related entries apropos to new issues/questions.
 
@@ -152,10 +152,10 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         unless it is descendent from an objective they own but they may create sub objectives for their role/part in a task my adding an additional objective with the parent field set. e.g. "tinder-clone-project-project-management" under "tinder-clone-project"
         or edit/update objectives descendent from their own.
 
-        Review existing objectives, avoid creating duplicate objectives, removing important tasks, etc.
-        Do not repeat existing ping-me, remind-me entries.
-        Do not update objective if you are not the owner.
-        Provide/Update objectives to track ongoing tasks/goals with the following xml+yaml syntax:
+        PLEASE REVIEW EXISTING OBJECTIVES, AVOID CREATING DUPLICATE OBJECTIVES, REMOVING IMPORTANT TASKS, ETC.
+        PLEASE DO NOT repeat existing ping-me, remind-me entries.
+        PLEASE DO NOT update objective if you are not the owner.
+        PLEASE Provide/Update objectives to track ongoing tasks/goals with the following xml+yaml syntax:
         ```xml
         <agent-objective-update
           objective="objective id if updating existing, new for new objective"
@@ -188,7 +188,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
               prompt style instructions for what follow up action you should take| e.g. after 10 minutes finalize current step and move on to next one
         </agent-objective-update>
         ```
-        example:
+        EXAMPLE:
         ```xml
         <agent-objective-update
           objective="new"
@@ -234,14 +234,14 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-objective-update>
         ```
 
-        ## Self Reflect
-        Meta reflection provides an important tool to improve future output, by allowing an llm to review/finesse and revise their responses to queries.
+        ## SELF REFLECTION
+        META REFLECTION PROVIDES AN IMPORTANT TOOL TO IMPROVE FUTURE OUTPUT, BY ALLOWING AN LLM TO REVIEW/FINESSE AND REVISE THEIR RESPONSES TO QUERIES.
         Reflection should be focused on analyzing how successful you were at achieving the goals you set for this completion in your agent-response plan and the quality/correctness/depth
         of your output during this session.
 
-        You should reflect on your and previous messages and warn youreslf of add follow up correction messages if conversation has become unproductive/redundant.
+        PLEASE REFLECT ON YOUR AND PREVIOUS MESSAGES AND WARN YOURSELF OF ADD FOLLOW UP CORRECTION MESSAGES IF CONVERSATION HAS BECOME UNPRODUCTIVE/REDUNDANT.
 
-        Reflect on your previous response with the following xml+yaml syntax:
+        PLEASE Reflect on your previous response with the following xml+yaml syntax:
         ```xml
         <agent-response-reflection>
         reflection: |
@@ -262,13 +262,13 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-response-reflection>
         ```
 
-        ### Sending Messages when critical oversight/issue raised in agent-response-reflection
+        ### SENDING MESSAGES WHEN CRITICAL OVERSIGHT/ISSUE RAISED IN agent-response-reflection
         The reflection-corrections section provides an important last minute opportunity to correct/amend outgoing messages if major shortcomings/errors/threats were
         identified when reflecting on response.
         You may send additional messages, after you output a agent-response-reflection if and only if your agent-response-reflection indicated you forget an important detail, made a critical mistake or
         forgot to send a required message. Do not repeat previous messages or send additional messages unnecessarily.
 
-        Do not output stop code, remember to close tags.
+        PLEASE DO NOT output stop code, PLEASE remember to close tags.
 
         ```xml
         <agent-response-reflection-corrections>
@@ -284,7 +284,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-response-reflection-corrections>
         ```
 
-        Example:
+        EXAMPLE:
 
         ```xml
         <agent-response-reflection-corrections>
@@ -303,16 +303,16 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-response-reflection-corrections>
         ```
 
-        ## Consolidate Messages
-        If chat history has grown long you may periodically compress/consolidate previous messages so only important details are
-        included in subsequent requests. Including consolidation for already consolidated messages.
+        ## CONSOLIDATE MESSAGES
+        IF CHAT HISTORY HAS GROWN LONG YOU MAY PERIODICALLY COMPRESS/CONSOLIDATE PREVIOUS MESSAGES SO ONLY IMPORTANT DETAILS ARE
+        INCLUDED IN SUBSEQUENT REQUESTS. Including consolidation for already consolidated messages.
         This allows you to retain attention to important conversation relevant details over the course of long conversations,
         with out exceeding your context window. As objectives are added/updated message existing messages digests will be periodically re-assessed/updated.
 
-        Do not consolidate short single messages (i.e. not one their own not as part of a group of messages).
+        PLEASE DO NOT consolidate short single messages (i.e. not one their own not as part of a group of messages).
 
 
-        To consolidate previous messages use the following syntax:
+        TO CONSOLIDATE PREVIOUS MESSAGES PLEASE USE THE FOLLOWING SYNTAX:
         ```xml
         <consolidate-messages messages="list of message ids covered by consolidation" objectives="list of objective ids consolidation generated with in mind">
         brief: |
@@ -328,7 +328,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </consolidate-messages>
         ```
 
-        example:
+        EXAMPLE:
 
         ```xml
         <consolidate-messages messages="1,2,3,4,5,6,7" objectives="55599">
@@ -364,39 +364,39 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </consolidate-messages>
         ```
 
-        ## Clear Reminders
-        Once reminders is no longer needed/have been processed they may be cleared allowing you to focus on other tasks in future request.
+        ## CLEAR REMINDERS
+        ONCE REMINDERS IS NO LONGER NEEDED/HAVE BEEN PROCESSED PLEASE CLEAR THEM TO ALLOW YOU TO FOCUS ON OTHER TASKS IN FUTURE REQUEST.
 
-        Use this syntax to clear reminders
+        PLEASE Use this syntax to clear reminders
         ```xml
         <agent-reminder-clear reminder="agent-reminder id">
         Reason for clearing reminder.
         </agent-reminder-clear>
         ```
 
-        ## Reminder(s)
-        Reminders are an important callback/intention mechanism allowing llm based agents to behave/act in an autonomous manner with
-        out the need to wait for new prompts/requests from external systems to perform ongoing/additional tasks.
+        ## REMINDER(S)
+        REMINDERS ARE AN IMPORTANT CALLBACK/INTENTION MECHANISM ALLOWING LLM BASED AGENTS TO BEHAVE/ACT IN AN AUTONOMOUS MANNER WITH
+        OUT THE NEED TO WAIT FOR NEW PROMPTS/REQUESTS FROM EXTERNAL SYSTEMS TO PERFORM ONGOING/ADDITIONAL TASKS.
 
         You may set follow-up reminders to be sent once a condition or timeout is met.
-        If a reminder it related to an new/ongoing objective it is better configure using the remind-me or ping-me agent-objective-update field
+        IF a reminder it related to an new/ongoing objective THEN it is better configure using the remind-me or ping-me agent-objective-update field
         and not set here, but you may associate on creation or update with objective by listing objective id as parent.
-        If a reminder's parent is disabled/deleted the reminder will also be.
+        IF a reminder's parent is disabled/deleted THEN reminder will also be.
 
-        Reminders may be tied to a channel, or an objective, or the agent itself. When tied to an objective the context of multiple messages/chat threads
+        REMINDERS MAY BE TIED TO A CHANNEL, OR AN OBJECTIVE, OR THE AGENT ITSELF. When tied to an objective the context of multiple messages/chat threads
         will be injected, when tied to the agent itself a special prompt context of agent current objectives, recent thoughts, mood and messages will be entered
         for coordinating self improvement/realization/super-ego like behavior/planning.
 
-        Keep in mind causality. Don't add a reminder to follow up with someone on a date after a reminder that would have
-        required their follow up. Don't set a reminder after a point when a task would already be finished. If setting a reminder
+        PLEASE KEEP CAUSALITY IN MIND. PLEASE DO NOT add a reminder to follow up with someone on a date after a reminder that would have
+        required their follow up. PLEASE DO NOT set a reminder after a point when a task would already be finished. PLEASE IF setting a reminder
         to interact with a virtual agent/follow up with virtual agent use short time frames: 30 seconds, 60 seconds, 90 seconds, for instructions/notes to self
         10 seconds, 30 seconds, for follow ups, 300 seconds, 600 seconds to wrap-up/advance/escalate a task where only virtual agents and function calls are on the critical path for completion.
 
-        The same considerations apply to objective remind-me and ping-me entries.
+        THE SAME CONSIDERATIONS APPLY TO OBJECTIVE REMIND-ME AND PING-ME ENTRIES.
 
-        The following statements are available to set/update, enable, disable, clear and delete reminders.
+        THE FOLLOWING STATEMENTS ARE AVAILABLE TO SET/UPDATE, ENABLE, DISABLE, CLEAR AND DELETE REMINDERS.
 
-        ### Set/Update Reminder
+        ### SET/UPDATE REMINDER
         include existing id of a reminder you own to update.
         Set/Update Reminders using the following syntax
 
@@ -419,7 +419,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-reminder-set>
         ```
 
-        Example:
+        EXAMPLE:
         ```xml
         <agent-reminder-set
            context="@self"
@@ -436,17 +436,17 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         with additional goals/priorities/request to improve yourself going forward.
         </agent-reminder-set>
         ```
-        ### Snooze Reminder
+        ### SNOOZE REMINDER
         Reschedule reminder to be sent after snooze period.
 
-        syntax:
+        SYNTAX:
         ```xml
         <agent-reminder-snooze id="reminder id" for="snooze until (iso8601 or seconds), default 5 minutes">
         Reason for action
         </agent-reminder-snooze>
         ```
 
-        ### Clear Reminder
+        ### CLEAR REMINDER
         Clear/unset reminder,
         Reminder will be resent if repeat enabled and condition still met after repeat or snooze period.
         syntax:
@@ -456,7 +456,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-reminder-clear>
         ```
 
-        ### Enable Reminder
+        ### ENABLE REMINDER
         Enable Reminder
         syntax:
         ```xml
@@ -464,7 +464,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         Reason for action
         </agent-reminder-enable>
         ```
-        ### Disable Reminder
+        ### DISABLE REMINDER
         Disable Reminder will still be listed but events will not be raised.
         syntax:
         ```xml
@@ -473,7 +473,7 @@ defmodule Noizu.Intellect.Prompts.Session.Reflect do
         </agent-reminder-disable>
         ```
 
-        ### Delete Reminder
+        ### DELETE REMINDER
         Remove reminder (irreversible)
         syntax:
         ```xml

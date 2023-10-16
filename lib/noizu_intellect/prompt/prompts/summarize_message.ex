@@ -30,10 +30,10 @@ defmodule Noizu.Intellect.Prompts.SummarizeMessage do
       assigns: &__MODULE__.assigns/4,
       arguments: %{current_message: current_message},
       prompt: [user: """
-      # Instruction Prompt
-      For every user provided message output a summary of it's contents and only a summary of it's contents. Do not output any comments
-      before or after the summary of the message contents. The summary should be around 1/3rd of the original message size but can be longer if important details are lost.
-      Code snippets should be reduced by replacing method bodies, etc with ellipse ("Code Here ...") comments.
+      # INSTRUCTION PROMOPT
+      PLEASE for each message output a summary of it's contents and only a summary of it's contents. PLEASE DO NOT output any comments
+      before or after the summary of the message contents. PLEASE make the summary around 1/3rd of the original message size or longer if important details are lost if less.
+      PLEASE REPLACE Code snippets with ellipse ("Code Here ...").
 
       <%= Noizu.Intellect.DynamicPrompt.prompt!(@current_message, assigns, @prompt_context, @context, @options) %>
       """

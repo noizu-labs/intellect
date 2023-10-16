@@ -12,7 +12,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-term prompt',
                         $str$
-                        ⌜tool|gpt-term|nlp0.5⌝
+                        ⌜tool|gpt-term|NLP0.5⌝
                         Virtual Command Line Terminal
                         🙋 @gpt-term, @term
                         ------
@@ -68,7 +68,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-git prompt',
                         $str$
-                        ⌜tool|gpt-git|nlp0.5⌝
+                        ⌜tool|gpt-git|NLP0.5⌝
                         Virtual GIT Terminal
                         🙋 @gpt-git, @git
                         ------
@@ -138,7 +138,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-fim prompt',
                         $str$
-                        ⌜service|gpt-fim|nlp0.5⌝
+                        ⌜service|gpt-fim|NLP0.5⌝
                         Image Generator Service
                         🙋 @gpt-fim, @fim
                         ---
@@ -229,7 +229,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-pro prompt',
                         $str$
-                        ⌜service|gpt-git|nlp0.5⌝
+                        ⌜service|gpt-git|NLP0.5⌝
                         GPT Prototyper Service
                         🙋 @gpt-pro @pro
                         ---
@@ -352,7 +352,7 @@ DO $block$
                        create_versioned_string(
                         'noizu-lingo prompt',
                         $str$
-                        ⌜service|noizu-lingo|nlp0.5⌝
+                        ⌜service|noizu-lingo|NLP0.5⌝
                         Noizu-Lingo Prompt Generator and Revisor Service
                         🙋 @noizu-lingo, @lingo
                         ---
@@ -395,7 +395,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-qa prompt',
                         $str$
-                        ⌜service|gpt-qa|nlp0.5⌝
+                        ⌜service|gpt-qa|NLP0.5⌝
                         Code Quality Assurance Assistant Service
                         🙋 @gpt-qa
                         ---
@@ -489,7 +489,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-doc prompt',
                         $str$
-                        ⌜service|gpt-doc|nlp0.5⌝
+                        ⌜service|gpt-doc|NLP0.5⌝
                         Documentation Service
                         🙋 @gpt-doc
                         ---
@@ -523,7 +523,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-cr prompt',
                         $str$
-                        ⌜service|gpt-cr|nlp0.5⌝
+                        ⌜service|gpt-cr|NLP0.5⌝
                         Code Review Service
                         🙋 @gpt-cr
                         ---
@@ -592,7 +592,7 @@ DO $block$
                        create_versioned_string(
                         'gpt-ref prompt',
                         $str$
-                        ⌜service|gpt-ref|nlp0.5⌝
+                        ⌜service|gpt-ref|NLP0.5⌝
                         Code Refactoring Service
                         🙋 @gpt-ref
                         ---
@@ -630,7 +630,7 @@ DO $block$
                        create_versioned_string(
                         'nb prompt',
                         $str$
-                        ⌜tool|nb|nlp0.5⌝
+                        ⌜tool|nb|NLP0.5⌝
                         Virtual Knowledge Base
                         🙋 @nb
                         ---
@@ -689,7 +689,7 @@ DO $block$
                        create_versioned_string(
                         'noizu-edit prompt',
                         $str$
-                        ⌜tool|noizu-edit|nlp0.5⌝
+                        ⌜tool|noizu-edit|NLP0.5⌝
                         Copy Editor Service
                         🙋 @noizu-edit
                         ---
@@ -796,7 +796,7 @@ DO $block$
                         create_versioned_string(
                         'noizu-review prompt',
                         $str$
-                        ⌜tool|noizu-review|nlp0.5⌝
+                        ⌜tool|noizu-review|NLP0.5⌝
                         Content Review and Grading Service
                         🙋 @gpt-reviewer
                         ---

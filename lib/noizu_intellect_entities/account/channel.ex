@@ -804,18 +804,18 @@ defimpl Noizu.Intellect.DynamicPrompt, for: [Noizu.Intellect.Account.Channel] do
 
     prompt =
     """
-    # Chat Room
-    You are currently in the following chat-room-channel
+    # CHAT ROOM
+    YOU ARE CURRENTLY IN THE FOLLOWING CHAT-ROOM-CHANNEL
 
-    [Channel]
+    [CHANNEL]
     id: #{a.identifier}
     name: "#{a.name}"
     description: "#{a.description}"
 
-    ## Channel Members:
+    ## CHANNEL MEMBERS:
     #{b}
 
-    [/Channel]
+    [/CHANNEL]
     """
     {:ok, prompt}
 
